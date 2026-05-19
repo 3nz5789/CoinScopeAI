@@ -9,7 +9,7 @@ version: "3.9"
 services:
   trading-engine:
     build:
-      context: ../../services/trading-engine
+      context: ../..
       dockerfile: Dockerfile
     container_name: coinscopeai-engine
     env_file:
@@ -25,7 +25,7 @@ services:
 
   dashboard:
     build:
-      context: ../../apps/dashboard
+      ../../apps/dashboard
       dockerfile: Dockerfile
     container_name: coinscopeai-dashboard
     ports:

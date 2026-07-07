@@ -9,6 +9,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
+from typing import Optional
 
 
 @dataclass
@@ -38,6 +39,11 @@ class JournalEntry:
     status: str
     opened_at: str
     closed_at: str = ""
+    # ── Ownership (Phase 4c) ──────────────────────────────────────
+    # auth.users.id of the user who owns this trade. Empty string means
+    # "engine" (pre-multi-tenant legacy entries). We tag all new writes
+    # with a real user_id so /me/journal can filter cleanly.
+    user_id: str = ""
 
     # ── Signal origin ─────────────────────────────────────────────
     signal_score:     float = 0.0
@@ -120,6 +126,7 @@ class TradeJournal:
         tp_price: float = 0.0,
         sl_algo_id: int = 0,
         tp_algo_id: int = 0,
+        user_id: str = "",
     ):
         """Log a trade open with full provenance."""
         entry = JournalEntry(
@@ -153,6 +160,7 @@ class TradeJournal:
             tp_price=float(tp_price or 0.0),
             sl_algo_id=int(sl_algo_id or 0),
             tp_algo_id=int(tp_algo_id or 0),
+            user_id=str(user_id or ""),
         )
         self.entries.append(entry)
         self._save()
@@ -194,21 +202,34 @@ class TradeJournal:
                 return True
         return False
 
-    def get_recent_trades(self, days: int = 30):
-        """Get recent closed trades"""
+    # ------------------------------------------------------------------
+    # Phase 4c — per-user filtering helpers
+    # ------------------------------------------------------------------
+    def _filter_by_user(self, entries, user_id: Optional[str]):
+        """Return only entries owned by the given user (or all if None)."""
+        if user_id is None:
+            return entries
+        return [e for e in entries if (e.user_id or "") == user_id]
+
+    def all_for_user(self, user_id: Optional[str] = None) -> list[dict]:
+        """Return every journal entry (open + closed) for the user."""
+        return [asdict(e) for e in self._filter_by_user(self.entries, user_id)]
+
+    def get_recent_trades(self, days: int = 30, user_id: Optional[str] = None):
+        """Get recent closed trades, optionally scoped to one user."""
         cutoff = datetime.utcnow() - timedelta(days=days)
         return [
             asdict(e)
-            for e in self.entries
+            for e in self._filter_by_user(self.entries, user_id)
             if e.status == "CLOSED" and datetime.fromisoformat(e.closed_at) > cutoff
         ]
 
-    def daily_summary(self):
-        """Get today's summary"""
+    def daily_summary(self, user_id: Optional[str] = None):
+        """Get today's summary, optionally scoped to one user."""
         today = datetime.utcnow().date().isoformat()
         today_trades = [
             e
-            for e in self.entries
+            for e in self._filter_by_user(self.entries, user_id)
             if e.status == "CLOSED" and e.closed_at.startswith(today)
         ]
         if not today_trades:
@@ -224,9 +245,17 @@ class TradeJournal:
             "worst_trade": round(min(pnls), 4),
         }
 
-    def performance_stats(self):
-        """Get overall performance statistics including timestamped equity curve."""
-        closed = [e for e in self.entries if e.status == "CLOSED"]
+    def performance_stats(self, user_id: Optional[str] = None):
+        """Get overall performance statistics including timestamped equity curve.
+
+        When ``user_id`` is provided we compute the stats from that user's
+        closed trades only. When ``None`` we aggregate across everything
+        (engine-wide view — used by admin debug endpoints).
+        """
+        closed = [
+            e for e in self._filter_by_user(self.entries, user_id)
+            if e.status == "CLOSED"
+        ]
         if not closed:
             return {
                 "total_trades": 0,

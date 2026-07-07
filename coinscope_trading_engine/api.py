@@ -35,7 +35,7 @@ import time
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -117,6 +117,34 @@ async def _on_startup() -> None:
     # Open the DecisionJournal's Postgres mirror (non-fatal if offline)
     asyncio.create_task(_decisions.pg_connect())
 
+    # Auth subsystem (users, sessions, email verify, resets). Non-fatal:
+    # if the Postgres DSN is empty or unreachable, /auth/* endpoints will
+    # return 503 and the rest of the engine continues to work.
+    try:
+        from auth import init_auth_db as _init_auth_db
+        await _init_auth_db()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("Auth DB init failed: %s", exc)
+
+    # Resolve the engine's owning user_id (Phase 4c). Needs auth DB to be
+    # open — run after init_auth_db above.
+    global _ENGINE_USER_ID
+    try:
+        _ENGINE_USER_ID = await _resolve_engine_user_id()
+        if _ENGINE_USER_ID:
+            logger.info("Engine writes tagged with user_id=%s", _ENGINE_USER_ID[:8] + "…")
+        else:
+            logger.info("No admin user found — engine writes will be un-owned (user_id=NULL)")
+    except Exception as exc:
+        logger.warning("Engine user_id resolve failed: %s", exc)
+
+    # Admin audit table (Phase 4e). Non-fatal.
+    try:
+        await _init_admin()
+    except Exception as exc:
+        logger.warning("Admin init failed: %s", exc)
+
     # Telegram heartbeat so you can verify the bot is alive
     asyncio.create_task(_tg_send(
         f"<b>CoinScopeAI engine online</b>\n"
@@ -133,6 +161,16 @@ async def _on_shutdown() -> None:
         await _decisions.pg_close()
     except Exception:
         pass
+    try:
+        from auth import close_auth_db as _close_auth_db
+        await _close_auth_db()
+    except Exception:
+        pass
+    try:
+        from auth.client_pool import user_client_pool as _user_client_pool
+        await _user_client_pool.close_all()
+    except Exception:
+        pass
     global _account_sync_task, _price_feed_task, _scan_loop_task, _liq_feed_task, _hist_refresh_task
     for t in (_account_sync_task, _price_feed_task, _liq_feed_task, _hist_refresh_task, _scan_loop_task):
         if t is not None:
@@ -145,6 +183,37 @@ async def _on_shutdown() -> None:
         await _cache.close()
     except Exception:
         pass
+
+# ---------------------------------------------------------------------------
+# Engine ownership (Phase 4c)
+# ---------------------------------------------------------------------------
+# Every journal/decision row the engine writes is tagged with a user_id so
+# it shows up in /me/journal for that user. Until Phase 4d makes autotrade
+# per-user, the engine is a single "owner" — we resolve it to the first
+# admin's UUID at startup. If no admin exists (fresh install) it stays
+# None and engine writes are effectively un-owned.
+_ENGINE_USER_ID: Optional[str] = None
+
+
+async def _resolve_engine_user_id() -> Optional[str]:
+    """Look up the first admin user_id from auth.users. Called once at startup."""
+    try:
+        from auth import get_pool as _auth_pool
+        pool = _auth_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT id::text AS id FROM auth.users WHERE is_admin = TRUE ORDER BY created_at LIMIT 1"
+            )
+        return row["id"] if row else None
+    except Exception as exc:
+        logger.warning("Could not resolve engine_user_id: %s", exc)
+        return None
+
+
+def engine_user_id() -> Optional[str]:
+    """Accessor used at each journal/decision write site."""
+    return _ENGINE_USER_ID
+
 
 # ---------------------------------------------------------------------------
 # Shared singletons (lightweight — no persistent state between requests)
@@ -409,6 +478,7 @@ def _autotrade_record(event: dict) -> None:
             extra        = {k: v for k, v in evt.items()
                             if k not in {"ts","symbol","side","action","reason","score","order_id","qty"}} or None,
             source       = "auto",
+            user_id      = engine_user_id(),
         )
         _decisions.record(de)
     except Exception as exc:
@@ -752,16 +822,51 @@ async def _scan_loop() -> None:
                                 setup        = res.get("setup"),
                                 scanners     = res.get("scanners") or [],
                                 source       = "scan_loop",
-                                extra        = {"reasons": res.get("reasons", [])[:5], "actionable": res.get("actionable")},
+                                # Phase 6 transparency: persist the full
+                                # pipeline trace alongside summary fields so
+                                # /me/decisions/{id} can render a step timeline.
+                                extra        = {
+                                    "reasons":        res.get("reasons", [])[:5],
+                                    "actionable":     res.get("actionable"),
+                                    "pipeline_trace": res.get("pipeline_trace"),
+                                },
+                                user_id      = engine_user_id(),
                             ))
                         except Exception as jex:
                             logger.debug("signal persist failed: %s", jex)
 
-                        # Phase 3c: give the autotrader a chance to act on it
+                        # Phase 3c: engine's own autotrade path (admin account,
+                        # unchanged from Phase 3). Uses the module-level
+                        # _autotrade_state, _circuit and _rest singletons.
                         try:
                             await _autotrade_consider(res)
                         except Exception as auto_exc:
                             logger.warning("autotrade_consider(%s) errored: %s", sym, auto_exc)
+
+                        # Phase 4d: fan out the signal to every ACTIVE per-user
+                        # runtime. Admin's runtime is intentionally skipped here
+                        # because their autotrade already ran via the engine's
+                        # global path above (they share the same keys).
+                        try:
+                            for rt in _runtime_registry.active():
+                                if rt.user_id == engine_user_id():
+                                    continue
+                                try:
+                                    await _per_user_gate.consider_for_user(
+                                        rt, res,
+                                        decisions       = _decisions,
+                                        correlation     = _correlation,
+                                        sizer           = _sizer,
+                                        execute_entry_fn= _execute_entry_for_user,
+                                        get_htf_trend_fn= _get_htf_trend,
+                                    )
+                                except Exception as ue:
+                                    logger.warning(
+                                        "per-user gate user=%s sym=%s errored: %s",
+                                        rt.user_id, sym, ue,
+                                    )
+                        except Exception as fan_exc:
+                            logger.warning("runtime fan-out errored: %s", fan_exc)
                     else:
                         _signal_cache.pop(sym, None)
                 except Exception as exc:
@@ -1189,6 +1294,10 @@ async def _account_sync_loop() -> None:
 async def _scan_symbol(symbol: str, timeframe: str, limit: int) -> Optional[dict]:
     """
     Fetch candles, run all scanners, score, and return a signal dict or None.
+
+    Also captures a structured `pipeline_trace` in the result so the
+    Decisions UI can show *exactly* which scanner ran, in what order,
+    what each one returned, and how the final score was assembled.
     """
     try:
         raw     = await _rest.get_klines(symbol, timeframe, limit=limit)
@@ -1196,13 +1305,36 @@ async def _scan_symbol(symbol: str, timeframe: str, limit: int) -> Optional[dict
         if len(candles) < 30:
             return None
 
+        # ── Pipeline trace: scanner step-by-step (Phase 6 transparency) ──
+        scanners_trace: list[dict] = []
         results = []
-        for scanner in _scanners:
+        for step, scanner in enumerate(_scanners, start=1):
+            t_start = time.monotonic()
+            r = None
+            err = None
             try:
                 r = await scanner.scan(symbol)
                 results.append(r)
-            except Exception:
-                pass
+            except Exception as exc:
+                err = str(exc)
+            elapsed_ms = round((time.monotonic() - t_start) * 1000, 1)
+
+            scanners_trace.append({
+                "step":        step,
+                "name":        type(scanner).__name__,
+                "elapsed_ms":  elapsed_ms,
+                "error":       err,
+                # Summarised hits — names + direction + weight + reason
+                "hits": [
+                    {
+                        "direction": h.direction.value,
+                        "weight":    round(h.weight, 3),
+                        "score":     round(getattr(h, "score", 0.0), 3),
+                        "reason":    h.reason,
+                    }
+                    for h in (r.hits if r and not err else [])
+                ] if r else [],
+            })
 
         signal = _scorer.score(symbol, results, candles)
         if not signal:
@@ -1257,6 +1389,62 @@ async def _scan_symbol(symbol: str, timeframe: str, limit: int) -> Optional[dict
                 "volatility": indicators.volatility_state,
             },
             "scanned_at": time.time(),
+            # ── Pipeline trace — see docs/transparency.md ─────────────────
+            # Captures the full chain so the dashboard Decisions detail
+            # can render a step-by-step timeline of *why* this score
+            # came out the way it did. Lives under `pipeline_trace` so
+            # downstream consumers that only need the summary fields
+            # above don't have to parse the rich payload.
+            "pipeline_trace": {
+                "schema_version": 1,
+                "scanned_at":     time.time(),
+                "timeframe":      timeframe,
+                "scanners":       scanners_trace,
+                "score": {
+                    "final":            round(signal.score, 2),
+                    "strength":         signal.strength,
+                    "direction":        signal.direction.value,
+                    "contributing_hits":[
+                        {
+                            "scanner":   getattr(h, "scanner_name", type(h).__name__),
+                            "direction": h.direction.value,
+                            "weight":    round(h.weight, 3),
+                            "score":     round(getattr(h, "score", 0.0), 3),
+                            "reason":    h.reason,
+                        }
+                        for h in signal.contributing_hits
+                    ],
+                    "bonuses":          signal.bonuses,
+                },
+                "indicators": {
+                    "rsi":        round(indicators.rsi, 2)  if indicators.rsi else None,
+                    "adx":        round(indicators.adx, 2)  if indicators.adx else None,
+                    "macd_hist":  round(indicators.macd_histogram, 4) if getattr(indicators, "macd_histogram", None) else None,
+                    "atr_pct":    round(indicators.atr_pct, 3) if getattr(indicators, "atr_pct", None) else None,
+                    "trend":      indicators.trend_direction,
+                    "momentum":   indicators.momentum_bias,
+                    "volatility": indicators.volatility_state,
+                },
+                "regime":   {"label": regime.regime.value, "confidence": getattr(regime, "confidence", None)},
+                "htf":      {"trend": htf_trend, "agrees": (
+                    (signal.direction.value == "LONG"  and htf_trend == "bull") or
+                    (signal.direction.value == "SHORT" and htf_trend == "bear")
+                )},
+                "anomaly":  {
+                    "detected": anomaly.is_anomaly,
+                    "severity": anomaly.severity,
+                    "types":    anomaly.anomaly_types,
+                },
+                "setup": {
+                    "method":    setup.method,
+                    "entry":     round(setup.entry, 8)         if setup.valid else None,
+                    "stop_loss": round(setup.stop_loss, 8)      if setup.valid else None,
+                    "tp2":       round(setup.tp2, 8)            if setup.valid else None,
+                    "rr_ratio":  round(setup.rr_ratio_tp2, 3)   if setup.valid else None,
+                    "valid":     setup.valid,
+                    "reason":    setup.invalid_reason if not setup.valid else None,
+                },
+            },
         }
     except Exception as exc:
         logger.warning("API scan error for %s: %s", symbol, exc)
@@ -1272,6 +1460,16 @@ async def _scan_symbol(symbol: str, timeframe: str, limit: int) -> Optional[dict
 # Billing
 # ---------------------------------------------------------------------------
 app.include_router(billing_router)
+
+# ---------------------------------------------------------------------------
+# Auth (Phase 1 — user accounts, sessions, email verification, resets)
+# Phase 4a — Per-user API key vault
+# ---------------------------------------------------------------------------
+from auth import router as _auth_router, credentials_router as _credentials_router
+from auth.admin_router import router as _admin_router, init_admin as _init_admin
+app.include_router(_auth_router)
+app.include_router(_credentials_router)
+app.include_router(_admin_router)
 
 @app.get("/health", tags=["System"])
 async def health():
@@ -1498,9 +1696,10 @@ def _require_testnet_and_breaker() -> None:
         )
 
 
-async def _place_signed_order(params: dict) -> dict:
+async def _place_signed_order(params: dict, rest: Optional[BinanceRESTClient] = None) -> dict:
     """Signed POST /fapi/v1/order with only the keys given — no over-specify."""
-    return await _rest._request("POST", "/fapi/v1/order", params=params, signed=True)  # type: ignore[attr-defined]
+    client = rest if rest is not None else _rest
+    return await client._request("POST", "/fapi/v1/order", params=params, signed=True)  # type: ignore[attr-defined]
 
 
 async def _execute_entry(
@@ -1522,6 +1721,11 @@ async def _execute_entry(
     scanner_hits:    Optional[list]  = None,
     indicators:      Optional[dict]  = None,
     setup_entry:     Optional[float] = None,        # signal's intended entry — for slippage calc
+    # Phase 4d — per-user override. When provided, the order is signed
+    # with THIS client (the caller's pool entry) and the journal entry
+    # is tagged with the caller's user_id instead of engine_user_id().
+    rest_override:   Optional[BinanceRESTClient] = None,
+    user_id_override: Optional[str] = None,
 ) -> dict:
     """Shared entry path used by both the manual POST /orders endpoint and
     the autotrade loop (Phase 3c).
@@ -1542,6 +1746,12 @@ async def _execute_entry(
     side = side.upper()
     if side not in ("BUY", "SELL"):
         raise HTTPException(400, f"side must be BUY or SELL, got {side!r}")
+
+    # Phase 4d — resolve which Binance client + user_id to use. When called
+    # from the per-user gate, overrides are explicit; otherwise default to
+    # the engine's shared globals (admin runtime's current behavior).
+    rest = rest_override if rest_override is not None else _rest
+    uid  = user_id_override if user_id_override is not None else engine_user_id()
     if qty <= 0:
         raise HTTPException(400, f"qty must be > 0, got {qty}")
 
@@ -1551,7 +1761,7 @@ async def _execute_entry(
         if leverage < 1 or leverage > settings.max_leverage:
             raise HTTPException(400, f"leverage {leverage} out of [1..{settings.max_leverage}]")
         try:
-            leverage_resp = await _rest.change_leverage(symbol, leverage)
+            leverage_resp = await rest.change_leverage(symbol, leverage)
         except Exception as exc:
             logger.warning("change_leverage(%s→%dx) failed: %s", symbol, leverage, exc)
 
@@ -1565,7 +1775,7 @@ async def _execute_entry(
         "newClientOrderId": client_id,
     }
     submit_ms = int(time.time() * 1000)
-    resp = await _place_signed_order(params)
+    resp = await _place_signed_order(params, rest=rest)
     fill_ms = int(resp.get("updateTime") or time.time() * 1000)
 
     bracket_results: dict = {}
@@ -1576,7 +1786,7 @@ async def _execute_entry(
         if stop_price is not None:
             try:
                 sp = await _prepare_price(symbol, stop_price)
-                sl_resp = await _place_algo_conditional({
+                sl_resp = await _place_algo_conditional(rest=rest, params={
                     "algoType":     "CONDITIONAL",
                     "symbol":       symbol,
                     "side":         exit_side,
@@ -1593,7 +1803,7 @@ async def _execute_entry(
         if tp_price is not None:
             try:
                 tp = await _prepare_price(symbol, tp_price)
-                tp_resp = await _place_algo_conditional({
+                tp_resp = await _place_algo_conditional(rest=rest, params={
                     "algoType":     "CONDITIONAL",
                     "symbol":       symbol,
                     "side":         exit_side,
@@ -1616,7 +1826,7 @@ async def _execute_entry(
     if fill_price <= 0 and resp.get("orderId"):
         await asyncio.sleep(0.4)
         try:
-            q = await _rest.get_order(symbol=symbol, order_id=int(resp["orderId"]))
+            q = await rest.get_order(symbol=symbol, order_id=int(resp["orderId"]))
             fill_price = float(q.get("avgPrice") or q.get("price") or 0)
         except Exception:
             pass
@@ -1662,6 +1872,7 @@ async def _execute_entry(
             tp_price        = float(tp_price or 0.0),
             sl_algo_id      = sl_algo_id,
             tp_algo_id      = tp_algo_id,
+            user_id         = uid or "",
         )
     except Exception as exc:
         logger.debug("journal.log_open non-fatal: %s", exc)
@@ -1838,9 +2049,10 @@ async def close_position(body: CloseRequest):
     return {"order": resp, "client_id": client_id, "closed_qty": qty, "was_side": pos_side}
 
 
-async def _place_algo_conditional(params: dict) -> dict:
+async def _place_algo_conditional(params: dict, rest: Optional[BinanceRESTClient] = None) -> dict:
     """Signed POST /fapi/v1/algoOrder for conditional SL/TP (migrated 2025-12)."""
-    return await _rest._request("POST", "/fapi/v1/algoOrder", params=params, signed=True)  # type: ignore[attr-defined]
+    client = rest if rest is not None else _rest
+    return await client._request("POST", "/fapi/v1/algoOrder", params=params, signed=True)  # type: ignore[attr-defined]
 
 
 def _algo_client_id(prefix: str) -> str:
@@ -1934,6 +2146,923 @@ async def list_open_algo_orders(symbol: Optional[str] = None):
         raise HTTPException(400, f"Binance error: {exc}")
     orders = resp.get("orders") if isinstance(resp, dict) else resp
     return {"orders": orders or [], "count": len(orders or [])}
+
+
+# ── /me/* — per-user account views (Phase 4b) ────────────────────────────────
+#
+# These mirror /account/*, /exposure, /positions and /orders/algo/open but
+# use the authenticated user's own Binance keys (resolved via the
+# UserClientPool). Admin users can pass ?as_user=<uuid> to impersonate.
+#
+# We fetch directly on each request — no background sync loop per user
+# yet. React Query's natural polling (5-10s) gives Binance ≤ 12 req/min
+# per user per endpoint, comfortably under the 2400 req/min IP limit.
+#
+# Why not gate the existing /account/* endpoints: they still back the
+# engine's own autotrade loop state (admin account). Phase 4d will fold
+# that into the per-user runtime; until then the two coexist.
+from auth.user_exchange import admin_or_self_client  # noqa: E402
+from auth.client_pool import user_client_pool  # noqa: E402
+from auth.deps import CurrentUser, require_user  # noqa: E402
+from data.binance_rest import BinanceRESTClient as _UserRestType  # noqa: E402
+
+# Phase 4d — per-user autotrade runtime + gate
+from engine.user_runtime import registry as _runtime_registry, PerUserRuntime  # noqa: E402
+from engine import autotrade_gate as _per_user_gate  # noqa: E402
+
+
+async def _execute_entry_for_user(
+    *, runtime: PerUserRuntime, **kwargs,
+) -> dict:
+    """
+    Adapter called by engine/autotrade_gate.consider_for_user() to place
+    an order with the runtime's Binance client and tag the journal entry
+    with the runtime's user_id.
+
+    Safe against concurrent runtimes — we pass the client + user_id as
+    explicit overrides to _execute_entry instead of swapping globals.
+    """
+    user_rest = await user_client_pool.get(runtime.user_id)
+    return await _execute_entry(
+        rest_override    = user_rest,
+        user_id_override = runtime.user_id,
+        **kwargs,
+    )
+
+
+def _shape_positions(rows) -> list[dict]:
+    """Shared formatter — identical to /account/positions output."""
+    return [
+        {
+            "symbol":            p.get("symbol"),
+            "position_side":     p.get("positionSide"),
+            "position_amt":      float(p.get("positionAmt", 0) or 0),
+            "side":              "LONG" if float(p.get("positionAmt", 0) or 0) > 0 else "SHORT",
+            "entry_price":       float(p.get("entryPrice", 0) or 0),
+            "mark_price":        float(p.get("markPrice", 0) or 0),
+            "liquidation_price": float(p.get("liquidationPrice", 0) or 0),
+            "leverage":          int(float(p.get("leverage", 0) or 0)),
+            "margin_type":       p.get("marginType"),
+            "isolated_margin":   float(p.get("isolatedMargin", 0) or 0),
+            "unrealized_pnl":    float(p.get("unRealizedProfit", 0) or 0),
+            "notional":          float(p.get("notional", 0) or 0),
+            "update_time":       int(p.get("updateTime", 0) or 0),
+        }
+        for p in (rows or [])
+    ]
+
+
+@app.get("/me/account", tags=["Me · Account"])
+async def me_account(rest: _UserRestType = Depends(admin_or_self_client)):
+    """The caller's live Binance Futures Demo account summary."""
+    s = await rest.get_account()
+    positions = [p for p in (s.get("positions") or []) if float(p.get("positionAmt", 0) or 0) != 0]
+    return {
+        "updated_at":              time.time(),
+        "error":                   None,
+        "can_trade":               bool(s.get("canTrade", False)),
+        "fee_tier":                s.get("feeTier"),
+        "total_wallet_balance":    float(s.get("totalWalletBalance", 0) or 0),
+        "total_margin_balance":    float(s.get("totalMarginBalance", 0) or 0),
+        "available_balance":       float(s.get("availableBalance", 0) or 0),
+        "total_unrealized_pnl":    float(s.get("totalUnrealizedProfit", 0) or 0),
+        "total_position_notional": float(s.get("totalPositionInitialMargin", 0) or 0),
+        "total_maint_margin":      float(s.get("totalMaintMargin", 0) or 0),
+        "position_count":          len(positions),
+    }
+
+
+@app.get("/me/account/balance", tags=["Me · Account"])
+async def me_account_balance(
+    only_non_zero: bool = True,
+    rest: _UserRestType = Depends(admin_or_self_client),
+):
+    """Per-asset balances for the caller."""
+    rows = await rest.get_balances()
+    if only_non_zero:
+        rows = [r for r in rows if float(r.get("balance", 0) or 0) > 0]
+    return {
+        "updated_at": time.time(),
+        "error":      None,
+        "balances": [
+            {
+                "asset":             r.get("asset"),
+                "balance":           float(r.get("balance", 0) or 0),
+                "available_balance": float(r.get("availableBalance", 0) or 0),
+                "cross_wallet":      float(r.get("crossWalletBalance", 0) or 0),
+                "cross_unpnl":       float(r.get("crossUnPnl", 0) or 0),
+                "max_withdraw":      float(r.get("maxWithdrawAmount", 0) or 0),
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get("/me/account/positions", tags=["Me · Account"])
+async def me_account_positions(rest: _UserRestType = Depends(admin_or_self_client)):
+    """Open positions for the caller (non-zero only)."""
+    rows = await rest.get_positions()
+    rows = [p for p in (rows or []) if float(p.get("positionAmt", 0) or 0) != 0]
+    return {
+        "updated_at": time.time(),
+        "error":      None,
+        "count":      len(rows),
+        "positions":  _shape_positions(rows),
+    }
+
+
+@app.get("/me/exposure", tags=["Me · Account"])
+async def me_exposure(rest: _UserRestType = Depends(admin_or_self_client)):
+    """Exposure summary derived directly from the caller's Binance account."""
+    acct = await rest.get_account()
+    positions = [p for p in (acct.get("positions") or []) if float(p.get("positionAmt", 0) or 0) != 0]
+    balance = float(acct.get("totalWalletBalance", 0) or 0)
+    total_notional = sum(abs(float(p.get("notional", 0) or 0)) for p in positions)
+    unrealised_pnl = float(acct.get("totalUnrealizedProfit", 0) or 0)
+    return {
+        "balance":                round(balance, 2),
+        "position_count":         len(positions),
+        "total_notional":         round(total_notional, 2),
+        "total_exposure_pct":     round((total_notional / balance * 100) if balance > 0 else 0, 2),
+        "unrealised_pnl":         round(unrealised_pnl, 2),
+        # These are account-derived; intraday P&L + daily loss come from
+        # the per-user trade journal once Phase 4c lands.
+        "realised_pnl":           0.0,
+        "daily_pnl":              round(unrealised_pnl, 2),
+        "daily_loss_pct":         round((unrealised_pnl / balance) if balance > 0 else 0, 4),
+        "is_over_exposed":        total_notional > balance * (settings.max_total_exposure_pct / 100),
+        "max_total_exposure_pct": settings.max_total_exposure_pct,
+    }
+
+
+@app.get("/me/orders/algo/open", tags=["Me · Account"])
+async def me_open_algo_orders(
+    symbol: Optional[str] = None,
+    rest: _UserRestType = Depends(admin_or_self_client),
+):
+    """Active conditional (SL/TP) orders for the caller."""
+    params: dict = {}
+    if symbol:
+        params["symbol"] = symbol
+    try:
+        resp = await rest._request("GET", "/fapi/v1/openAlgoOrders", params=params, signed=True)  # type: ignore[attr-defined]
+    except Exception as exc:
+        raise HTTPException(400, f"Binance error: {exc}")
+    orders = resp.get("orders") if isinstance(resp, dict) else resp
+    return {"orders": orders or [], "count": len(orders or [])}
+
+
+@app.post("/me/account/sync", tags=["Me · Account"])
+async def me_account_sync(rest: _UserRestType = Depends(admin_or_self_client)):
+    """No-op for now: /me/* endpoints already fetch fresh on each call.
+
+    Kept as an endpoint so the dashboard's "force sync" button keeps working
+    symmetrically with the engine's /account/sync.
+    """
+    acct = await rest.get_account()
+    positions = [p for p in (acct.get("positions") or []) if float(p.get("positionAmt", 0) or 0) != 0]
+    return {"updated_at": time.time(), "error": None, "positions": len(positions)}
+
+
+# ── /me/orders — per-user order placement & cancellation (Phase 6) ────────────
+#
+# Mirrors of the legacy /orders/* endpoints, gated by require_user, using the
+# caller's own BinanceRESTClient via the pool. Admins can impersonate via
+# ?as_user=<uuid>.
+#
+# Why we don't just gate /orders/* with require_user: the engine's own
+# autotrade loop (admin runs on the legacy globals) still calls
+# _place_signed_order / _execute_entry directly with no auth. Forcing those
+# through require_user would break the engine. So we keep /orders/* as
+# admin/legacy and add /me/orders/* for users — both go through the same
+# helpers but with different REST clients + user_id tagging.
+
+@app.post("/me/orders", tags=["Me · Orders"])
+async def me_place_order(
+    body: OrderRequest,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Place an order on the caller's Binance account.
+
+    MARKET orders go through `_execute_entry` (same path as autotrade) so the
+    journal entry gets full provenance + the user_id tag. LIMIT orders take
+    a dedicated path (no bracket auto-attached).
+    """
+    target_id = _resolve_scope_user_id(user, as_user)
+    rest      = await user_client_pool.get(target_id)
+
+    side  = body.side.upper()
+    otype = body.type.upper()
+    if otype not in ("MARKET", "LIMIT"):
+        raise HTTPException(400, f"type must be MARKET or LIMIT, got {body.type!r}")
+
+    if otype == "MARKET":
+        try:
+            return await _execute_entry(
+                symbol            = body.symbol,
+                side              = side,
+                qty               = body.qty,
+                leverage          = body.leverage,
+                client_id_prefix  = "cs",
+                source            = "manual",
+                rest_override     = rest,
+                user_id_override  = target_id,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning("me_place_order(market) user=%s failed: %s", target_id, exc)
+            raise HTTPException(400, f"Binance rejected order: {exc}")
+
+    # LIMIT
+    _require_testnet_and_breaker()
+    if body.qty <= 0:
+        raise HTTPException(400, f"qty must be > 0, got {body.qty}")
+    if not body.price:
+        raise HTTPException(400, "LIMIT order requires a price")
+    if side not in ("BUY", "SELL"):
+        raise HTTPException(400, f"side must be BUY or SELL, got {body.side!r}")
+
+    leverage_resp = None
+    if body.leverage is not None:
+        if body.leverage < 1 or body.leverage > settings.max_leverage:
+            raise HTTPException(400, f"leverage {body.leverage} out of [1..{settings.max_leverage}]")
+        try:
+            leverage_resp = await rest.change_leverage(body.symbol, body.leverage)
+        except Exception as exc:
+            logger.warning("change_leverage user=%s failed: %s", target_id, exc)
+
+    qty_str, _ = await _prepare_qty(body.symbol, body.qty)
+    price_str  = await _prepare_price(body.symbol, body.price)
+    client_id  = body.client_id or _gen_client_id()
+    params = {
+        "symbol":           body.symbol,
+        "side":             side,
+        "type":             "LIMIT",
+        "quantity":         qty_str,
+        "price":            price_str,
+        "timeInForce":      body.tif.upper(),
+        "newClientOrderId": client_id,
+    }
+    if body.reduce_only:
+        params["reduceOnly"] = "true"
+    try:
+        resp = await _place_signed_order(params, rest=rest)
+    except Exception as exc:
+        raise HTTPException(400, f"Binance rejected order: {exc}")
+
+    return {"order": resp, "client_id": client_id, "leverage_change": leverage_resp,
+            "user_id": target_id}
+
+
+@app.post("/me/orders/close", tags=["Me · Orders"])
+async def me_close_position(
+    body: CloseRequest,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Market-close one of the caller's positions (reduceOnly).
+
+    We fetch fresh positions via the user's own client (NOT the engine's
+    `_account_state` cache) so we never accidentally close someone else's
+    position by symbol collision.
+    """
+    target_id = _resolve_scope_user_id(user, as_user)
+    rest      = await user_client_pool.get(target_id)
+
+    _require_testnet_and_breaker()
+
+    # Fetch the user's own positions
+    try:
+        positions = await rest.get_positions()
+    except Exception as exc:
+        raise HTTPException(502, f"Could not read your positions: {exc}")
+
+    qty       = body.qty
+    pos_side  = "LONG"
+    matched   = None
+    for p in positions or []:
+        if p.get("symbol") == body.symbol and float(p.get("positionAmt", 0) or 0) != 0:
+            matched = p
+            amt = float(p["positionAmt"])
+            pos_side = "LONG" if amt > 0 else "SHORT"
+            if qty is None:
+                qty = abs(amt)
+            break
+    if matched is None or qty is None or qty <= 0:
+        raise HTTPException(404, f"You have no open position on {body.symbol}.")
+
+    side       = "SELL" if pos_side == "LONG" else "BUY"
+    client_id  = _gen_client_id("close")
+    qty_str, _ = await _prepare_qty(body.symbol, qty)
+
+    # Approximate exit price for journal logging (real avg comes via user-data WS later)
+    mark_before = None
+    cached_price = _price_cache.get(body.symbol, {}).get("mark_price")
+    if cached_price:
+        mark_before = float(cached_price)
+    if not mark_before:
+        try:
+            mark_before = float(matched.get("markPrice") or 0) or None
+        except Exception:
+            pass
+
+    params = {
+        "symbol":           body.symbol,
+        "side":             side,
+        "type":             "MARKET",
+        "quantity":         qty_str,
+        "reduceOnly":       "true",
+        "newClientOrderId": client_id,
+    }
+    try:
+        resp = await _place_signed_order(params, rest=rest)
+    except Exception as exc:
+        raise HTTPException(400, f"Binance rejected close: {exc}")
+
+    # Find + close the user's most recent OPEN journal entry on this symbol.
+    # We strictly filter by user_id so we never close someone else's row.
+    try:
+        match = None
+        for e in reversed(_journal.entries):
+            if (e.user_id or "") == target_id and e.symbol == body.symbol and e.status == "OPEN":
+                match = e
+                break
+        if match is not None:
+            exit_price = mark_before or match.entry_price
+            pnl_per_unit = (
+                (exit_price - match.entry_price)
+                if match.side.upper() == "BUY"
+                else (match.entry_price - exit_price)
+            )
+            pnl_usd = pnl_per_unit * match.quantity
+            pnl_pct = (pnl_per_unit / match.entry_price) if match.entry_price else 0
+            _journal.log_close(
+                match.id, exit_price, pnl_pct, pnl_usd,
+                exit_trigger  = "manual",
+                exit_order_id = int(resp.get("orderId") or 0),
+                closed_by     = f"user/api:/me/orders/close (user_id={target_id[:8]}…)",
+            )
+            _decisions.record_close(match.symbol, pnl_usd, pnl_pct)
+    except Exception as exc:
+        logger.debug("journal.log_close non-fatal: %s", exc)
+
+    # Cancel any outstanding algo brackets on this symbol on the USER'S account
+    try:
+        await rest._request("DELETE", "/fapi/v1/algoOrder", params={"symbol": body.symbol}, signed=True)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+    return {
+        "order": resp, "client_id": client_id,
+        "closed_qty": qty, "was_side": pos_side,
+        "user_id": target_id,
+    }
+
+
+@app.post("/me/orders/bracket", tags=["Me · Orders"])
+async def me_attach_bracket(
+    body: BracketRequest,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Attach SL + TP algo orders to one of the caller's positions."""
+    target_id = _resolve_scope_user_id(user, as_user)
+    rest      = await user_client_pool.get(target_id)
+
+    _require_testnet_and_breaker()
+    entry_side = body.side.upper()
+    if entry_side not in ("BUY", "SELL"):
+        raise HTTPException(400, "side must be BUY or SELL (entry side)")
+
+    exit_side = "SELL" if entry_side == "BUY" else "BUY"
+    results: dict = {}
+
+    def _base_params(order_type: str, trigger_str: str, prefix: str) -> dict:
+        p = {
+            "algoType":     "CONDITIONAL",
+            "symbol":       body.symbol,
+            "side":         exit_side,
+            "type":         order_type,
+            "triggerPrice": trigger_str,
+            "workingType":  "MARK_PRICE",
+            "clientAlgoId": _algo_client_id(prefix),
+        }
+        if body.qty is None:
+            p["closePosition"] = "true"
+        return p
+
+    if body.stop_price is not None:
+        stop_str = await _prepare_price(body.symbol, body.stop_price)
+        params   = _base_params("STOP_MARKET", stop_str, "sl")
+        if body.qty is not None:
+            qty_str, _ = await _prepare_qty(body.symbol, body.qty)
+            params["quantity"]   = qty_str
+            params["reduceOnly"] = "true"
+        try:
+            results["stop_loss"] = await _place_algo_conditional(params=params, rest=rest)
+        except Exception as exc:
+            results["stop_loss"] = {"error": str(exc)}
+
+    if body.tp_price is not None:
+        tp_str = await _prepare_price(body.symbol, body.tp_price)
+        params = _base_params("TAKE_PROFIT_MARKET", tp_str, "tp")
+        if body.qty is not None:
+            qty_str, _ = await _prepare_qty(body.symbol, body.qty)
+            params["quantity"]   = qty_str
+            params["reduceOnly"] = "true"
+        try:
+            results["take_profit"] = await _place_algo_conditional(params=params, rest=rest)
+        except Exception as exc:
+            results["take_profit"] = {"error": str(exc)}
+
+    return {**results, "user_id": target_id}
+
+
+@app.get("/me/orders/open", tags=["Me · Orders"])
+async def me_list_open_orders(
+    symbol:  Optional[str] = None,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Open (non-algo) orders on the caller's account."""
+    target_id = _resolve_scope_user_id(user, as_user)
+    rest      = await user_client_pool.get(target_id)
+    try:
+        orders = await rest.get_open_orders(symbol)
+    except Exception as exc:
+        raise HTTPException(400, f"Binance error: {exc}")
+    return {"orders": orders, "count": len(orders), "user_id": target_id}
+
+
+@app.delete("/me/orders/{order_id}", tags=["Me · Orders"])
+async def me_cancel_order(
+    order_id: int,
+    symbol:   str,
+    as_user:  Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Cancel one order by id on the caller's account.
+
+    Binance enforces ownership server-side: the API key + order_id pair must
+    match — passing a stranger's order_id returns -2011/-2013 from Binance.
+    So this is naturally isolated; no extra ownership check needed in our code.
+    """
+    target_id = _resolve_scope_user_id(user, as_user)
+    rest      = await user_client_pool.get(target_id)
+    try:
+        resp = await rest.cancel_order(symbol=symbol, order_id=order_id)
+    except Exception as exc:
+        raise HTTPException(400, f"Binance error: {exc}")
+    return {**(resp if isinstance(resp, dict) else {"resp": resp}), "user_id": target_id}
+
+
+@app.delete("/me/orders", tags=["Me · Orders"])
+async def me_cancel_all_orders(
+    symbol:  str,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Cancel every open order on a symbol on the caller's account."""
+    target_id = _resolve_scope_user_id(user, as_user)
+    rest      = await user_client_pool.get(target_id)
+    try:
+        resp = await rest.cancel_all_orders(symbol)
+    except Exception as exc:
+        raise HTTPException(400, f"Binance error: {exc}")
+    return {**(resp if isinstance(resp, dict) else {"resp": resp}), "user_id": target_id}
+
+
+# ── /me/journal, /me/performance, /me/decisions — per-user history (Phase 4c) ─
+#
+# Every row in the trade journal + decision log carries a user_id (tagged
+# at write time by the engine — see engine_user_id). These endpoints
+# filter to the caller's own rows and compute per-user stats / equity.
+#
+# Admins with ?as_user=<uuid> scope to that user instead, matching the
+# convention from the /me/account endpoints.
+#
+# Shape parity with the existing global endpoints (/journal, /performance,
+# /decisions) so the frontend can swap URL-prefix and keep its own types.
+
+def _resolve_scope_user_id(user: CurrentUser, as_user: Optional[str]) -> str:
+    """Return the effective user_id for a /me/* lookup. Admin can impersonate."""
+    if as_user:
+        if not user.is_admin:
+            raise HTTPException(403, "as_user requires admin")
+        return as_user
+    return user.id
+
+
+@app.get("/me/journal", tags=["Me · Journal"])
+async def me_journal(
+    days: int = Query(default=30, ge=1, le=365),
+    include_open: bool = True,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Caller's journal entries (open + closed) mapped to the dashboard shape."""
+    from datetime import datetime as _dt, timedelta as _td
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    cutoff = _dt.utcnow() - _td(days=days)
+    entries = []
+    for e in _journal.entries:
+        if (e.user_id or "") != scope_uid:
+            continue
+        when = e.closed_at if e.status == "CLOSED" else e.opened_at
+        try:
+            ts = _dt.fromisoformat(when) if when else None
+        except Exception:
+            ts = None
+        if ts and ts < cutoff:
+            continue
+        if e.status == "OPEN" and not include_open:
+            continue
+
+        duration_hours = None
+        try:
+            if e.closed_at and e.opened_at:
+                d = _dt.fromisoformat(e.closed_at) - _dt.fromisoformat(e.opened_at)
+                duration_hours = d.total_seconds() / 3600.0
+        except Exception:
+            pass
+
+        entries.append({
+            "id":              e.id,
+            "symbol":          e.symbol,
+            "side":            "LONG" if e.side.upper() == "BUY" else "SHORT",
+            "entry_price":     e.entry_price,
+            "exit_price":      e.exit_price if e.exit_price else None,
+            "qty":             e.quantity,
+            "size":            e.quantity,
+            "leverage":        e.leverage if getattr(e, "leverage", 0) else None,
+            "pnl":             e.pnl_usd if e.status == "CLOSED" else None,
+            "pnl_pct":         e.pnl_pct * 100 if e.status == "CLOSED" else None,
+            "entry_time":      e.opened_at,
+            "exit_time":       e.closed_at or None,
+            "duration_hours":  duration_hours,
+            "strategy":        getattr(e, "source", "") or e.regime or "—",
+            "regime":          e.regime if e.regime and e.regime != "—" else None,
+            "reasons":         getattr(e, "reasons", None) or [],
+            "notes":           None,
+            "status":          e.status,
+            "signal_score":    e.signal_score,
+            "kelly_usd":       e.kelly_usd,
+            "strength":        getattr(e, "strength", "") or None,
+            "htf_trend":       getattr(e, "htf_trend", "") or None,
+            "scanner_hits":    getattr(e, "scanner_hits", None) or [],
+            "indicators_at_entry": getattr(e, "indicators_at_entry", None) or {},
+            "entry_client_id": getattr(e, "entry_client_id", "") or None,
+            "entry_order_id":  getattr(e, "entry_order_id", 0) or None,
+            "entry_submit_ms": getattr(e, "entry_submit_ms", 0) or None,
+            "entry_fill_ms":   getattr(e, "entry_fill_ms", 0) or None,
+            "slippage_bps":    getattr(e, "slippage_bps", 0.0) or 0.0,
+            "sl_price":        getattr(e, "sl_price", 0.0) or None,
+            "tp_price":        getattr(e, "tp_price", 0.0) or None,
+            "sl_algo_id":      getattr(e, "sl_algo_id", 0) or None,
+            "tp_algo_id":      getattr(e, "tp_algo_id", 0) or None,
+            "exit_trigger":    getattr(e, "exit_trigger", "") or None,
+            "exit_order_id":   getattr(e, "exit_order_id", 0) or None,
+            "closed_by":       getattr(e, "closed_by", "") or None,
+        })
+
+    entries.sort(key=lambda r: r["exit_time"] or r["entry_time"] or "", reverse=True)
+    return {
+        "entries":   entries,
+        "count":     len(entries),
+        "closed":    sum(1 for r in entries if r["status"] == "CLOSED"),
+        "open":      sum(1 for r in entries if r["status"] == "OPEN"),
+        "days":      days,
+        "timestamp": time.time(),
+    }
+
+
+@app.get("/me/journal/{entry_id}/trace", tags=["Me · Journal"])
+async def me_trade_trace(
+    entry_id: str,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Full per-user provenance trace for a single trade."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+
+    match = None
+    for e in _journal.entries:
+        if e.id == entry_id and (e.user_id or "") == scope_uid:
+            match = e; break
+    if not match:
+        raise HTTPException(404, f"journal entry {entry_id!r} not found for this user")
+
+    entry_dict = asdict(match)
+
+    from datetime import datetime as _dt, timezone as _tz
+    try:
+        open_ts = _dt.fromisoformat(match.opened_at).replace(tzinfo=_tz.utc).timestamp()
+    except Exception:
+        open_ts = 0.0
+    try:
+        close_ts = (
+            _dt.fromisoformat(match.closed_at).replace(tzinfo=_tz.utc).timestamp()
+            if match.closed_at else time.time()
+        )
+    except Exception:
+        close_ts = time.time()
+    pad = 5 * 60
+    window_lo = open_ts - pad
+    window_hi = close_ts + pad
+
+    all_dec = _decisions.recent(symbol=match.symbol, limit=1000, user_id=scope_uid)
+    in_window = [d for d in all_dec if window_lo <= d.get("ts", 0) <= window_hi]
+
+    algo_open = []
+    try:
+        # Use the user's own client for algo-order fetch so the trace is
+        # truthful for that user's bracket state.
+        rest = await user_client_pool.get(scope_uid)  # type: ignore[name-defined]
+        resp = await rest._request(
+            "GET", "/fapi/v1/openAlgoOrders",
+            params={"symbol": match.symbol}, signed=True,
+        )
+        algo_open = (resp.get("orders") if isinstance(resp, dict) else resp) or []
+    except Exception as exc:
+        algo_open = [{"error": f"algo fetch: {exc}"}]
+
+    return {
+        "entry":       entry_dict,
+        "decisions":   in_window,
+        "algo_orders": algo_open,
+        "window": {
+            "lo_ts":  window_lo,
+            "hi_ts":  window_hi,
+            "span_s": round(window_hi - window_lo, 1),
+        },
+    }
+
+
+@app.get("/me/performance", tags=["Me · Journal"])
+async def me_performance(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Caller's aggregate performance stats + equity curve."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    stats = _journal.performance_stats(user_id=scope_uid)
+    return {**stats, "scale_profile": _scaler.status(), "timestamp": time.time()}
+
+
+@app.get("/me/performance/equity", tags=["Me · Journal"])
+async def me_equity_curve(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Caller's timestamped equity curve (from closed trades only)."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    stats = _journal.performance_stats(user_id=scope_uid)
+    return {
+        "equity_curve":    stats.get("equity_curve", []),
+        "initial_capital": stats.get("initial_capital", 10_000.0),
+        "current_equity":  stats.get("current_equity", stats.get("initial_capital", 10_000.0)),
+        "timestamp":       time.time(),
+    }
+
+
+@app.get("/me/performance/daily", tags=["Me · Journal"])
+async def me_daily_performance(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Today's P&L summary for the caller."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    summary = _journal.daily_summary(user_id=scope_uid)
+    return {**summary, "timestamp": time.time()}
+
+
+# ── /me/decisions ────────────────────────────────────────────────────────────
+
+@app.get("/me/decisions", tags=["Me · Decisions"])
+async def me_decisions(
+    symbol: Optional[str] = None,
+    action: Optional[str] = None,
+    limit:  int = Query(default=100, ge=1, le=1000),
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Decision-journal events filtered to the caller."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    return {
+        "decisions": _decisions.recent(
+            symbol=symbol, action=action, limit=limit, user_id=scope_uid
+        ),
+        "timestamp": time.time(),
+    }
+
+
+@app.get("/me/decisions/stats", tags=["Me · Decisions"])
+async def me_decisions_stats(
+    window_s: int = Query(default=24 * 3600, ge=60),
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Per-user decision counts + rejection histogram over the window."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    return _decisions.stats(window_s=window_s, user_id=scope_uid)
+
+
+@app.get("/me/decisions/per-symbol", tags=["Me · Decisions"])
+async def me_decisions_per_symbol(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """Per-user per-symbol health snapshot (computed from the decision log)."""
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    return {
+        "per_symbol": _decisions.per_symbol_health(user_id=scope_uid),
+        "timestamp":  time.time(),
+    }
+
+
+@app.get("/me/decisions/trace", tags=["Me · Decisions"])
+async def me_decision_trace(
+    symbol:  Optional[str] = None,
+    action:  Optional[str] = None,
+    limit:   int = Query(20, ge=1, le=100),
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    """
+    Return recent decisions WITH the full pipeline_trace + gate_trace
+    embedded — used by the Decisions UI detail page to render the
+    step-by-step "why" timeline (which scanner ran in what order, what
+    each one returned, which gate passed/failed and why).
+
+    The base /me/decisions trims `extra` for size; this endpoint keeps it.
+    """
+    scope_uid = _resolve_scope_user_id(user, as_user)
+    rows = _decisions.recent(symbol=symbol, action=action, limit=limit, user_id=scope_uid)
+    enriched = []
+    for d in rows:
+        extra = d.get("extra") or {}
+        enriched.append({
+            "ts":            d.get("ts"),
+            "symbol":        d.get("symbol"),
+            "direction":     d.get("direction"),
+            "action":        d.get("action"),
+            "reason":        d.get("reason"),
+            "signal_score":  d.get("signal_score"),
+            "strength":      d.get("strength"),
+            "regime":        d.get("regime"),
+            "htf_trend":     d.get("htf_trend"),
+            "setup":         d.get("setup"),
+            "scanners":      d.get("scanners") or [],
+            "source":        d.get("source"),
+            "verdict":       extra.get("verdict") or d.get("reason"),
+            "pipeline_trace": extra.get("pipeline_trace"),
+            "gate_trace":    extra.get("gate_trace") or [],
+        })
+    return {"decisions": enriched, "count": len(enriched), "timestamp": time.time()}
+
+
+# ── /me/autotrade — per-user autotrade (Phase 4d) ─────────────────────────────
+#
+# Each authenticated user has their own PerUserRuntime in the registry
+# (lazily created on first /enable). The scan-loop fans out to every
+# active runtime each tick. State is in-memory — wipes on engine restart.
+#
+# Admin note: the admin's autotrade still runs via the engine's GLOBAL
+# /autotrade/* endpoints and global _autotrade_state/_circuit — those are
+# unchanged. Admin also has a runtime entry (lazy) but the scan-loop
+# fan-out intentionally skips it to avoid double-execution.
+
+class MeAutotradeConfigRequest(BaseModel):
+    enabled:              Optional[bool]  = None
+    risk_per_trade_pct:   Optional[float] = None
+    default_leverage:     Optional[int]   = None
+    attach_bracket:       Optional[bool]  = None
+    min_score:            Optional[int]   = None
+    cooldown_s:           Optional[int]   = None
+    allowed_directions:   Optional[str]   = None  # "BOTH" | "LONG_ONLY" | "SHORT_ONLY"
+    mtf_filter_enabled:   Optional[bool]  = None
+    mtf_block_neutral:    Optional[bool]  = None
+    mtf_htf_timeframe:    Optional[str]   = None
+
+
+def _runtime_status_dict(rt: PerUserRuntime) -> dict:
+    s = rt.state
+    return {
+        "user_id":              rt.user_id,
+        "enabled":              bool(s.get("enabled")),
+        "started_at":           s.get("started_at"),
+        "entries_total":        int(s.get("entries_total", 0)),
+        "entries_rejected":     int(s.get("entries_rejected", 0)),
+        "last_entry_at":        float(s.get("last_entry_at", 0) or 0),
+        "last_reject_reason":   s.get("last_reject_reason"),
+        "recent_events":        s.get("recent_events", [])[:20],
+        "risk_per_trade_pct":   s.get("risk_per_trade_pct"),
+        "default_leverage":     int(s.get("default_leverage", 5)),
+        "attach_bracket":       bool(s.get("attach_bracket", True)),
+        "min_score":            s.get("min_score"),
+        "cooldown_s":           int(s.get("cooldown_s", 300)),
+        "allowed_directions":   s.get("allowed_directions", "LONG_ONLY"),
+        "mtf_filter_enabled":   bool(s.get("mtf_filter_enabled", False)),
+        "mtf_block_neutral":    bool(s.get("mtf_block_neutral", True)),
+        "mtf_htf_timeframe":    s.get("mtf_htf_timeframe", "4h"),
+    }
+
+
+def _runtime_for(user: CurrentUser, as_user: Optional[str]) -> PerUserRuntime:
+    """Admin can impersonate via ?as_user=. Otherwise caller's runtime."""
+    if as_user:
+        if not user.is_admin:
+            raise HTTPException(403, "as_user requires admin")
+        return _runtime_registry.get_or_create(as_user)
+    return _runtime_registry.get_or_create(user.id)
+
+
+@app.get("/me/autotrade/status", tags=["Me · Autotrade"])
+async def me_autotrade_status(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    return _runtime_status_dict(_runtime_for(user, as_user))
+
+
+@app.post("/me/autotrade/enable", tags=["Me · Autotrade"])
+async def me_autotrade_enable(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    # Sanity: make sure the user has keys on file — no point enabling
+    # autotrade if we can't place orders for them.
+    try:
+        await user_client_pool.get(_runtime_for(user, as_user).user_id)
+    except Exception as exc:
+        raise HTTPException(400, f"Connect Binance keys first: {exc}")
+
+    rt = _runtime_for(user, as_user)
+    rt.enable()
+    rt.record_event({"symbol": "-", "action": "enabled", "reason": "user toggle"})
+    logger.info("[Runtime] user=%s autotrade ENABLED", rt.user_id)
+    return _runtime_status_dict(rt)
+
+
+@app.post("/me/autotrade/disable", tags=["Me · Autotrade"])
+async def me_autotrade_disable(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    rt = _runtime_for(user, as_user)
+    rt.disable()
+    rt.record_event({"symbol": "-", "action": "disabled", "reason": "user toggle"})
+    logger.info("[Runtime] user=%s autotrade DISABLED", rt.user_id)
+    return _runtime_status_dict(rt)
+
+
+@app.post("/me/autotrade/config", tags=["Me · Autotrade"])
+async def me_autotrade_config(
+    body: MeAutotradeConfigRequest,
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    rt = _runtime_for(user, as_user)
+    applied = rt.update_config(body.model_dump(exclude_none=True))
+    rt.record_event({"symbol": "-", "action": "config", "reason": str(applied)})
+    return {"updated": applied, "state": _runtime_status_dict(rt)}
+
+
+# ── /me/circuit-breaker — per-user breaker ────────────────────────────────────
+
+@app.get("/me/circuit-breaker", tags=["Me · Risk"])
+async def me_circuit_breaker(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    rt = _runtime_for(user, as_user)
+    return {**rt.circuit.status(), "timestamp": time.time()}
+
+
+@app.post("/me/circuit-breaker/trip", tags=["Me · Risk"])
+async def me_circuit_breaker_trip(
+    reason: str = "Manual trip via /me/circuit-breaker/trip",
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    rt = _runtime_for(user, as_user)
+    rt.circuit.trip(reason)
+    rt.record_event({"symbol": "-", "action": "breaker_tripped", "reason": reason})
+    logger.info("[Runtime] user=%s breaker TRIPPED: %s", rt.user_id, reason)
+    return {"message": "Circuit breaker tripped.", **rt.circuit.status()}
+
+
+@app.post("/me/circuit-breaker/reset", tags=["Me · Risk"])
+async def me_circuit_breaker_reset(
+    as_user: Optional[str] = None,
+    user: CurrentUser = Depends(require_user),
+):
+    rt = _runtime_for(user, as_user)
+    rt.circuit.reset()
+    rt.record_event({"symbol": "-", "action": "breaker_reset", "reason": "user reset"})
+    return {"message": "Circuit breaker reset.", **rt.circuit.status()}
 
 
 @app.delete("/orders/{order_id}", tags=["Orders"])

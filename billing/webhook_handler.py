@@ -220,7 +220,78 @@ async def stripe_webhook(request: Request):
         # Return 500 so Stripe retries — do NOT swallow silently
         raise HTTPException(status_code=500, detail="Internal handler error")
 
+    # ── 4. Mirror subscription state into auth.users (dashboard's source of
+    # truth for entitlement). Never fatal — failures here are logged and
+    # the webhook still returns 200 so Stripe doesn't replay an already-
+    # processed billing-store event.
+    try:
+        await _mirror_to_auth_users(event_type, data)
+    except Exception as exc:
+        logger.warning(f"[Billing] auth.users mirror failed for {event_id}: {exc}")
+
     return JSONResponse({"received": True, "event_id": event_id})
+
+
+async def _mirror_to_auth_users(event_type: str, data: dict) -> None:
+    """
+    Map a Stripe event onto (tier, status, customer_id, email) and push
+    those fields into auth.users so the dashboard's ProtectedRoute
+    unlocks immediately.
+    """
+    from .auth_users_sync import upsert_auth_user
+
+    customer_id = data.get("customer") or None
+    tier:   Optional[str] = None
+    status: Optional[str] = None
+    email:  Optional[str] = None
+
+    if event_type == "checkout.session.completed":
+        # Metadata.tier is the trusted value we set at checkout creation time.
+        tier   = (data.get("metadata") or {}).get("tier")
+        status = "active"
+        email  = (
+            (data.get("customer_details") or {}).get("email")
+            or data.get("customer_email")
+        )
+        # If metadata.tier is missing (shouldn't happen — we set it in
+        # stripe_gateway.create_checkout — fall back to resolving from the
+        # subscription's price_id.
+        if not tier and data.get("subscription"):
+            t, _iv = _resolve_tier_from_subscription_id(data["subscription"])
+            tier = getattr(t, "value", str(t)) if t else None
+
+    elif event_type == "customer.subscription.updated":
+        status = data.get("status")              # active / trialing / past_due / ...
+        t, _iv = _resolve_tier_from_sub_object(data)
+        tier   = getattr(t, "value", str(t)) if t else None
+
+    elif event_type == "customer.subscription.deleted":
+        status = "canceled"
+        tier   = "free"                           # revoke access
+
+    elif event_type == "invoice.payment_succeeded":
+        status = "active"                         # renewal → stay active
+
+    elif event_type == "invoice.payment_failed":
+        status = "past_due"
+
+    else:
+        return  # nothing to mirror
+
+    # Normalize: the SubscriptionTier enum may stringify as "SubscriptionTier.PRO"
+    if tier and "." in tier:
+        tier = tier.split(".")[-1]
+    if tier:
+        tier = tier.lower()
+    if tier == "unknown":
+        tier = None  # don't overwrite a known tier with 'unknown'
+
+    await upsert_auth_user(
+        email=email,
+        customer_id=customer_id,
+        tier=tier,
+        status=status,
+    )
 
 # ── Event handlers ────────────────────────────────────────────────────────────
 

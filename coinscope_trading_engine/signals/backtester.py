@@ -273,7 +273,18 @@ class Backtester:
         ----------
         rest : BinanceRESTClient
             Connected REST client to fetch historical klines.
+
+        Notes
+        -----
+        ``_replay`` is CPU-bound (iterates every bar, runs the full
+        signal/scoring/risk stack) and can take minutes per symbol.
+        We offload it to a worker thread with ``asyncio.to_thread`` so it
+        doesn't block the FastAPI event loop — otherwise the API freezes
+        (health, prices, account, orders all hang) for the duration of
+        every backtest job.
         """
+        import asyncio
+
         results = BacktestResults(config=self._config)
         balance = self._config.initial_balance
         results.equity_curve.append(balance)
@@ -286,7 +297,10 @@ class Backtester:
                 logger.warning("Not enough candles for %s (%d) — skipping", symbol, len(candles))
                 continue
 
-            trades, balance, equity = self._replay(symbol, candles, balance)
+            # Run the heavy CPU replay off the event loop so HTTP stays responsive.
+            trades, balance, equity = await asyncio.to_thread(
+                self._replay, symbol, candles, balance
+            )
             results.trades.extend(trades)
             results.equity_curve.extend(equity)
 

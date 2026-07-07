@@ -264,6 +264,47 @@ class Settings(BaseSettings):
         description="Redirect URL on checkout cancel"
     )
 
+    # ── Auth / User accounts (Phase 1) ────────────────────────────────────
+    # Separate DSN from decisions_pg_url so you can point auth at a different
+    # DB later if you want. Empty → falls back to decisions_pg_url at runtime.
+    auth_pg_url: str = Field(
+        "", description="Postgres DSN for auth (users, sessions, etc). Empty = reuse DECISIONS_PG_URL."
+    )
+    jwt_secret: SecretStr = Field(
+        SecretStr("change_me_to_a_random_secret"),
+        description="HS256 signing secret for JWT access/refresh tokens. Generate: openssl rand -hex 32",
+    )
+    jwt_access_ttl_seconds: int = Field(
+        15 * 60, ge=60, description="Access token TTL (default 15 min)"
+    )
+    jwt_refresh_ttl_seconds: int = Field(
+        30 * 24 * 3600, ge=3600, description="Refresh token TTL (default 30 days)"
+    )
+    auth_encryption_key: SecretStr = Field(
+        SecretStr("change_me_32_bytes_base64_or_hex"),
+        description="AES-256-GCM key (urlsafe b64 / 32+ bytes) for encrypting per-user API credentials",
+    )
+    resend_api_key: Optional[SecretStr] = Field(
+        None, description="Resend API key (re_...) for transactional email"
+    )
+    sender_email: str = Field(
+        "no-reply@coinscope.ai", description="From address for auth emails"
+    )
+    sender_name: str = Field(
+        "CoinScopeAI", description="Display name for auth emails"
+    )
+    app_base_url: str = Field(
+        "https://app.coinscope.ai",
+        description="Public base URL of the dashboard (used in verification/reset links)",
+    )
+    signup_flow: str = Field(
+        "b",
+        description="Onboarding flow: a=free-trial, b=card-upfront, c=waitlist-only",
+    )
+    signup_enabled: bool = Field(
+        True, description="Master kill switch for new user registration"
+    )
+
     # ── Logging ───────────────────────────────────────────────────────────
     log_level: LogLevel = Field(LogLevel.INFO, description="Application log level")
     log_file: str = Field("logs/coinscope.log", description="Rotating log file path")
@@ -332,6 +373,11 @@ class Settings(BaseSettings):
     def environment(self) -> Environment:
         """Alias for `env` — some callers use this name."""
         return self.env
+
+    @property
+    def active_auth_pg_url(self) -> str:
+        """DSN for the auth database. Falls back to the decisions DSN when unset."""
+        return self.auth_pg_url or self.decisions_pg_url
 
     @property
     def max_position_size_pct(self) -> float:

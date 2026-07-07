@@ -55,6 +55,9 @@ class DecisionEvent:
     notional:     Optional[float]     = None
     source:       str                 = "auto"   # "auto" | "manual" | "api"
     extra:        Optional[dict]      = None
+    # Phase 4c — auth.users.id of the user this decision belongs to.
+    # None means "engine/legacy" (pre-multi-tenant, before we tagged writes).
+    user_id:      Optional[str]       = None
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +124,9 @@ class DecisionJournal:
                 dsn=self._pg_url, min_size=1, max_size=4, command_timeout=10,
             )
             async with self._pg_pool.acquire() as conn:
+                # Idempotent schema — safe to run on every boot. The
+                # user_id column is added by a defensive ALTER so old
+                # deployments pick it up on first restart after upgrade.
                 await conn.execute("""
                     CREATE TABLE IF NOT EXISTS decisions (
                         id           BIGSERIAL PRIMARY KEY,
@@ -140,12 +146,17 @@ class DecisionJournal:
                         qty          DOUBLE PRECISION,
                         notional     DOUBLE PRECISION,
                         source       TEXT,
-                        extra        JSONB
+                        extra        JSONB,
+                        user_id      UUID
                     );
+                    ALTER TABLE decisions ADD COLUMN IF NOT EXISTS user_id UUID;
                     CREATE INDEX IF NOT EXISTS idx_decisions_ts_symbol
                         ON decisions (ts DESC, symbol);
                     CREATE INDEX IF NOT EXISTS idx_decisions_action
                         ON decisions (action, ts DESC);
+                    CREATE INDEX IF NOT EXISTS idx_decisions_user_ts
+                        ON decisions (user_id, ts DESC)
+                        WHERE user_id IS NOT NULL;
                 """)
             self._pg_ready = True
             # Start the background writer
@@ -185,10 +196,10 @@ class DecisionJournal:
                         """INSERT INTO decisions
                            (ts, symbol, direction, action, reason, signal_score,
                             strength, regime, htf_trend, setup, scanners, gate_state,
-                            order_id, qty, notional, source, extra)
+                            order_id, qty, notional, source, extra, user_id)
                            VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8, $9,
                                    $10::jsonb, $11::jsonb, $12::jsonb,
-                                   $13, $14, $15, $16, $17::jsonb)""",
+                                   $13, $14, $15, $16, $17::jsonb, $18::uuid)""",
                         [
                             (
                                 e.ts, e.symbol, e.direction, e.action, e.reason,
@@ -198,6 +209,7 @@ class DecisionJournal:
                                 json.dumps(e.gate_state) if e.gate_state else None,
                                 e.order_id, e.qty, e.notional, e.source,
                                 json.dumps(e.extra) if e.extra else None,
+                                e.user_id or None,
                             )
                             for e in batch
                         ],
@@ -259,10 +271,17 @@ class DecisionJournal:
         symbol: Optional[str] = None,
         action: Optional[str] = None,
         limit: int = 100,
+        user_id: Optional[str] = None,
     ) -> list[dict]:
-        """Most recent events (newest first), optionally filtered."""
+        """Most recent events (newest first), optionally filtered.
+
+        `user_id` scopes the result to a single user. Pass None for the
+        engine-wide view (admin/debug).
+        """
         with self._lock:
             xs = list(self._recent)
+        if user_id is not None:
+            xs = [e for e in xs if (e.user_id or "") == user_id]
         if symbol:
             xs = [e for e in xs if e.symbol == symbol]
         if action:
@@ -270,7 +289,7 @@ class DecisionJournal:
         xs.reverse()
         return [_prune_none(asdict(e)) for e in xs[:limit]]
 
-    def stats(self, window_s: Optional[int] = None) -> dict:
+    def stats(self, window_s: Optional[int] = None, user_id: Optional[str] = None) -> dict:
         """Aggregate decision counts + rejection reason histogram."""
         cutoff = time.time() - (window_s or self._window_s)
         actions: dict[str, int] = {}
@@ -281,6 +300,8 @@ class DecisionJournal:
             xs = list(self._recent)
         for e in xs:
             if e.ts < cutoff:
+                continue
+            if user_id is not None and (e.user_id or "") != user_id:
                 continue
             n += 1
             actions[e.action] = actions.get(e.action, 0) + 1
@@ -300,10 +321,42 @@ class DecisionJournal:
             "top_rejections": [{"reason": r, "count": c} for r, c in top_rejects],
         }
 
-    def per_symbol_health(self) -> dict[str, dict]:
-        """Rolling per-symbol health snapshot."""
+    def per_symbol_health(self, user_id: Optional[str] = None) -> dict[str, dict]:
+        """Rolling per-symbol health snapshot.
+
+        Phase 4c note: the live SymbolHealth cache is still engine-wide
+        (shared across users). Per-user health accounting comes in 4d
+        when we split the autotrade runtime. For now:
+          - user_id=None → engine-wide cache (admin view)
+          - user_id=<uuid> → compute on-the-fly from per-user decisions
+            in the in-memory window.
+        """
+        if user_id is None:
+            with self._lock:
+                return {s: asdict(h) for s, h in self._per_symbol.items()}
+
+        # User-scoped compute from the recent deque
+        now = time.time()
+        cutoff = now - 24 * 3600
+        by_sym: dict[str, SymbolHealth] = {}
         with self._lock:
-            return {s: asdict(h) for s, h in self._per_symbol.items()}
+            xs = list(self._recent)
+        for e in xs:
+            if e.ts < cutoff or (e.user_id or "") != user_id:
+                continue
+            h = by_sym.setdefault(e.symbol, SymbolHealth(symbol=e.symbol))
+            if e.action == "accept":
+                h.accepts_24h += 1
+                h.last_accept_at = e.ts
+                h.last_action = "accept"
+            elif e.action == "reject":
+                h.rejects_24h += 1
+                h.last_reject_at = e.ts
+                h.last_action = "reject"
+            elif e.action == "skip":
+                h.skips_24h += 1
+                h.last_action = "skip"
+        return {s: asdict(h) for s, h in by_sym.items()}
 
     def symbol_health(self, symbol: str) -> SymbolHealth:
         """Get (or create) the health record for one symbol."""

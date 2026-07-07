@@ -10,6 +10,12 @@ uvicorn[standard]>=0.29.0
 python-multipart>=0.0.9        # form/file uploads in FastAPI
 httpx>=0.27.0                  # async HTTP client (webhooks, external APIs)
 
+# ── Auth (Phase 1 — user accounts) ────────────────────────────────────────────
+argon2-cffi>=23.1.0             # OWASP-recommended password hashing (argon2id)
+PyJWT>=2.8.0                    # JWT access/refresh tokens (HS256)
+email-validator>=2.1.0          # Pydantic EmailStr validator
+cryptography>=42.0.0            # AES-256-GCM for the per-user Binance key vault (Phase 4)
+
 # ── Configuration & environment ───────────────────────────────────────────────
 pydantic>=2.6.0
 pydantic-settings>=2.2.0

@@ -240,13 +240,21 @@ async def create_checkout(body: CheckoutRequest) -> CheckoutResponse:
             customer_id = customer.id
             logger.info("Created Stripe customer %s for %s", customer_id, body.customer_email)
 
+        # Honour per-request redirect URLs (frontend passes its own
+        # app.coinscope.ai URLs) and fall back to env defaults.
+        effective_success = body.success_url or settings.billing_success_url or settings.stripe_success_url
+        effective_cancel  = body.cancel_url  or settings.billing_cancel_url  or settings.stripe_cancel_url
+        if "{CHECKOUT_SESSION_ID}" not in effective_success:
+            sep = "&" if "?" in effective_success else "?"
+            effective_success = f"{effective_success}{sep}session_id={{CHECKOUT_SESSION_ID}}"
+
         session = stripe.checkout.Session.create(
             customer           = customer_id,
             payment_method_types = ["card"],
             line_items         = [{"price": price_id, "quantity": 1}],
             mode               = "subscription",
-            success_url        = settings.stripe_success_url + "?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url         = settings.stripe_cancel_url,
+            success_url        = effective_success,
+            cancel_url         = effective_cancel,
             metadata           = {
                 "tier":   body.tier.value,
                 "source": "coinscopeai_engine",

@@ -12,16 +12,19 @@ assignees: ""
 
 ## Phase alignment
 
-- [ ] P0 — testnet validation (in flight — needs sign-off before merging)
-- [ ] P1 — soft launch (Jun–Jul 2026)
-- [ ] P1.5 — compliance and margin scaffold
-- [ ] P2 — Bybit + vendor expansion (Aug–Sep 2026)
-- [ ] P3 — trust rail, compliance, stability (Oct–Dec 2026)
-- [ ] P4+ — deferred
+- [ ] P0 — testnet validation (in flight — changes need sign-off)
+- [ ] P1 — soft launch (Jun 2026)
+- [ ] P1.5 — compliance and margin
+- [ ] P2 — Bybit + expansion (Aug-Sep 2026)
+- [ ] P3+ — deferred
 
 ## Problem it solves
 
+<!-- What gap or pain point does this address? -->
+
 ## Proposed solution
+
+<!-- High-level description of the approach -->
 
 ## Acceptance criteria
 
@@ -30,12 +33,12 @@ assignees: ""
 
 ## Out of scope
 
-## Risk / compliance considerations
-
-<!-- Does this touch the risk gate, exchange adapter, or any threshold? If yes, a strategy_change issue is also required. -->
+<!-- What this explicitly does NOT include -->
 
 ## Dependencies / blockers
 
+<!-- Other issues, ADRs, or external dependencies -->
+
 ## Related
 
-<!-- Linear issue (COI-NNN), Notion doc, or ADR -->
+<!-- Linear issue, Notion doc, or ADR -->

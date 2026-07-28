@@ -86,7 +86,9 @@ def _extract_block(text: str) -> str:
 def _table_rows(block: str) -> list[str]:
     rows = [line.strip() for line in block.splitlines() if line.strip().startswith("|")]
     if len(rows) < 3:
-        raise MatrixError("matrix table has fewer than 3 rows (header + separator + at least 1 row)")
+        raise MatrixError(
+            "matrix table has fewer than 3 rows (header + separator + at least 1 row)"
+        )
     return rows[2:]  # skip header + separator
 
 
@@ -123,7 +125,9 @@ def check() -> int:
     try:
         text = MATRIX_FILE.read_text(encoding="utf-8")
     except FileNotFoundError:
-        print(f"matrix-check: ERROR — {MATRIX_FILE.relative_to(REPO_ROOT)} not found", file=sys.stderr)
+        print(
+            f"matrix-check: ERROR — {MATRIX_FILE.relative_to(REPO_ROOT)} not found", file=sys.stderr
+        )
         return 2
 
     try:
@@ -140,12 +144,10 @@ def check() -> int:
     for raw_row in rows:
         cells = _cells(raw_row)
         if len(cells) != len(HEADER):
-            errors.append(
-                f"row has {len(cells)} cells, expected {len(HEADER)}: {raw_row[:80]}…"
-            )
+            errors.append(f"row has {len(cells)} cells, expected {len(HEADER)}: {raw_row[:80]}…")
             continue
 
-        record = dict(zip(HEADER, cells))
+        record = dict(zip(HEADER, cells, strict=False))
         rowid = record["ID"]
         status = record["Status"]
         row_count += 1
@@ -176,9 +178,7 @@ def check() -> int:
                 # Skip self-references (e.g. "this file") that aren't backticked.
                 target = REPO_ROOT / path
                 if not target.exists():
-                    errors.append(
-                        f"{rowid}: cited path missing in column '{column}': {path}"
-                    )
+                    errors.append(f"{rowid}: cited path missing in column '{column}': {path}")
 
     if row_count == 0:
         print("matrix-check: ERROR — table has zero data rows", file=sys.stderr)

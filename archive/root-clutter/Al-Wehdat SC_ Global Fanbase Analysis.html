@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<!-- saved from url=(0062)file:///Users/mac/Downloads/al_wehdat_fanbase_infographic.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al-Wehdat SC: Global Fanbase Analysis</title>
+    <script src="./Al-Wehdat SC_ Global Fanbase Analysis_files/saved_resource"></script>
+    <script src="./Al-Wehdat SC_ Global Fanbase Analysis_files/chart.js"></script>
+    <script src="./Al-Wehdat SC_ Global Fanbase Analysis_files/plotly-2.27.0.min.js"></script><style id="plotly.js-style-global"></style>
+    <style>
+        /* Chosen Palette: Vibrant Emerald & Crimson (Based on "Energetic & Playful" and "Brilliant Blues" contrast guides) */
+        :root {
+            --emerald: #059669;
+            --crimson: #dc2626;
+            --amber: #f59e0b;
+            --slate-bg: #f8fafc;
+            --navy-text: #0f172a;
+            --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            background-color: var(--slate-bg);
+            color: var(--navy-text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 380px;
+            }
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+            height: 100%;
+        }
+
+        .stat-card {
+            border-top: 4px solid var(--emerald);
+        }
+
+        .nav-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e2e8f0;
+        }
+    </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:0.5rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.ml-2{margin-left:0.5rem}.mr-2{margin-right:0.5rem}.mr-3{margin-right:0.75rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-4{margin-top:1rem}.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-10{height:2.5rem}.h-2{height:0.5rem}.h-8{height:2rem}.h-\[400px\]{height:400px}.w-10{width:2.5rem}.w-2{width:0.5rem}.w-8{width:2rem}.w-full{width:100%}.max-w-4xl{max-width:56rem}.max-w-7xl{max-width:80rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.cursor-crosshair{cursor:crosshair}.cursor-e-resize{cursor:e-resize}.cursor-ew-resize{cursor:ew-resize}.cursor-n-resize{cursor:n-resize}.cursor-ne-resize{cursor:ne-resize}.cursor-ns-resize{cursor:ns-resize}.cursor-nw-resize{cursor:nw-resize}.cursor-s-resize{cursor:s-resize}.cursor-se-resize{cursor:se-resize}.cursor-sw-resize{cursor:sw-resize}.cursor-w-resize{cursor:w-resize}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.space-x-4 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(1rem * var(--tw-space-x-reverse));margin-left:calc(1rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-12 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(3rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(3rem * var(--tw-space-y-reverse))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-8 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(2rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(2rem * var(--tw-space-y-reverse))}.rounded{border-radius:0.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-l-4{border-left-width:4px}.border-t{border-top-width:1px}.border-\[\#059669\]{--tw-border-opacity:1;border-color:rgb(5 150 105 / var(--tw-border-opacity, 1))}.border-\[\#dc2626\]{--tw-border-opacity:1;border-color:rgb(220 38 38 / var(--tw-border-opacity, 1))}.border-\[\#f59e0b\]{--tw-border-opacity:1;border-color:rgb(245 158 11 / var(--tw-border-opacity, 1))}.border-slate-100{--tw-border-opacity:1;border-color:rgb(241 245 249 / var(--tw-border-opacity, 1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85 / var(--tw-border-opacity, 1))}.border-slate-800{--tw-border-opacity:1;border-color:rgb(30 41 59 / var(--tw-border-opacity, 1))}.border-t-\[\#dc2626\]{--tw-border-opacity:1;border-top-color:rgb(220 38 38 / var(--tw-border-opacity, 1))}.border-t-\[\#f59e0b\]{--tw-border-opacity:1;border-top-color:rgb(245 158 11 / var(--tw-border-opacity, 1))}.bg-\[\#059669\]{--tw-bg-opacity:1;background-color:rgb(5 150 105 / var(--tw-bg-opacity, 1))}.bg-\[\#059669\]\/20{background-color:rgb(5 150 105 / 0.2)}.bg-\[\#0f172a\]{--tw-bg-opacity:1;background-color:rgb(15 23 42 / var(--tw-bg-opacity, 1))}.bg-\[\#dc2626\]\/20{background-color:rgb(220 38 38 / 0.2)}.bg-\[\#f59e0b\]\/20{background-color:rgb(245 158 11 / 0.2)}.bg-slate-100{--tw-bg-opacity:1;background-color:rgb(241 245 249 / var(--tw-bg-opacity, 1))}.bg-slate-50{--tw-bg-opacity:1;background-color:rgb(248 250 252 / var(--tw-bg-opacity, 1))}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42 / var(--tw-bg-opacity, 1))}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-\[\#059669\]{--tw-gradient-from:#059669 var(--tw-gradient-from-position);--tw-gradient-to:rgb(5 150 105 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-\[\#047857\]{--tw-gradient-to:#047857 var(--tw-gradient-to-position)}.p-3{padding:0.75rem}.p-4{padding:1rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-16{padding-top:4rem;padding-bottom:4rem}.py-4{padding-top:1rem;padding-bottom:1rem}.pb-2{padding-bottom:0.5rem}.pl-6{padding-left:1.5rem}.text-center{text-align:center}.text-right{text-align:right}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-light{font-weight:300}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.text-\[\#059669\]{--tw-text-opacity:1;color:rgb(5 150 105 / var(--tw-text-opacity, 1))}.text-\[\#dc2626\]{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-\[\#f59e0b\]{--tw-text-opacity:1;color:rgb(245 158 11 / var(--tw-text-opacity, 1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184 / var(--tw-text-opacity, 1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139 / var(--tw-text-opacity, 1))}.text-slate-600{--tw-text-opacity:1;color:rgb(71 85 105 / var(--tw-text-opacity, 1))}.text-slate-800{--tw-text-opacity:1;color:rgb(30 41 59 / var(--tw-text-opacity, 1))}.text-slate-900{--tw-text-opacity:1;color:rgb(15 23 42 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.antialiased{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.opacity-50{opacity:0.5}.opacity-90{opacity:0.9}@media (min-width: 640px){.sm\:inline{display:inline}}@media (min-width: 768px){.md\:mt-0{margin-top:0px}.md\:w-1\/2{width:50%}.md\:w-1\/3{width:33.333333%}.md\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.md\:flex-row{flex-direction:row}.md\:text-5xl{font-size:3rem;line-height:1}}@media (min-width: 1024px){.lg\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}</style></head>
+<body class="antialiased">
+
+    <!-- 
+    Plan Narrative & Structure:
+    1. Introduction: Contextualizing Al-Wehdat as a socio-political symbol.
+    2. Step 1: Domestic Market Analysis (Jordanian split and market penetration).
+    3. Step 2: The Diaspora Reach (GCC expatriates and the Global Palestinian cohort).
+    4. Step 3: Synthesis (Low, Mid, and High-End forecasts).
+    5. Conclusion: Commercial strategy and revenue implications.
+    -->
+
+    <!-- 
+    Visualization Justification Summary (NO SVG USED):
+    - Stat Highlights: Single Big Numbers (HTML/Tailwind) for core KPIs.
+    - Domestic Breakdown: Stacked Bar (Chart.js/Canvas) for comparing pop splits.
+    - Market Share: Donut Chart (Chart.js/Canvas) for Al-Wehdat vs Others.
+    - Diaspora Distribution: Bubble Chart (Plotly/Canvas) for regional density.
+    - Final Synthesis: Grouped Bar Chart (Chart.js/Canvas) for scenario comparisons.
+    - Commercial Funnel: Structured HTML/CSS elements for process flow.
+    -->
+
+    <nav class="nav-sticky px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="font-bold text-xl tracking-tight flex items-center">
+                <div class="w-8 h-8 bg-[#059669] rounded-full mr-2"></div>
+                AL-WEHDAT SC <span class="ml-2 font-light text-slate-500 hidden sm:inline">| Demographic Intelligence</span>
+            </div>
+            <div class="text-xs font-semibold bg-slate-100 px-3 py-1 rounded-full text-slate-600">
+                FERMI ESTIMATION MODEL 2026
+            </div>
+        </div>
+    </nav>
+
+    <header class="bg-gradient-to-r from-[#059669] to-[#047857] text-white py-16 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-6">The Global Green Pulse</h1>
+            <p class="text-lg opacity-90 leading-relaxed">
+                Quantifying one of the Arab world's most culturally significant football institutions. 
+                Using a multi-vector Fermi model, we analyze the demographic scaffolding of 
+                Al-Wehdat SC across Jordan, the GCC, and the global Palestinian diaspora.
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-12 space-y-12">
+
+        <!-- Introduction Paragraph -->
+        <section class="max-w-4xl mx-auto text-center">
+            <h2 class="text-2xl font-bold mb-4 text-[#059669]">Beyond the Pitch</h2>
+            <p class="text-slate-600 leading-relaxed">
+                Al-Wehdat SC is not merely a sports club; it is an existential symbol of Palestinian heritage and resilience. 
+                Founded in 1956 within the Al-Wehdat refugee camp, the club commands a loyalty that is geographically 
+                transcendent. Because official CRM data is non-existent for regional fandoms, our analysis utilizes 
+                demographic splits, migration history, and cultural affinity rates to estimate the market size.
+            </p>
+        </section>
+
+        <!-- Core KPIs -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="card stat-card text-center">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Conservative Floor</p>
+                <h3 class="text-4xl font-black text-slate-800">1.87M</h3>
+                <p class="text-xs text-slate-400 mt-2">Active Core Supporters</p>
+            </div>
+            <div class="card stat-card border-t-[#dc2626] text-center">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Most Likely Reach</p>
+                <h3 class="text-4xl font-black text-[#059669]">3.35M</h3>
+                <p class="text-xs text-slate-400 mt-2">Estimated Median Fanbase</p>
+            </div>
+            <div class="card stat-card border-t-[#f59e0b] text-center">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Maximum Potential</p>
+                <h3 class="text-4xl font-black text-slate-800">5.37M</h3>
+                <p class="text-xs text-slate-400 mt-2">Total Global Sympathizers</p>
+            </div>
+        </div>
+
+        <!-- Step 1: Domestic -->
+        <section id="domestic" class="space-y-8">
+            <div class="border-l-4 border-[#059669] pl-6">
+                <h2 class="text-3xl font-extrabold text-slate-900">Step 1: The Domestic Engine</h2>
+                <p class="text-slate-500 mt-2">Analyzing the Hashemite Kingdom of Jordan's internal population dynamics.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="card">
+                    <h4 class="text-lg font-bold mb-4">Jordanian Population Split</h4>
+                    <p class="text-sm text-slate-600 mb-6">
+                        Jordan's demographic reality is bifurcated. Historical migration patterns suggest that between 50% to 70% 
+                        of the population is of Palestinian descent. This group represents the core addressable market for Al-Wehdat SC.
+                    </p>
+                    <div class="chart-container">
+                        <canvas id="domesticPopChart" width="552" height="380" style="display: block; box-sizing: border-box; height: 380px; width: 552px;"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4 class="text-lg font-bold mb-4">Market Share Penetration</h4>
+                    <p class="text-sm text-slate-600 mb-6">
+                        Within the football-following demographic of Palestinian-Jordanians, Al-Wehdat enjoys a near-monopoly. 
+                        This chart shows our "Most Likely" scenario for market dominance compared to other local clubs.
+                    </p>
+                    <div class="chart-container">
+                        <canvas id="marketShareChart" width="552" height="380" style="display: block; box-sizing: border-box; height: 380px; width: 552px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Diaspora -->
+        <section id="diaspora" class="space-y-8">
+            <div class="border-l-4 border-[#dc2626] pl-6">
+                <h2 class="text-3xl font-extrabold text-slate-900">Step 2: The Diaspora Reach</h2>
+                <p class="text-slate-500 mt-2">Quantifying support across the GCC and Global networks.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-8">
+                <div class="card">
+                    <div class="flex flex-col md:flex-row justify-between mb-6">
+                        <div class="md:w-1/2">
+                            <h4 class="text-lg font-bold">Regional Distribution Density</h4>
+                            <p class="text-sm text-slate-600 mt-2">
+                                The Gulf Cooperation Council (GCC) acts as a high-income economic hub for hundreds of thousands 
+                                of Jordanians and Palestinians. While the global diaspora is larger, the GCC has higher 
+                                active engagement due to regional cultural proximity.
+                            </p>
+                        </div>
+                        <div class="md:w-1/3 mt-4 md:mt-0 flex items-center justify-end">
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 text-right">
+                                <span class="text-xs font-bold text-[#dc2626] block uppercase">GCC Estimated Segment</span>
+                                <span class="text-2xl font-black">~392,000 Fans</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="diasporaBubbleChart" class="w-full h-[400px] js-plotly-plot"><div class="plot-container plotly"><div class="user-select-none svg-container" style="position: relative; width: 100%; height: 100%;"><svg class="main-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1184" height="400" style="background: rgba(0, 0, 0, 0);"><defs id="defs-5a5dce"><g class="clips"><clippath id="clip5a5dcexyplot" class="plotclip"><rect width="1144" height="340"></rect></clippath><clippath class="axesclip" id="clip5a5dcex"><rect x="20" y="0" width="1144" height="400"></rect></clippath><clippath class="axesclip" id="clip5a5dcey"><rect x="0" y="40" width="1184" height="340"></rect></clippath><clippath class="axesclip" id="clip5a5dcexy"><rect x="20" y="40" width="1144" height="340"></rect></clippath></g><g class="gradients"></g><g class="patterns"></g></defs><g class="bglayer"><rect class="bg" x="20" y="40" width="1144" height="340" style="fill: rgb(0, 0, 0); fill-opacity: 0; stroke-width: 0;"></rect></g><g class="draglayer cursor-crosshair"><g class="xy"><rect class="nsewdrag drag" data-subplot="xy" x="20" y="40" width="1144" height="340" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="nwdrag drag cursor-nw-resize" data-subplot="xy" x="0" y="20" width="20" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="nedrag drag cursor-ne-resize" data-subplot="xy" x="1164" y="20" width="20" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="swdrag drag cursor-sw-resize" data-subplot="xy" x="0" y="380" width="20" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="sedrag drag cursor-se-resize" data-subplot="xy" x="1164" y="380" width="20" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="ewdrag drag cursor-ew-resize" data-subplot="xy" x="134.4" y="380.5" width="915.2" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="wdrag drag cursor-w-resize" data-subplot="xy" x="20" y="380.5" width="114.4" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="edrag drag cursor-e-resize" data-subplot="xy" x="1049.6000000000001" y="380.5" width="114.4" height="20" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="nsdrag drag cursor-ns-resize" data-subplot="xy" x="-0.5" y="74" width="20" height="272" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="sdrag drag cursor-s-resize" data-subplot="xy" x="-0.5" y="346" width="20" height="34" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect><rect class="ndrag drag cursor-n-resize" data-subplot="xy" x="-0.5" y="40" width="20" height="34" style="fill: transparent; stroke-width: 0; pointer-events: all;"></rect></g></g><g class="layer-below"><g class="imagelayer"></g><g class="shapelayer"></g></g><g class="cartesianlayer"><g class="subplot xy"><g class="layer-subplot"><g class="shapelayer"></g><g class="imagelayer"></g></g><g class="minor-gridlayer"><g class="x"></g><g class="y"></g></g><g class="gridlayer"><g class="x"></g><g class="y"></g></g><g class="zerolinelayer"></g><path class="xlines-below"></path><path class="ylines-below"></path><g class="overlines-below"></g><g class="xaxislayer-below"></g><g class="yaxislayer-below"></g><g class="overaxes-below"></g><g class="plot" transform="translate(20,40)" clip-path="url(#clip5a5dcexyplot)"><g class="scatterlayer mlayer"><g class="trace scatter trace734e2a" style="stroke-miterlimit: 2; opacity: 1;"><g class="fills"></g><g class="errorbars"></g><g class="lines"></g><g class="points"><path class="point" transform="translate(75.95,304.25)" d="M15,0A15,15 0 1,1 0,-15A15,15 0 0,1 15,0Z" style="opacity: 0.7; stroke-width: 1px; fill: rgb(148, 163, 184); fill-opacity: 1; stroke: rgb(255, 255, 255); stroke-opacity: 1;"></path><path class="point" transform="translate(396.23,225.17)" d="M20,0A20,20 0 1,1 0,-20A20,20 0 0,1 20,0Z" style="opacity: 0.7; stroke-width: 1px; fill: rgb(148, 163, 184); fill-opacity: 1; stroke: rgb(255, 255, 255); stroke-opacity: 1;"></path><path class="point" transform="translate(716.52,146.08)" d="M60,0A60,60 0 1,1 0,-60A60,60 0 0,1 60,0Z" style="opacity: 0.7; stroke-width: 1px; fill: rgb(220, 38, 38); fill-opacity: 1; stroke: rgb(255, 255, 255); stroke-opacity: 1;"></path><path class="point" transform="translate(1036.8,67)" d="M40,0A40,40 0 1,1 0,-40A40,40 0 0,1 40,0Z" style="opacity: 0.7; stroke-width: 1px; fill: rgb(5, 150, 105); fill-opacity: 1; stroke: rgb(255, 255, 255); stroke-opacity: 1;"></path></g><g class="text"><g class="textpoint" transform="translate(0,-22.75)"><text x="75.95" y="304.25" data-unformatted="USA/Canada" data-math="N" text-anchor="middle" style="font-family: &quot;Open Sans&quot;, verdana, arial, sans-serif; font-size: 12px; fill: rgb(68, 68, 68); fill-opacity: 1; white-space: pre;">USA/Canada</text></g><g class="textpoint" transform="translate(0,-29)"><text x="396.23" y="225.17" data-unformatted="European Union" data-math="N" text-anchor="middle" style="font-family: &quot;Open Sans&quot;, verdana, arial, sans-serif; font-size: 12px; fill: rgb(68, 68, 68); fill-opacity: 1; white-space: pre;">European Union</text></g><g class="textpoint" transform="translate(0,-79)"><text x="716.52" y="146.08" data-unformatted="GCC Expatriates" data-math="N" text-anchor="middle" style="font-family: &quot;Open Sans&quot;, verdana, arial, sans-serif; font-size: 12px; fill: rgb(68, 68, 68); fill-opacity: 1; white-space: pre;">GCC Expatriates</text></g><g class="textpoint" transform="translate(0,-54)"><text x="1036.8" y="67" data-unformatted="West Bank/Gaza" data-math="N" text-anchor="middle" style="font-family: &quot;Open Sans&quot;, verdana, arial, sans-serif; font-size: 12px; fill: rgb(68, 68, 68); fill-opacity: 1; white-space: pre;">West Bank/Gaza</text></g></g></g></g></g><g class="overplot"></g><path class="xlines-above crisp" d="M0,0" style="fill: none;"></path><path class="ylines-above crisp" d="M0,0" style="fill: none;"></path><g class="overlines-above"></g><g class="xaxislayer-above"></g><g class="yaxislayer-above"></g><g class="overaxes-above"></g></g></g><g class="polarlayer"></g><g class="smithlayer"></g><g class="ternarylayer"></g><g class="geolayer"></g><g class="funnelarealayer"></g><g class="pielayer"></g><g class="iciclelayer"></g><g class="treemaplayer"></g><g class="sunburstlayer"></g><g class="glimages"></g></svg><div class="gl-container"></div><svg class="main-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1184" height="400"><defs id="topdefs-5a5dce"><g class="clips"></g></defs><g class="indicatorlayer"></g><g class="layer-above"><g class="imagelayer"></g><g class="shapelayer"></g></g><g class="selectionlayer"></g><g class="infolayer"><g class="g-gtitle"><text class="gtitle" x="592" y="20" text-anchor="middle" dy="0em" data-unformatted="Fan Intensity by Region" data-math="N" style="font-family: &quot;Open Sans&quot;, verdana, arial, sans-serif; font-size: 17px; fill: rgb(68, 68, 68); opacity: 1; font-weight: normal; white-space: pre;">Fan Intensity by Region</text></g><g class="g-xtitle"></g><g class="g-ytitle"></g></g><g class="menulayer"></g><g class="zoomlayer"></g></svg><div class="modebar-container" style="position: absolute; top: 0px; right: 0px; width: 100%;"></div><svg class="main-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1184" height="400"><g class="hoverlayer"></g></svg></div></div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Synthesis -->
+        <section id="synthesis" class="space-y-8">
+            <div class="border-l-4 border-[#f59e0b] pl-6">
+                <h2 class="text-3xl font-extrabold text-slate-900">Step 3: Final Synthesis</h2>
+                <p class="text-slate-500 mt-2">Aggregated results across all demographic vectors.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="card">
+                    <h4 class="text-lg font-bold mb-4">The Fermi Aggregate Model</h4>
+                    <p class="text-sm text-slate-600 mb-6">
+                        By combining domestic, GCC, and broader diaspora estimates, we arrive at three distinct tiers. 
+                        The 'Most Likely' scenario positions Al-Wehdat as a club with a fanbase comparable to 
+                        mid-sized European top-flight teams.
+                    </p>
+                    <div class="chart-container">
+                        <canvas id="synthesisChart" width="552" height="380" style="display: block; box-sizing: border-box; height: 380px; width: 552px;"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="card bg-[#0f172a] text-white">
+                        <h4 class="text-xl font-bold mb-4 border-b border-slate-700 pb-2">Analytical Assumptions</h4>
+                        <ul class="space-y-3 text-sm opacity-90">
+                            <li class="flex items-start">
+                                <span class="mr-3 mt-1 w-2 h-2 bg-[#059669] rounded-full flex-shrink-0"></span>
+                                <span><strong>Pop Growth:</strong> Based on 2026 projections of 11.59M-11.94M residents in Jordan.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="mr-3 mt-1 w-2 h-2 bg-[#059669] rounded-full flex-shrink-0"></span>
+                                <span><strong>Identity Split:</strong> Applied 60% Palestinian-descent variable for the median model.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="mr-3 mt-1 w-2 h-2 bg-[#059669] rounded-full flex-shrink-0"></span>
+                                <span><strong>Fandom Engagement:</strong> Football interest rate capped at 45% for active local league tracking.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="mr-3 mt-1 w-2 h-2 bg-[#059669] rounded-full flex-shrink-0"></span>
+                                <span><strong>Market Hegemony:</strong> Assumed 80% market share within the target ethno-national demographic.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h4 class="text-lg font-bold mb-4">Strategic Market Opportunities</h4>
+                        <div class="space-y-3">
+                            <!-- Process Flow using HTML/CSS (No Mermaid/SVG) -->
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-[#f59e0b]/20 flex items-center justify-center text-[#f59e0b] font-bold">1</div>
+                                <div class="flex-1 bg-slate-50 p-3 rounded text-sm">
+                                    <strong>GCC Monetization:</strong> Targeted digital merch for high-disposable income expats.
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-[#059669]/20 flex items-center justify-center text-[#059669] font-bold">2</div>
+                                <div class="flex-1 bg-slate-50 p-3 rounded text-sm">
+                                    <strong>OTT Content:</strong> Exclusive training and heritage documentaries for global fans.
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-[#dc2626]/20 flex items-center justify-center text-[#dc2626] font-bold">3</div>
+                                <div class="flex-1 bg-slate-50 p-3 rounded text-sm">
+                                    <strong>Global Brand:</strong> Leveraging the Palestinian identity for multi-national sponsorships.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-12 px-6 text-center border-t border-slate-800">
+        <p class="text-sm">© 2026 Al-Wehdat SC Demographic Analysis. Data synthesized using Fermi Logic Models.</p>
+        <div class="mt-4 flex justify-center space-x-4 opacity-50">
+            <span class="text-xs border border-slate-700 px-2 py-1 rounded">No SVG Used</span>
+            <span class="text-xs border border-slate-700 px-2 py-1 rounded">No Mermaid JS</span>
+            <span class="text-xs border border-slate-700 px-2 py-1 rounded">Canvas Rendering Enabled</span>
+        </div>
+    </footer>
+
+    <script>
+        // --- Helper Function: Label Wrapping (16-char logic) ---
+        function wrapLabel(label) {
+            if (typeof label !== 'string' || label.length <= 16) return label;
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = "";
+
+            words.forEach(word => {
+                if ((currentLine + word).length > 16) {
+                    lines.push(currentLine.trim());
+                    currentLine = word + " ";
+                } else {
+                    currentLine += word + " ";
+                }
+            });
+            lines.push(currentLine.trim());
+            return lines;
+        }
+
+        // --- Tooltip Callback Logic ---
+        const tooltipConfig = {
+            callbacks: {
+                title: function(tooltipItems) {
+                    const item = tooltipItems[0];
+                    let label = item.chart.data.labels[item.dataIndex];
+                    if (Array.isArray(label)) {
+                        return label.join(' ');
+                    } else {
+                        return label;
+                    }
+                }
+            }
+        };
+
+        // 1. Domestic Population Chart (Stacked Bar)
+        const ctxDomestic = document.getElementById('domesticPopChart').getContext('2d');
+        new Chart(ctxDomestic, {
+            type: 'bar',
+            data: {
+                labels: [wrapLabel('Low Scenario'), wrapLabel('Mid Scenario'), wrapLabel('High Scenario')],
+                datasets: [
+                    {
+                        label: wrapLabel('Palestinian Origin'),
+                        data: [5750000, 7164000, 8540000],
+                        backgroundColor: '#059669',
+                    },
+                    {
+                        label: wrapLabel('East Bank Origin'),
+                        data: [5750000, 4776000, 3660000],
+                        backgroundColor: '#94a3b8',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                },
+                plugins: {
+                    tooltip: tooltipConfig
+                }
+            }
+        });
+
+        // 2. Market Share Chart (Donut)
+        const ctxMarket = document.getElementById('marketShareChart').getContext('2d');
+        new Chart(ctxMarket, {
+            type: 'doughnut',
+            data: {
+                labels: [wrapLabel('Al-Wehdat SC'), wrapLabel('Al-Faisaly SC'), wrapLabel('Other Clubs'), wrapLabel('Unaffiliated Fans')],
+                datasets: [{
+                    data: [80, 10, 5, 5],
+                    backgroundColor: ['#059669', '#dc2626', '#f59e0b', '#e2e8f0'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: tooltipConfig,
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // 3. Diaspora Bubble Chart (Plotly - WebGL/Canvas)
+        const diasporaTrace = {
+            x: [1, 2, 3, 4],
+            y: [5, 10, 15, 20],
+            text: ['USA/Canada', 'European Union', 'GCC Expatriates', 'West Bank/Gaza'],
+            mode: 'markers+text',
+            textposition: 'top center',
+            marker: {
+                size: [30, 40, 120, 80],
+                color: ['#94a3b8', '#94a3b8', '#dc2626', '#059669'],
+                opacity: 0.7
+            },
+            type: 'scatter'
+        };
+
+        const diasporaLayout = {
+            title: 'Fan Intensity by Region',
+            showlegend: false,
+            xaxis: { showgrid: false, zeroline: false, showticklabels: false },
+            yaxis: { showgrid: false, zeroline: false, showticklabels: false },
+            margin: { t: 40, b: 20, l: 20, r: 20 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)'
+        };
+
+        Plotly.newPlot('diasporaBubbleChart', [diasporaTrace], diasporaLayout, { 
+            responsive: true, 
+            displayModeBar: false,
+            // Force Canvas rendering
+            renderer: 'canvas' 
+        });
+
+        // 4. Final Synthesis Chart (Grouped Bar)
+        const ctxSynthesis = document.getElementById('synthesisChart').getContext('2d');
+        new Chart(ctxSynthesis, {
+            type: 'bar',
+            data: {
+                labels: [wrapLabel('Conservative Floor'), wrapLabel('Most Likely Median'), wrapLabel('Maximum Potential')],
+                datasets: [{
+                    label: wrapLabel('Total Global Fans'),
+                    data: [1871150, 3345970, 5369675],
+                    backgroundColor: ['#94a3b8', '#059669', '#f59e0b'],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: tooltipConfig,
+                    legend: { display: false }
+                }
+            }
+        });
+    </script><svg id="js-plotly-tester" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position: absolute; left: -10000px; top: -10000px; width: 9000px; height: 9000px; z-index: 1;"><path class="js-reference-point" d="M0,0H1V1H0Z" style="stroke-width: 0; fill: black;"></path></svg>
+
+</body></html>

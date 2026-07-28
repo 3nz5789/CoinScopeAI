@@ -1,0 +1,180 @@
+name: "Design · New component proposal"
+description: Propose a new component for the CoinScopeAI design system catalog.
+title: "[DS · new] <component name>"
+labels:
+  - "design-system"
+  - "component"
+  - "status: idea"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open this when you want a **new** component added to the design system. For changes to an existing component, use *Design · component change* instead.
+
+        Read [`coinscopeai-dashboard/docs/contributing.md`](../../coinscopeai-dashboard/docs/contributing.md) first — the workflow is a five-stage gate from `idea → preview → beta → stable`. This form is stage 1.
+
+  - type: input
+    id: name
+    attributes:
+      label: Component name
+      description: "PascalCase. One concept = one word — match the glossary if applicable."
+      placeholder: "e.g. LiquidationWarning"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: "Picks the storybook hierarchy and reviewer routing. Maps to `category` in component-map.json."
+      options:
+        - core (button, input, table, modal, …)
+        - trading (signals, pairs, regimes, …)
+        - risk (banners, gauges, kill-switch)
+        - chrome (sidebar, status bar, app shell)
+        - viz (charts, sparklines, gauges)
+        - pattern (page-level composites)
+        - messaging (alerts, AI explainer, chat)
+        - brand (marks, marketing surfaces)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owner team
+      description: "Maps to `owner` in component-map.json. Picks who must approve before promotion."
+      options:
+        - ds (design systems)
+        - trading (trading UX)
+        - risk (risk UX)
+        - platform (platform UX)
+        - brand (brand)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem this solves
+      description: "What gap or pain point does this component address? Reference the operator workflow it fits into."
+      placeholder: "Operators on the Positions page need a visible warning when mark price approaches the liquidation price by < 10%. Currently this lives as a one-off red banner in PositionDetail."
+    validations:
+      required: true
+
+  - type: textarea
+    id: when_to_use
+    attributes:
+      label: When to use
+      description: "Bullet list of situations where this is the right component. Also list 'don't use when' cases — that's where most component drift starts."
+      value: |
+        Use when:
+        -
+
+        Don't use when:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: anatomy
+    attributes:
+      label: Anatomy (slots / props)
+      description: "Initial guess at the shape. ASCII sketch or bullet list of regions. The preview specimen will firm this up."
+      placeholder: |
+        ┌──────────────────────────────────────────┐
+        │ [icon] Title          [optional chip]    │
+        │ Description text here.                   │
+        │ [primary cta]  [secondary cta]           │
+        └──────────────────────────────────────────┘
+    validations:
+      required: true
+
+  - type: textarea
+    id: variants
+    attributes:
+      label: Variants (if any)
+      description: "List the variants this component will support. Each variant must justify its existence — operators shouldn't have to remember more than three."
+      placeholder: |
+        - imminent (< 5% from liquidation, danger color, blocking)
+        - warning (5-15%, amber, non-blocking)
+        - safe (> 15%, hidden)
+
+  - type: textarea
+    id: tokens_used
+    attributes:
+      label: Tokens used (best guess)
+      description: "List the design tokens you expect this component to consume. Use semantic tokens (--success, --signal-execute) before palette (--emerald). See [docs/naming-rules.md § Tokens](../../coinscopeai-dashboard/docs/naming-rules.md#tokens-css-custom-properties)."
+      placeholder: |
+        --danger
+        --danger-bg
+        --danger-border
+        --shadow-crit
+        --signal-halt
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Depends on
+      description: "Existing catalog entries this composes (look them up in docs/component-map.json)."
+      placeholder: |
+        - PairChip
+        - Button
+
+  - type: textarea
+    id: consumers
+    attributes:
+      label: First consumers
+      description: "Which pages or features will use this on day one? At least one production consumer is required before `beta → stable`."
+      placeholder: |
+        - /positions PositionDetail drawer
+        - /alerts AlertCenter
+
+  - type: dropdown
+    id: a11y_impact
+    attributes:
+      label: A11y impact
+      description: "How interactive is this component? Drives the depth of the ship checklist run."
+      options:
+        - Display-only (no focus, no keyboard)
+        - Focusable (tab in, no actions)
+        - Interactive (buttons, inputs, drag)
+        - Critical interactive (executes a trade, modifies state, dismisses alerts)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope_confirm
+    attributes:
+      label: Scope checks
+      description: "Confirm the proposal is well-formed before triage."
+      options:
+        - label: "Not already in [docs/component-map.json](../../coinscopeai-dashboard/docs/component-map.json)"
+          required: true
+        - label: "Doesn't duplicate an existing component (search the catalog for similar names)"
+          required: true
+        - label: "Uses only existing tokens, OR new tokens are explicitly listed below"
+          required: true
+        - label: "Works under all 4 themes (default / light / hc / terminal) — no theme-conditional logic"
+          required: true
+        - label: "Renders at the 1280px breakpoint floor without horizontal scroll"
+          required: true
+        - label: "Doesn't use emoji in product UI (the 15-glyph marketing shortlist is marketing-only)"
+          required: true
+
+  - type: textarea
+    id: new_tokens
+    attributes:
+      label: New tokens (if any)
+      description: "If the proposal requires tokens that don't exist yet, list them here with proposed values. New tokens require `ds` approval — a token rename later costs a MAJOR bump."
+      placeholder: |
+        --liquidation-warning-bg: oklch(0.637 0.237 25.331 / 0.15)
+        --liquidation-warning-glow: 0 0 16px oklch(0.637 0.237 25.331 / 0.5)
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related
+      description: "Linear issue · Notion doc · ADR · spec preview specimen URL · screenshots."

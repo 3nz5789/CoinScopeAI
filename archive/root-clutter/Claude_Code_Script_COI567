@@ -1,0 +1,100 @@
+# CoinScopeAI · Claude Code · COI-5 / COI-6 / COI-7 fix session
+# SLO: No Silent Data Loss
+# Repo: ~/Projects/CoinScopeAI_v2  (private v2 — NOT Cowork clone)
+# Branch: fix/coi-5-6-7-slo-save
+# Apply in order: COI-5 → COI-6 + COI-7 (parallel, both on top of COI-5)
+
+## Launch
+cd ~/Projects/CoinScopeAI_v2
+git checkout -b fix/coi-5-6-7-slo-save
+claude
+
+## ─── COI-5 — atomic_write_json primitive + wire save() ─────────────────────
+# Files: daily_session_state.py (lines 603-608), trade_monitor.py (lines 380-383)
+# Also create: utils/io.py (shared helper)
+#
+> Read daily_session_state.py and trade_monitor.py. Locate both save() methods.
+> Both use atomic write (tmp + replace) but catch no OSError.
+>
+> Step 1: Create utils/io.py with a single shared helper:
+>
+>   def atomic_write_json(path: Path, data: dict) -> bool:
+>       - Uses tempfile.NamedTemporaryFile in path.parent dir
+>       - Calls fh.flush() + os.fsync(fh.fileno()) before close
+>       - Calls tmp_path.replace(path) for atomic rename
+>       - Catches OSError: log with logger.error(), unlink tmp if exists,
+>         return False — never raises
+>       - Returns True on success
+>
+> Step 2: Replace both save() bodies with:
+>   return atomic_write_json(self._path, self._to_dict())
+>   Change return type annotation None -> bool.
+>
+> Step 3: Write tests/test_slo_save.py with two tests:
+>   - test_save_returns_false_on_oserror: mock Path.replace -> OSError,
+>     assert result is False, no exception raised
+>   - test_save_cleans_tmp_on_failure: mock Path.replace -> OSError,
+>     assert no *.tmp files remain in tmp_path
+>
+> State your assumptions. Then run pytest tests/ -x -q and show output.
+
+## ─── COI-6 — self_cancel() atomicity (after COI-5 lands) ───────────────────
+# File: trade_monitor.py (lines 362-367)
+#
+> Read trade_monitor.py self_cancel(). It currently sets STATE_ARCHIVED before
+> writing the archive file — two failure modes:
+>   (1) archive succeeds, unlink() fails → monitor re-enters loop
+>   (2) archive fails → state already ARCHIVED → infinite retry
+>
+> Rewrite self_cancel() to:
+>   1. Call atomic_write_json(self._archive_path, self._to_dict()) first.
+>      If it returns False: log error, leave monitor intact, return False.
+>      Do NOT set state.
+>   2. Try self._path.unlink(). If OSError: log warning, continue.
+>   3. Set self.state = STATE_ARCHIVED ONLY after archive confirmed.
+>   4. Return True.
+>
+> Add two tests to tests/test_slo_save.py:
+>   - test_self_cancel_no_state_on_archive_failure: mock atomic_write_json
+>     -> False, assert state != STATE_ARCHIVED
+>   - test_self_cancel_state_set_even_if_unlink_fails: mock unlink ->
+>     PermissionError, assert state == STATE_ARCHIVED, result is True
+>
+> Run pytest tests/ -x -q and show output.
+
+## ─── COI-7 — persist trade_log (after COI-5 lands) ────────────────────────
+# File: daily_session_state.py (lines 587-608)
+#
+> Read daily_session_state.py. _to_dict() serialises counters but not
+> _trade_log deque. On restart, trade records are lost.
+>
+> Step 1: Add to _to_dict():
+>   "trade_log": list(self._trade_log)
+>
+> Step 2: In _from_dict() / load(), after restoring other fields:
+>   raw = data.get("trade_log", [])
+>   if isinstance(raw, list):
+>       self._trade_log = collections.deque(
+>           raw[-MAX_LOG_SIZE:], maxlen=MAX_LOG_SIZE
+>       )
+>
+> Step 3: Add three tests to tests/test_slo_save.py:
+>   - test_trade_log_survives_save_load_cycle: record 2 trades, save, load,
+>     assert both present and in order
+>   - test_load_old_file_without_trade_log: write JSON without trade_log key,
+>     load, assert _trade_log is empty deque, no error
+>   - test_trade_log_capped_at_max_size: record MAX_LOG_SIZE + 10 trades,
+>     save, load, assert len == MAX_LOG_SIZE
+>
+> Run pytest tests/ -x -q and show output.
+
+## ─── Final — commit + verify ───────────────────────────────────────────────
+#
+> Run pytest tests/ -v --tb=short and show full output.
+> Then run python3 scripts/drift_detector.py and
+> python3 scripts/risk_threshold_guardrail.py.
+> If all pass, write the git commit message in conventional-commit format
+> covering all three issues, then run:
+>   git add utils/io.py daily_session_state.py trade_monitor.py tests/test_slo_save.py
+>   git commit -m "<message>"
+>   git push origin fix/coi-5-6-7-slo-save

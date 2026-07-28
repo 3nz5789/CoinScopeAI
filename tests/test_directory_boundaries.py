@@ -54,8 +54,8 @@ from __future__ import annotations
 import ast
 import importlib
 import os
-import sys
 from pathlib import Path
+import sys
 from types import ModuleType
 from typing import Optional
 
@@ -65,7 +65,7 @@ import pytest
 # Root paths
 # ---------------------------------------------------------------------------
 
-REPO_ROOT   = Path(__file__).parent.parent
+REPO_ROOT = Path(__file__).parent.parent
 ENGINE_ROOT = REPO_ROOT / "coinscope_trading_engine"
 
 # ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ VALIDATION_SAFE_DIRS = {
     "core",
     "scanner",
     "scanners",
-    "signals",       # except backtester.py
+    "signals",  # except backtester.py
     "data",
     "alerts",
     "storage",
@@ -129,10 +129,10 @@ EXPERIMENTAL_MODULE_PATTERNS = [
 
 # Canonical risk thresholds that must never be overridden in experimental code
 CANONICAL_THRESHOLDS = {
-    "MAX_LEVERAGE":          10,
-    "MAX_OPEN_POSITIONS":    5,
-    "MAX_DRAWDOWN_PCT":      0.10,
-    "MAX_DAILY_LOSS_PCT":    0.05,
+    "MAX_LEVERAGE": 10,
+    "MAX_OPEN_POSITIONS": 5,
+    "MAX_DRAWDOWN_PCT": 0.10,
+    "MAX_DAILY_LOSS_PCT": 0.05,
     "POSITION_HEAT_CAP_PCT": 80,
 }
 
@@ -140,6 +140,7 @@ CANONICAL_THRESHOLDS = {
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _engine_file(relative: str) -> Optional[Path]:
     p = ENGINE_ROOT / relative
@@ -196,6 +197,7 @@ def _file_source(path: Path) -> str:
 # SECTION 1 — Experimental Directory Structure
 # ===========================================================================
 
+
 class TestExperimentalDirectoryStructure:
     """
     Invariant: every file declared as experimental must exist where expected,
@@ -238,22 +240,24 @@ class TestExperimentalDirectoryStructure:
         if init.exists():
             source = _file_source(init)
             # __init__.py must not re-export to risk or core namespaces
-            assert "from risk" not in source, \
-                "validation/__init__.py must not re-export from risk/"
-            assert "from core" not in source, \
-                "validation/__init__.py must not re-export from core/"
+            assert "from risk" not in source, "validation/__init__.py must not re-export from risk/"
+            assert "from core" not in source, "validation/__init__.py must not re-export from core/"
 
     def test_models_dir_contains_only_known_files(self):
         """models/ should only contain known files — no surprise new models."""
         known = {
-            "__init__.py", "price_predictor.py", "regime_detector.py",
-            "sentiment_analyzer.py", "anomaly_detector.py",
+            "__init__.py",
+            "price_predictor.py",
+            "regime_detector.py",
+            "sentiment_analyzer.py",
+            "anomaly_detector.py",
         }
         models_dir = ENGINE_ROOT / "models"
         if not models_dir.is_dir():
             pytest.skip("models/ not present in repo")
-        actual = {f.name for f in models_dir.iterdir()
-                  if f.is_file() and not f.name.startswith(".")}
+        actual = {
+            f.name for f in models_dir.iterdir() if f.is_file() and not f.name.startswith(".")
+        }
         unknown = actual - known - {"__pycache__"}
         assert not unknown, (
             f"Unknown files in models/ (experimental boundary violation): {unknown}. "
@@ -264,6 +268,7 @@ class TestExperimentalDirectoryStructure:
 # ===========================================================================
 # SECTION 2 — Hot-Path Files Must Not Top-Level Import Experimental Modules
 # ===========================================================================
+
 
 class TestHotPathImportBoundaries:
     """
@@ -280,8 +285,7 @@ class TestHotPathImportBoundaries:
 
         top_imports = _top_level_imports(path)
         violations = [
-            imp for imp in top_imports
-            if any(pat in imp for pat in EXPERIMENTAL_MODULE_PATTERNS)
+            imp for imp in top_imports if any(pat in imp for pat in EXPERIMENTAL_MODULE_PATTERNS)
         ]
         assert not violations, (
             f"{hot_file} has top-level import(s) of experimental modules: {violations}. "
@@ -294,8 +298,7 @@ class TestHotPathImportBoundaries:
             pytest.skip("circuit_breaker.py not found")
         source = _file_source(path)
         for ml_lib in ["torch", "tensorflow", "sklearn", "hmmlearn", "numpy.random.seed"]:
-            assert ml_lib not in source, \
-                f"circuit_breaker.py references ML library {ml_lib!r}"
+            assert ml_lib not in source, f"circuit_breaker.py references ML library {ml_lib!r}"
 
     def test_position_sizer_has_no_ml_imports(self):
         path = _engine_file("risk/position_sizer.py")
@@ -303,29 +306,31 @@ class TestHotPathImportBoundaries:
             pytest.skip("position_sizer.py not found")
         source = _file_source(path)
         for ml_lib in ["torch", "tensorflow", "sklearn", "hmmlearn"]:
-            assert ml_lib not in source, \
-                f"position_sizer.py references ML library {ml_lib!r}"
+            assert ml_lib not in source, f"position_sizer.py references ML library {ml_lib!r}"
 
     def test_risk_gate_has_no_backtester_import(self):
         path = _engine_file("core/risk_gate.py")
         if path is None:
             pytest.skip("core/risk_gate.py not found")
         source = _file_source(path)
-        assert "backtester" not in source.lower(), \
-            "core/risk_gate.py must not import the backtester"
+        assert (
+            "backtester" not in source.lower()
+        ), "core/risk_gate.py must not import the backtester"
 
     def test_confluence_scorer_has_no_price_predictor(self):
         path = _engine_file("signals/confluence_scorer.py")
         if path is None:
             pytest.skip("confluence_scorer.py not found")
         source = _file_source(path)
-        assert "price_predictor" not in source.lower(), \
-            "confluence_scorer.py must not import the LSTM price predictor"
+        assert (
+            "price_predictor" not in source.lower()
+        ), "confluence_scorer.py must not import the LSTM price predictor"
 
 
 # ===========================================================================
 # SECTION 3 — Experimental Modules Must Not Write to Live Systems
 # ===========================================================================
+
 
 class TestExperimentalModulesReadOnly:
     """
@@ -339,50 +344,48 @@ class TestExperimentalModulesReadOnly:
         if path is None:
             pytest.skip("walk_forward_validation.py not found")
         source = _file_source(path)
-        assert "send_message" not in source, \
-            "walk_forward_validation.py must not send Telegram messages"
-        assert "TelegramNotifier" not in source, \
-            "walk_forward_validation.py must not import TelegramNotifier"
+        assert (
+            "send_message" not in source
+        ), "walk_forward_validation.py must not send Telegram messages"
+        assert (
+            "TelegramNotifier" not in source
+        ), "walk_forward_validation.py must not import TelegramNotifier"
 
     def test_walk_forward_validator_has_no_order_placement(self):
         path = _engine_file("validation/walk_forward_validation.py")
         if path is None:
             pytest.skip("walk_forward_validation.py not found")
         source = _file_source(path)
-        assert "place_order" not in source, \
-            "walk_forward_validation.py must not call place_order"
-        assert "fapi/v1/order" not in source, \
-            "walk_forward_validation.py must not call Binance order endpoint"
+        assert "place_order" not in source, "walk_forward_validation.py must not call place_order"
+        assert (
+            "fapi/v1/order" not in source
+        ), "walk_forward_validation.py must not call Binance order endpoint"
 
     def test_backtester_has_no_telegram_send(self):
         path = _engine_file("signals/backtester.py")
         if path is None:
             pytest.skip("backtester.py not found")
         source = _file_source(path)
-        assert "TelegramNotifier" not in source, \
-            "backtester.py must not import TelegramNotifier"
-        assert "send_message" not in source, \
-            "backtester.py must not send Telegram messages"
+        assert "TelegramNotifier" not in source, "backtester.py must not import TelegramNotifier"
+        assert "send_message" not in source, "backtester.py must not send Telegram messages"
 
     def test_backtester_has_no_live_order_placement(self):
         path = _engine_file("signals/backtester.py")
         if path is None:
             pytest.skip("backtester.py not found")
         source = _file_source(path)
-        assert "place_order" not in source, \
-            "backtester.py must not place real orders"
-        assert "fapi/v1/order" not in source, \
-            "backtester.py must not reference Binance order endpoint"
+        assert "place_order" not in source, "backtester.py must not place real orders"
+        assert (
+            "fapi/v1/order" not in source
+        ), "backtester.py must not reference Binance order endpoint"
 
     def test_price_predictor_has_no_order_placement(self):
         path = _engine_file("models/price_predictor.py")
         if path is None:
             pytest.skip("price_predictor.py not found")
         source = _file_source(path)
-        assert "place_order" not in source, \
-            "price_predictor.py must not place orders"
-        assert "TelegramNotifier" not in source, \
-            "price_predictor.py must not send Telegram alerts"
+        assert "place_order" not in source, "price_predictor.py must not place orders"
+        assert "TelegramNotifier" not in source, "price_predictor.py must not send Telegram alerts"
 
     def test_validation_dir_has_no_notion_writes(self):
         """No file in validation/ must write to Notion databases."""
@@ -390,8 +393,11 @@ class TestExperimentalModulesReadOnly:
         if not val_dir.is_dir():
             pytest.skip("validation/ not present")
         notion_write_patterns = [
-            "pages.create", "databases.query", "notion_create",
-            "NOTION_SIGNAL_LOG_DB", "NOTION_TRADE_JOURNAL_DB",
+            "pages.create",
+            "databases.query",
+            "notion_create",
+            "NOTION_SIGNAL_LOG_DB",
+            "NOTION_TRADE_JOURNAL_DB",
         ]
         for py_file in val_dir.rglob("*.py"):
             source = _file_source(py_file)
@@ -405,6 +411,7 @@ class TestExperimentalModulesReadOnly:
 # ===========================================================================
 # SECTION 4 — Canonical Threshold Invariants in Experimental Code
 # ===========================================================================
+
 
 class TestCanonicalThresholdsNotOverriddenByExperimental:
     """
@@ -421,14 +428,17 @@ class TestCanonicalThresholdsNotOverriddenByExperimental:
         source = _file_source(path)
         # Backtester should not reference leverage > 10 as a default
         bad_patterns = [
-            "leverage=20", "leverage = 20",
-            "max_leverage=20", "max_leverage = 20",
-            "leverage=15", "leverage = 15",
+            "leverage=20",
+            "leverage = 20",
+            "max_leverage=20",
+            "max_leverage = 20",
+            "leverage=15",
+            "leverage = 15",
         ]
         for pat in bad_patterns:
-            assert pat not in source, (
-                f"backtester.py contains {pat!r} — violates MAX_LEVERAGE=10 (PCC v2 §8)"
-            )
+            assert (
+                pat not in source
+            ), f"backtester.py contains {pat!r} — violates MAX_LEVERAGE=10 (PCC v2 §8)"
 
     def test_walk_forward_validator_risk_params_reasonable(self):
         """WFV thresholds should not encourage reckless sizing."""
@@ -438,10 +448,8 @@ class TestCanonicalThresholdsNotOverriddenByExperimental:
         source = _file_source(path)
         # Should not hard-code a max_drawdown threshold above 25%
         # (anything larger would pass catastrophically bad strategies)
-        assert "mdd > -0.50" not in source, \
-            "WFV max_drawdown threshold is too permissive (> 50%)"
-        assert "mdd > -0.75" not in source, \
-            "WFV max_drawdown threshold is too permissive (> 75%)"
+        assert "mdd > -0.50" not in source, "WFV max_drawdown threshold is too permissive (> 50%)"
+        assert "mdd > -0.75" not in source, "WFV max_drawdown threshold is too permissive (> 75%)"
 
     def test_backtester_config_has_commission(self):
         """BacktestConfig must include commission to produce realistic results."""
@@ -449,8 +457,9 @@ class TestCanonicalThresholdsNotOverriddenByExperimental:
         if path is None:
             pytest.skip("backtester.py not found")
         source = _file_source(path)
-        assert "commission_pct" in source, \
-            "BacktestConfig must include commission_pct — zero-commission backtests overfit"
+        assert (
+            "commission_pct" in source
+        ), "BacktestConfig must include commission_pct — zero-commission backtests overfit"
 
     def test_backtester_config_has_slippage(self):
         """BacktestConfig must include slippage."""
@@ -458,13 +467,15 @@ class TestCanonicalThresholdsNotOverriddenByExperimental:
         if path is None:
             pytest.skip("backtester.py not found")
         source = _file_source(path)
-        assert "slippage_pct" in source, \
-            "BacktestConfig must include slippage_pct — zero-slippage backtests overfit"
+        assert (
+            "slippage_pct" in source
+        ), "BacktestConfig must include slippage_pct — zero-slippage backtests overfit"
 
 
 # ===========================================================================
 # SECTION 5 — API Layer Guards (api.py Imports Experimental Safely)
 # ===========================================================================
+
 
 class TestApiLayerExperimentalGuards:
     """
@@ -483,45 +494,51 @@ class TestApiLayerExperimentalGuards:
         # Verify it's not a bare top-level import
         top_imports = _top_level_imports(ENGINE_ROOT / "api.py")
         ml_top = [i for i in top_imports if "regime_classifier" in i or "RegimeClassifierV3" in i]
-        assert not ml_top, \
-            f"api.py imports ML classifier at top level: {ml_top}. Must be inside try/except."
+        assert (
+            not ml_top
+        ), f"api.py imports ML classifier at top level: {ml_top}. Must be inside try/except."
 
     def test_api_does_not_top_level_import_price_predictor(self):
         path = _engine_file("api.py")
         if path is None:
             pytest.skip("api.py not found")
         top_imports = _top_level_imports(ENGINE_ROOT / "api.py")
-        assert not any("price_predictor" in i for i in top_imports), \
-            "api.py imports price_predictor at top level — must be lazy or removed"
+        assert not any(
+            "price_predictor" in i for i in top_imports
+        ), "api.py imports price_predictor at top level — must be lazy or removed"
 
     def test_api_does_not_top_level_import_backtester(self):
         path = _engine_file("api.py")
         if path is None:
             pytest.skip("api.py not found")
         top_imports = _top_level_imports(ENGINE_ROOT / "api.py")
-        assert not any("backtester" in i for i in top_imports), \
-            "api.py imports backtester at top level — must be lazy (inside the endpoint function)"
+        assert not any(
+            "backtester" in i for i in top_imports
+        ), "api.py imports backtester at top level — must be lazy (inside the endpoint function)"
 
     def test_api_does_not_top_level_import_torch(self):
         path = _engine_file("api.py")
         if path is None:
             pytest.skip("api.py not found")
         top_imports = _top_level_imports(ENGINE_ROOT / "api.py")
-        assert not any("torch" in i for i in top_imports), \
-            "api.py imports torch at top level — PyTorch must be optional"
+        assert not any(
+            "torch" in i for i in top_imports
+        ), "api.py imports torch at top level — PyTorch must be optional"
 
     def test_api_does_not_top_level_import_hmmlearn(self):
         path = _engine_file("api.py")
         if path is None:
             pytest.skip("api.py not found")
         top_imports = _top_level_imports(ENGINE_ROOT / "api.py")
-        assert not any("hmmlearn" in i for i in top_imports), \
-            "api.py imports hmmlearn at top level — must be inside try/except"
+        assert not any(
+            "hmmlearn" in i for i in top_imports
+        ), "api.py imports hmmlearn at top level — must be inside try/except"
 
 
 # ===========================================================================
 # SECTION 6 — Boundary ADR Compliance Check
 # ===========================================================================
+
 
 class TestBoundaryAdrCompliance:
     """
@@ -532,25 +549,39 @@ class TestBoundaryAdrCompliance:
 
     def test_boundary_adr_exists(self):
         """ADR-0005 for directory boundaries must exist."""
-        adr_path = REPO_ROOT / "docs" / "decisions" / "adr-0005-validation-safe-vs-experimental-boundaries.md"
+        adr_path = (
+            REPO_ROOT
+            / "docs"
+            / "decisions"
+            / "adr-0005-validation-safe-vs-experimental-boundaries.md"
+        )
         assert adr_path.exists(), (
             f"ADR-0005 not found at {adr_path}. "
             f"Run: create docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md"
         )
 
     def test_boundary_adr_contains_required_sections(self):
-        adr_path = REPO_ROOT / "docs" / "decisions" / "adr-0005-validation-safe-vs-experimental-boundaries.md"
+        adr_path = (
+            REPO_ROOT
+            / "docs"
+            / "decisions"
+            / "adr-0005-validation-safe-vs-experimental-boundaries.md"
+        )
         if not adr_path.exists():
             pytest.skip("ADR-0005 not found — covered by test_boundary_adr_exists")
         content = adr_path.read_text(encoding="utf-8")
         required_sections = [
-            "validation-safe", "experimental",
-            "price_predictor", "backtester",
-            "Consequences", "Decision",
+            "validation-safe",
+            "experimental",
+            "price_predictor",
+            "backtester",
+            "Consequences",
+            "Decision",
         ]
         for section in required_sections:
-            assert section.lower() in content.lower(), \
-                f"ADR-0005 is missing required section/term: {section!r}"
+            assert (
+                section.lower() in content.lower()
+            ), f"ADR-0005 is missing required section/term: {section!r}"
 
 
 # ===========================================================================
@@ -559,4 +590,5 @@ class TestBoundaryAdrCompliance:
 
 if __name__ == "__main__":
     import pytest as _pytest
+
     _pytest.main([__file__, "-v", "--tb=short"])

@@ -17,8 +17,8 @@ close. This matches docs/validation/p0-evidence-pack.md §5's
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Iterable, List, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Iterable, List, Sequence
 
 import numpy as np
 
@@ -113,7 +113,7 @@ def score_bars(ohlcv: np.ndarray) -> np.ndarray:
     from engine.signals.scoring_fixed import FixedScorer
 
     scorer = FixedScorer()
-    opens = ohlcv[:, 1]
+    ohlcv[:, 1]
     highs = ohlcv[:, 2]
     lows = ohlcv[:, 3]
     closes = ohlcv[:, 4]
@@ -163,6 +163,7 @@ def direction_from_score(score: float) -> int:
 @dataclass
 class Trade:
     """A single simulated trade — directional quality only, not P&L."""
+
     bar_index: int
     direction: int  # +1 long, -1 short
     score: float
@@ -191,7 +192,7 @@ def simulate_trades(
             continue
         actual = +1 if closes[t + 1] > closes[t] else -1
         # Win: signal direction matches actual direction
-        win = (d == actual)
+        win = d == actual
         pnl = 0.01 if win else -0.01
         trades.append(Trade(bar_index=t, direction=d, score=float(scores[t]), pnl_pct=pnl))
     return trades
@@ -203,8 +204,9 @@ def simulate_trades(
 @dataclass
 class FoldMetrics:
     """Per-fold metrics for one symbol's trades."""
+
     symbol: str
-    fold_label: str         # e.g. "fold_1" or "path_03"
+    fold_label: str  # e.g. "fold_1" or "path_03"
     train_start: int
     train_end: int
     test_start: int
@@ -217,13 +219,20 @@ class FoldMetrics:
     avg_return_pct: float
     sharpe: float
     max_drawdown_pct: float
-    passed: bool            # Sharpe > 0.8 AND max DD > -25%
+    passed: bool  # Sharpe > 0.8 AND max DD > -25%
 
     def as_row(self) -> List:
         return [
-            self.symbol, self.fold_label,
-            self.train_start, self.train_end, self.test_start, self.test_end,
-            self.n_test_bars, self.n_trades, self.n_wins, self.n_losses,
+            self.symbol,
+            self.fold_label,
+            self.train_start,
+            self.train_end,
+            self.test_start,
+            self.test_end,
+            self.n_test_bars,
+            self.n_trades,
+            self.n_wins,
+            self.n_losses,
             f"{self.win_rate:.3f}",
             f"{self.avg_return_pct:+.4f}",
             f"{self.sharpe:+.3f}",
@@ -234,10 +243,20 @@ class FoldMetrics:
     @staticmethod
     def csv_header() -> List[str]:
         return [
-            "symbol", "fold",
-            "train_start", "train_end", "test_start", "test_end",
-            "n_test_bars", "n_trades", "n_wins", "n_losses",
-            "win_rate", "avg_return_pct", "sharpe", "max_drawdown_pct",
+            "symbol",
+            "fold",
+            "train_start",
+            "train_end",
+            "test_start",
+            "test_end",
+            "n_test_bars",
+            "n_trades",
+            "n_wins",
+            "n_losses",
+            "win_rate",
+            "avg_return_pct",
+            "sharpe",
+            "max_drawdown_pct",
             "pass",
         ]
 
@@ -267,13 +286,21 @@ def compute_metrics(
     if n_trades == 0:
         # No signals fired — degenerate fold. Mark FAIL.
         return FoldMetrics(
-            symbol=symbol, fold_label=fold_label,
-            train_start=train_start, train_end=train_end,
-            test_start=test_start, test_end=test_end,
+            symbol=symbol,
+            fold_label=fold_label,
+            train_start=train_start,
+            train_end=train_end,
+            test_start=test_start,
+            test_end=test_end,
             n_test_bars=n_test_bars,
-            n_trades=0, n_wins=0, n_losses=0,
-            win_rate=0.0, avg_return_pct=0.0,
-            sharpe=0.0, max_drawdown_pct=0.0, passed=False,
+            n_trades=0,
+            n_wins=0,
+            n_losses=0,
+            win_rate=0.0,
+            avg_return_pct=0.0,
+            sharpe=0.0,
+            max_drawdown_pct=0.0,
+            passed=False,
         )
 
     avg_return = float(returns.mean())
@@ -289,11 +316,16 @@ def compute_metrics(
     passed = (sharpe > 0.8) and (max_dd > -0.25)
 
     return FoldMetrics(
-        symbol=symbol, fold_label=fold_label,
-        train_start=train_start, train_end=train_end,
-        test_start=test_start, test_end=test_end,
+        symbol=symbol,
+        fold_label=fold_label,
+        train_start=train_start,
+        train_end=train_end,
+        test_start=test_start,
+        test_end=test_end,
         n_test_bars=n_test_bars,
-        n_trades=n_trades, n_wins=wins, n_losses=losses,
+        n_trades=n_trades,
+        n_wins=wins,
+        n_losses=losses,
         win_rate=float(wins / n_trades) if n_trades else 0.0,
         avg_return_pct=avg_return,
         sharpe=sharpe,
@@ -308,6 +340,7 @@ def compute_metrics(
 def write_csv(rows: Iterable[FoldMetrics], path: str) -> None:
     """Write fold metrics to a CSV file with the canonical header."""
     import csv
+
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(FoldMetrics.csv_header())

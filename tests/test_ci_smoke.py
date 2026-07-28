@@ -5,6 +5,7 @@ No assumptions about file contents beyond what's confirmed in git.
 """
 
 import os
+
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -15,15 +16,14 @@ class TestRepoStructure:
     def test_env_example_exists(self):
         """At least one .env example file must exist"""
         has_env = (
-            os.path.isfile(os.path.join(ROOT, ".env.example")) or
-            os.path.isfile(os.path.join(ROOT, "coinscope.env.example")) or
-            os.path.isfile(os.path.join(ROOT, ".env.template"))
+            os.path.isfile(os.path.join(ROOT, ".env.example"))
+            or os.path.isfile(os.path.join(ROOT, "coinscope.env.example"))
+            or os.path.isfile(os.path.join(ROOT, ".env.template"))
         )
         assert has_env, "No .env example file found at repo root"
 
     def test_env_not_committed(self):
-        assert not os.path.isfile(os.path.join(ROOT, ".env")), \
-            ".env committed — SECURITY RISK"
+        assert not os.path.isfile(os.path.join(ROOT, ".env")), ".env committed — SECURITY RISK"
 
     def test_requirements_txt_exists(self):
         assert os.path.isfile(os.path.join(ROOT, "requirements.txt"))
@@ -32,8 +32,15 @@ class TestRepoStructure:
         assert os.path.isdir(os.path.join(ROOT, "docs"))
 
     def test_source_dir_exists(self):
-        candidates = ["engine", "apps", "backend", "services", "main",
-                      "coinscope_trading_engine", "risk_management"]
+        candidates = [
+            "engine",
+            "apps",
+            "backend",
+            "services",
+            "main",
+            "coinscope_trading_engine",
+            "risk_management",
+        ]
         found = [d for d in candidates if os.path.isdir(os.path.join(ROOT, d))]
         assert found, f"No source dir. Checked: {candidates}"
 
@@ -87,16 +94,14 @@ class TestCanonicalThresholds:
         if not content:
             pytest.skip("No env example file found")
         # Accept 10 or 10.0 but NOT 20
-        assert "MAX_LEVERAGE=20" not in content, \
-            "Stale MAX_LEVERAGE=20 found — must be 10"
+        assert "MAX_LEVERAGE=20" not in content, "Stale MAX_LEVERAGE=20 found — must be 10"
 
     def test_max_open_positions_canonical(self):
         """MAX_OPEN_POSITIONS should not be 3 (must be 5)"""
         content = self._find_env_file()
         if not content:
             pytest.skip("No env example file found")
-        assert "MAX_OPEN_POSITIONS=3" not in content, \
-            "Stale MAX_OPEN_POSITIONS=3 found — must be 5"
+        assert "MAX_OPEN_POSITIONS=3" not in content, "Stale MAX_OPEN_POSITIONS=3 found — must be 5"
 
     def test_testnet_mode(self):
         """Testnet flag should be set"""
@@ -104,9 +109,9 @@ class TestCanonicalThresholds:
         if not content:
             pytest.skip("No env example file found")
         has_testnet = (
-            "TESTNET_MODE=true" in content or
-            "BINANCE_TESTNET=true" in content or
-            "BINANCE_FUTURES_TESTNET" in content
+            "TESTNET_MODE=true" in content
+            or "BINANCE_TESTNET=true" in content
+            or "BINANCE_FUTURES_TESTNET" in content
         )
         assert has_testnet, "No testnet configuration found in env example"
 

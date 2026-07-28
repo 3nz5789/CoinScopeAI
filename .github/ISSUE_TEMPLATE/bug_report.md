@@ -8,16 +8,13 @@ assignees: ""
 
 ## Summary
 
-<!-- One sentence: what is broken? -->
+<!-- One-line description of what is broken -->
 
 ## Environment
 
-| Field | Value |
-|---|---|
-| Component | <!-- engine / scanner / risk-gate / regime / executor / journal / dashboard / telegram / billing / VPS / local --> |
-| Mode | <!-- testnet / local dev --> |
-| Commit / version | <!-- git rev-parse --short HEAD --> |
-| OS / Python | <!-- e.g. Ubuntu 22.04 / Python 3.11.9 --> |
+- Component: <!-- engine / scanner / risk-gate / dashboard / telegram / VPS / local -->
+- Mode: <!-- testnet / local dev -->
+- Engine version / commit:
 
 ## Steps to reproduce
 
@@ -27,26 +24,23 @@ assignees: ""
 
 ## Expected behaviour
 
+<!-- What should happen -->
+
 ## Actual behaviour
 
-## Logs / output
+<!-- What actually happens — include logs, error messages, curl output -->
 
 ```
-# For engine: docker compose logs engine --tail=50
-# For risk gate: curl http://localhost:8001/risk-gate | python3 -m json.tool
-# For journal: curl http://localhost:8001/journal | python3 -m json.tool
+paste logs here
 ```
 
-## Impact assessment
+## Impact
 
-- [ ] **SLO: No Data Loss** — trade or journal data at risk
-- [ ] **Capital at risk** — incorrect sizing, gate bypass, or order error possible
-- [ ] **Silent failure** — bug occurs with no error surfaced
-- [ ] **Engine unavailable** — health/ready endpoints failing
-- [ ] **Cosmetic / low impact** — UI, logging, or non-critical path
-
-## Possible cause
+- [ ] Data loss risk (SLO: No Data Loss)
+- [ ] Capital at risk
+- [ ] Silent failure (no error surfaced)
+- [ ] Cosmetic / low impact
 
 ## Related
 
-<!-- Linear issue (COI-NNN), ADR, or PR -->
+<!-- Linear issue, ADR, or related PR -->

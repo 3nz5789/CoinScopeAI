@@ -239,7 +239,7 @@ Old pricing ($19/$49/$99/$299) is superseded — never use.
 | Asset | Mac path | Drive | GitHub |
 |---|---|---|---|
 | Business prompt CLAUDE.md | `CLAUDE.md` (root) | `01 — Project Overview` | ✅ v2 repo |
-| Design system manifest (this doc) | `docs/architecture/design-system-manifest.md` | `02 — Architecture` | ✅ v1 repo |
+| Design system manifest (this doc) | `architecture/design-system-manifest.md` | `02 — Architecture` | ✅ v1 repo |
 | CSS tokens | `coinscopeai-dashboard/client/src/index.css` | — | ✅ v1 repo |
 | UI components | `coinscopeai-dashboard/client/src/components/` | — | ✅ v1 repo |
 | Architecture v5 | `docs/architecture/architecture.md` | `02 — Architecture` | ✅ v1 repo |
@@ -253,7 +253,7 @@ Old pricing ($19/$49/$99/$299) is superseded — never use.
 When this manifest is updated, propagate in this order:
 
 ```
-1. Update this file (docs/architecture/design-system-manifest.md)
+1. Update this file (architecture/design-system-manifest.md)
 2. Bump Version stamp at top + add §15 changelog entry
 3. git commit: "docs(design-system): update manifest vN — <what changed>"
 4. git push to v1/main

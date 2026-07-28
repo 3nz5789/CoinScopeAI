@@ -5,6 +5,7 @@ Tests: pub/sub, topic matching, wildcard patterns, stats, error handling.
 
 import threading
 import time
+
 import pytest
 
 from services.market_data.event_bus import Event, EventBus

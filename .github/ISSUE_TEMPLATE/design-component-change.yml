@@ -1,0 +1,123 @@
+name: "Design · Component change"
+description: Propose a change to an existing component in the design-system catalog.
+title: "[DS · change] <component name>: <one-line change>"
+labels:
+  - "design-system"
+  - "component"
+  - "type: change"
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you want to **modify** an existing component — new variant, prop change, behavior tweak, content rule update. For brand-new components use *Design · new component proposal*; for removals use *Design · deprecation*.
+
+        The catalog lives at [`docs/component-map.json`](../../coinscopeai-dashboard/docs/component-map.json). Look up the entry before filing.
+
+  - type: input
+    id: name
+    attributes:
+      label: Component name
+      description: "Exact name as it appears in [docs/component-map.json](../../coinscopeai-dashboard/docs/component-map.json) — PascalCase."
+      placeholder: "e.g. SignalCard"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: change_kind
+    attributes:
+      label: Kind of change
+      description: "Drives the SemVer bump and reviewer routing."
+      options:
+        - "Add variant (MINOR)"
+        - "Change variant default (MINOR)"
+        - "Add prop (MINOR)"
+        - "Remove prop (BREAKING / MAJOR)"
+        - "Rename prop (BREAKING / MAJOR)"
+        - "Internal refactor — no behavior change (PATCH)"
+        - "Content / copy rule change (PATCH)"
+        - "Token mapping change — same value (PATCH)"
+        - "Token mapping change — different value (MINOR)"
+        - "Visual tweak — same tokens, different layout (PATCH or MINOR)"
+        - "Bug fix (PATCH)"
+        - "A11y fix (PATCH)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: What it does today
+      description: "One paragraph describing current behavior. Link a screenshot of the current state if the change is visual."
+      placeholder: "Today SignalCard's score arc colors at 50 → amber and 80 → emerald. Below 50 it stays muted-grey."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: What you want it to do
+      description: "Specific, comparable to 'today'. If a copy change, paste the old and new strings verbatim."
+      placeholder: "Add a third threshold at 65 → cyan-accent to mirror the Scanner's score-color step. Below 50 stays muted-grey, 50-64 amber, 65-79 cyan, 80+ emerald."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: "Operator workflow, accessibility issue, content style rule, regression — what triggered this. 'Cleaner' is not a reason; 'consistent with Scanner' is."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status_change
+    attributes:
+      label: Does this change the component's status?
+      description: "See approval states in [docs/review-workflow.md](../../coinscopeai-dashboard/docs/review-workflow.md)."
+      options:
+        - "No — stays at current status"
+        - "preview → beta (ready to gate behind a flag in production)"
+        - "beta → stable (ready to remove the flag)"
+        - "stable → deprecated (use the deprecation form instead)"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: backcompat
+    attributes:
+      label: Backwards compatibility
+      description: "If this is BREAKING, list every consumer in the catalog and what the migration looks like. CI fails the merge if a stable component breaks without a shim."
+      placeholder: "BREAKING. Consumers: LiveScanner, TopSignals, AlertItem. Migration: add `scoreColorScale='4-step' | '3-step'` prop defaulting to current ('3-step'). Stable migration to '4-step' default in next MAJOR."
+
+  - type: textarea
+    id: a11y_impact
+    attributes:
+      label: A11y impact
+      description: "Does this change focus order, keyboard bindings, screen-reader announcements, color contrast, or touch-target size? If yes, ship checklist re-run is required."
+      placeholder: "No focus / keyboard change. New cyan-accent color is verified at 4.6:1 on `--bg` (passes WCAG 2.2 AA)."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope_confirm
+    attributes:
+      label: Scope checks
+      options:
+        - label: "Catalog entry exists in [docs/component-map.json](../../coinscopeai-dashboard/docs/component-map.json)"
+          required: true
+        - label: "Change is in scope for current status (e.g. not adding new behavior to a `deprecated` component)"
+          required: true
+        - label: "Re-renders cleanly under all 4 themes — no theme-conditional logic added"
+          required: true
+        - label: "Doesn't introduce hex literals or `backdrop-filter` (see [naming-rules.md § things that must NOT happen](../../coinscopeai-dashboard/docs/naming-rules.md#things-that-must-not-happen))"
+          required: true
+        - label: "If BREAKING, a shim + migration plan is sketched above"
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related
+      description: "Linear issue · Notion doc · screenshots of current vs proposed · linked spec preview."

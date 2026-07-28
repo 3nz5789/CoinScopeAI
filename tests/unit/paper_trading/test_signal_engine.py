@@ -4,18 +4,19 @@ Tests cover: candle buffering, feature extraction, model inference,
 signal filtering, and integration with the backtesting strategy interface.
 """
 
-import time
-import pytest
-import numpy as np
-from unittest.mock import MagicMock, patch
 from pathlib import Path
+import time
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
 
 from services.paper_trading.config import TradingConfig
-
 
 # ── Signal Engine Import Guard ────────────────────────────────
 # The signal engine depends on the ML models which may not be
 # available in all test environments. We test the core logic.
+
 
 class TestSignalEngineCore:
     """Tests for signal engine core logic without ML model dependency."""
@@ -47,7 +48,9 @@ class TestSignalEngineCore:
 
         # Trim to buffer size
         if len(engine._candle_buffers["BTCUSDT"]) > engine._buffer_size:
-            engine._candle_buffers["BTCUSDT"] = engine._candle_buffers["BTCUSDT"][-engine._buffer_size:]
+            engine._candle_buffers["BTCUSDT"] = engine._candle_buffers["BTCUSDT"][
+                -engine._buffer_size :
+            ]
 
         assert len(engine._candle_buffers["BTCUSDT"]) == 200
 
@@ -66,11 +69,16 @@ class TestSignalEngineCore:
 
         # Only 50 candles — not enough
         for i in range(50):
-            engine._candle_buffers["BTCUSDT"].append({
-                "open_time": 1000000 + i * 14400000,
-                "open": 50000, "high": 50100, "low": 49900,
-                "close": 50050, "volume": 100.0,
-            })
+            engine._candle_buffers["BTCUSDT"].append(
+                {
+                    "open_time": 1000000 + i * 14400000,
+                    "open": 50000,
+                    "high": 50100,
+                    "low": 49900,
+                    "close": 50050,
+                    "volume": 100.0,
+                }
+            )
 
         # Should not have enough candles
         assert len(engine._candle_buffers["BTCUSDT"]) < engine._min_candles

@@ -32,41 +32,48 @@ HEADERS = {
 
 LABELS = [
     # Types
-    ("type: bug",       "d73a4a", "Something is broken"),
-    ("type: feature",   "0075ca", "New capability"),
-    ("type: infra",     "e4e669", "Infrastructure / DevOps"),
-    ("type: docs",      "cfd3d7", "Documentation"),
-    ("type: research",  "bfd4f2", "Investigation / spike"),
-    ("type: refactor",  "fef2c0", "Code cleanup, no behaviour change"),
-    ("type: test",      "c2e0c6", "Test coverage"),
-    ("type: config",    "f9d0c4", "Configuration / env change"),
+    ("type: bug", "d73a4a", "Something is broken"),
+    ("type: feature", "0075ca", "New capability"),
+    ("type: infra", "e4e669", "Infrastructure / DevOps"),
+    ("type: docs", "cfd3d7", "Documentation"),
+    ("type: research", "bfd4f2", "Investigation / spike"),
+    ("type: refactor", "fef2c0", "Code cleanup, no behaviour change"),
+    ("type: test", "c2e0c6", "Test coverage"),
+    ("type: config", "f9d0c4", "Configuration / env change"),
     # Domains
-    ("dom: scanner",      "0e8a16", "Signal scoring / scanner"),
-    ("dom: risk",         "b60205", "Risk gate / kill switch / sizing"),
+    ("dom: scanner", "0e8a16", "Signal scoring / scanner"),
+    ("dom: risk", "b60205", "Risk gate / kill switch / sizing"),
     ("dom: exchange-api", "ff6b35", "Exchange integration (Binance, CCXT)"),
-    ("dom: regime",       "6f42c1", "HMM regime classifier"),
-    ("dom: alerts",       "0052cc", "Telegram / Notion alerts"),
-    ("dom: monitoring",   "e11d48", "Observability / metrics"),
-    ("dom: signals",      "1d76db", "Signal model / ML"),
-    ("dom: execution",    "5319e7", "Order management / execution"),
-    ("dom: ui",           "84b6eb", "Dashboard / frontend"),
+    ("dom: regime", "6f42c1", "HMM regime classifier"),
+    ("dom: alerts", "0052cc", "Telegram / Notion alerts"),
+    ("dom: monitoring", "e11d48", "Observability / metrics"),
+    ("dom: signals", "1d76db", "Signal model / ML"),
+    ("dom: execution", "5319e7", "Order management / execution"),
+    ("dom: ui", "84b6eb", "Dashboard / frontend"),
     # Priority
-    ("P0 - urgent",  "b60205", "Blocking, requires immediate action"),
-    ("P1 - high",    "e4e669", "High priority"),
-    ("P2 - medium",  "fef2c0", "Medium priority"),
-    ("P3 - low",     "cfd3d7", "Low priority, nice to have"),
+    ("P0 - urgent", "b60205", "Blocking, requires immediate action"),
+    ("P1 - high", "e4e669", "High priority"),
+    ("P2 - medium", "fef2c0", "Medium priority"),
+    ("P3 - low", "cfd3d7", "Low priority, nice to have"),
     # SLOs
     ("SLO: No Data Loss", "b60205", "Data integrity SLO"),
     ("SLO: Code Quality", "1d76db", "Code quality SLO"),
     # Status
-    ("status: tech-debt",          "fef2c0", "Accumulated technical debt"),
-    ("status: needs-decision",     "f9d0c4", "Blocked on a design decision"),
-    ("status: validation-freeze",  "b60205", "Blocked until validation phase ends"),
+    ("status: tech-debt", "fef2c0", "Accumulated technical debt"),
+    ("status: needs-decision", "f9d0c4", "Blocked on a design decision"),
+    ("status: validation-freeze", "b60205", "Blocked until validation phase ends"),
 ]
 
 DEFAULT_LABELS = [
-    "bug", "documentation", "duplicate", "enhancement",
-    "good first issue", "help wanted", "invalid", "question", "wontfix",
+    "bug",
+    "documentation",
+    "duplicate",
+    "enhancement",
+    "good first issue",
+    "help wanted",
+    "invalid",
+    "question",
+    "wontfix",
 ]
 
 
@@ -103,10 +110,14 @@ for name, color, description in LABELS:
         print("  Created: {}".format(name))
     elif status == 422:
         encoded = urllib.parse.quote(name)
-        result, status = api_call("PATCH", "{}/{}".format(API_BASE, encoded), {
-            "color": color,
-            "description": description,
-        })
+        result, status = api_call(
+            "PATCH",
+            "{}/{}".format(API_BASE, encoded),
+            {
+                "color": color,
+                "description": description,
+            },
+        )
         if status == 200:
             print("  Updated: {}".format(name))
         else:

@@ -16,6 +16,7 @@ Usage:
   DATABASE_URL=postgresql://coinscopeai:devpassword@localhost:5432/coinscopeai_dev \
       python3 scripts/backfill_ohlcv_1h.py
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,10 +38,10 @@ INTERVAL = "1h"
 INTERVAL_MS = 60 * 60 * 1000
 INTERVAL_S = 60 * 60
 LOOKBACK_DAYS = 365
-KLINE_LIMIT = 1500          # Binance max per request
+KLINE_LIMIT = 1500  # Binance max per request
 PRICE_SPIKE_THRESHOLD = Decimal("0.20")  # 20% close-to-close
 BASE_URL = "https://fapi.binance.com"
-REQUEST_PACING_S = 0.25     # ~4 req/s — well under the 2400 weight/min cap
+REQUEST_PACING_S = 0.25  # ~4 req/s — well under the 2400 weight/min cap
 MAX_RETRIES = 6
 USER_AGENT = "CoinScopeAI-backfill/1.0 (COI-101)"
 
@@ -48,6 +49,7 @@ LOG = logging.getLogger("backfill_ohlcv_1h")
 
 
 # ─── Kline fetch ────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class Kline:
@@ -92,7 +94,10 @@ def _request_klines(
             retry_after = float(resp.headers.get("Retry-After", backoff))
             LOG.warning(
                 "[%s] %d rate-limited on attempt %d; sleeping %.1fs",
-                symbol, resp.status_code, attempt, retry_after,
+                symbol,
+                resp.status_code,
+                attempt,
+                retry_after,
             )
             time.sleep(retry_after)
             backoff = min(backoff * 2, 60.0)
@@ -100,15 +105,16 @@ def _request_klines(
         if 500 <= resp.status_code < 600:
             LOG.warning(
                 "[%s] %d server error on attempt %d; sleeping %.1fs",
-                symbol, resp.status_code, attempt, backoff,
+                symbol,
+                resp.status_code,
+                attempt,
+                backoff,
             )
             time.sleep(backoff)
             backoff = min(backoff * 2, 30.0)
             continue
         # Other 4xx — surface the body and raise.
-        raise RuntimeError(
-            f"Binance klines request failed: {resp.status_code} {resp.text[:200]}"
-        )
+        raise RuntimeError(f"Binance klines request failed: {resp.status_code} {resp.text[:200]}")
     raise RuntimeError(f"Binance klines exhausted retries for {symbol} start={start_ms}")
 
 
@@ -182,7 +188,12 @@ def load_klines(conn, klines: Sequence[Kline]) -> int:
         (
             k.symbol,
             datetime.fromtimestamp(k.open_time_ms / 1000, tz=timezone.utc),
-            k.open, k.high, k.low, k.close, k.volume, k.trades,
+            k.open,
+            k.high,
+            k.low,
+            k.close,
+            k.volume,
+            k.trades,
         )
         for k in klines
     ]
@@ -201,14 +212,15 @@ def _row_count(cur) -> int:
 
 # ─── Validate ───────────────────────────────────────────────────────────────
 
+
 @dataclass
 class SymbolReport:
     symbol: str
     bars: int
     expected_bars: int
     duplicates: int
-    gaps: int                       # consecutive open_time delta > 1h
-    gap_total_hours: int            # sum of missing hours across all gaps
+    gaps: int  # consecutive open_time delta > 1h
+    gap_total_hours: int  # sum of missing hours across all gaps
     zero_volume_bars: int
     high_lt_low: int
     close_out_of_range: int
@@ -216,8 +228,10 @@ class SymbolReport:
     price_spikes: int
     first_open_time: Optional[datetime]
     last_open_time: Optional[datetime]
-    gap_examples: List[Tuple[datetime, datetime, int]]   # (prev, next, missing_hours)
-    spike_examples: List[Tuple[datetime, Decimal, Decimal, Decimal]]  # (open_time, prev_close, close, pct)
+    gap_examples: List[Tuple[datetime, datetime, int]]  # (prev, next, missing_hours)
+    spike_examples: List[
+        Tuple[datetime, Decimal, Decimal, Decimal]
+    ]  # (open_time, prev_close, close, pct)
 
     def is_clean(self) -> bool:
         return (
@@ -249,11 +263,21 @@ def validate_symbol(conn, symbol: str, expected_bars: int) -> SymbolReport:
 
     if not rows:
         return SymbolReport(
-            symbol=symbol, bars=0, expected_bars=expected_bars,
-            duplicates=0, gaps=0, gap_total_hours=0, zero_volume_bars=0,
-            high_lt_low=0, close_out_of_range=0, open_out_of_range=0, price_spikes=0,
-            first_open_time=None, last_open_time=None,
-            gap_examples=[], spike_examples=[],
+            symbol=symbol,
+            bars=0,
+            expected_bars=expected_bars,
+            duplicates=0,
+            gaps=0,
+            gap_total_hours=0,
+            zero_volume_bars=0,
+            high_lt_low=0,
+            close_out_of_range=0,
+            open_out_of_range=0,
+            price_spikes=0,
+            first_open_time=None,
+            last_open_time=None,
+            gap_examples=[],
+            spike_examples=[],
         )
 
     duplicates = 0  # PK guarantees zero; kept explicit for the report contract.
@@ -377,6 +401,7 @@ def render_report(reports: Sequence[SymbolReport]) -> str:
 
 # ─── Driver ─────────────────────────────────────────────────────────────────
 
+
 def _floor_to_hour_utc(dt: datetime) -> datetime:
     return dt.replace(minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
 
@@ -406,11 +431,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="Postgres DSN (env: DATABASE_URL).",
     )
     parser.add_argument(
-        "--symbols", nargs="+", default=list(SYMBOLS),
+        "--symbols",
+        nargs="+",
+        default=list(SYMBOLS),
         help="Symbol whitelist (default: %(default)s).",
     )
     parser.add_argument(
-        "--skip-fetch", action="store_true",
+        "--skip-fetch",
+        action="store_true",
         help="Skip the Binance fetch and validate whatever is already in Postgres.",
     )
     args = parser.parse_args(argv)
@@ -440,7 +468,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     inserted = load_klines(conn, klines)
                     LOG.info(
                         "[%s] fetched=%d inserted=%d in %.1fs",
-                        sym, len(klines), inserted, time.monotonic() - t0,
+                        sym,
+                        len(klines),
+                        inserted,
+                        time.monotonic() - t0,
                     )
             finally:
                 session.close()

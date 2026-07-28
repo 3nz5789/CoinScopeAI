@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legal & Disclosures — CoinScopeAI</title>
+  <meta name="description" content="CoinScopeAI legal documents, Terms of Service, Risk Disclosures, and methodology summary.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111; --border: #222; --text: #e8e8e8;
+      --muted: #888; --accent: #10b981; --warn: #f59e0b;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.6; }
+    header { border-bottom: 1px solid var(--border); padding: 20px 32px; display: flex; align-items: center; gap: 12px; }
+    header a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 17px; }
+    header span { color: var(--muted); font-size: 13px; }
+    .banner { background: #1a1500; border-bottom: 1px solid #3d2e00; padding: 10px 32px; font-size: 13px; color: var(--warn); }
+    main { max-width: 860px; margin: 0 auto; padding: 48px 32px 80px; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 48px; }
+    .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 56px; }
+    .doc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; text-decoration: none; color: var(--text); display: block; transition: border-color 0.15s; }
+    .doc-card:hover { border-color: var(--accent); }
+    .doc-card .icon { font-size: 24px; margin-bottom: 12px; }
+    .doc-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .doc-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .badge { display: inline-block; margin-top: 12px; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #1a2a1a; color: var(--accent); border: 1px solid #2a4a2a; }
+    .badge.draft { background: #1a1500; color: var(--warn); border-color: #3d2e00; }
+    section { margin-bottom: 40px; }
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+    .box strong { color: var(--text); }
+    .box p { margin-bottom: 12px; }
+    .box p:last-child { margin-bottom: 0; }
+    .phase { display: flex; align-items: center; gap: 10px; background: #111820; border: 1px solid #1e3a5a; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; font-size: 14px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex-shrink: 0; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .th { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .th td { padding: 8px 0; border-bottom: 1px solid #222; vertical-align: top; }
+    .th td:first-child { color: #888; width: 200px; }
+    footer { border-top: 1px solid var(--border); padding: 24px 32px; font-size: 12px; color: var(--muted); text-align: center; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<header>
+  <a href="https://coinscope.ai">CoinScopeAI</a>
+  <span>/ Legal &amp; Disclosures</span>
+</header>
+<div class="banner">⚠️ Testnet validation phase active — no real capital is being traded. All signals are from Binance Testnet only.</div>
+<main>
+  <h1>Legal &amp; Disclosures</h1>
+  <p class="subtitle">All legal documents, risk disclosures, and methodology summaries for CoinScopeAI.</p>
+  <div class="phase">
+    <div class="dot"></div>
+    <div><strong>Current status:</strong> Testnet Validation Phase (P0). CoinScopeAI is not yet accepting paying customers. No real capital is at risk. Target soft launch: June 1, 2026.</div>
+  </div>
+  <div class="doc-grid">
+    <a class="doc-card" href="/legal/tos"><div class="icon">📋</div><h3>Terms of Service</h3><p>Governs access to and use of the CoinScopeAI platform. Required before API access.</p><span class="badge draft">v1.0 — Pre-counsel draft</span></a>
+    <a class="doc-card" href="/legal/risk-disclosures"><div class="icon">⚠️</div><h3>Risk Disclosures</h3><p>Full disclosure of risks in cryptocurrency futures trading and use of algorithmic signals.</p><span class="badge draft">v1.0 — Pre-counsel draft</span></a>
+    <a class="doc-card" href="/legal/methodology"><div class="icon">🔬</div><h3>Methodology Summary</h3><p>How CoinScopeAI generates signals, detects regimes, and applies risk gates.</p><span class="badge">Published</span></a>
+    <a class="doc-card" href="/legal/data-retention"><div class="icon">🗄️</div><h3>Data Retention Policy</h3><p>How long we keep trade records, logs, and user data. Purge windows and deletion rights.</p><span class="badge draft">v0.1 — Draft</span></a>
+    <a class="doc-card" href="/legal/security"><div class="icon">🛡️</div><h3>Security Policy</h3><p>Vulnerability disclosure, scope, and response timelines.</p><span class="badge">Published</span></a>
+    <a class="doc-card" href="/legal/registrations"><div class="icon">🏛️</div><h3>Registrations &amp; Licenses</h3><p>Regulatory registrations and jurisdictions where the service is available.</p><span class="badge">Published</span></a>
+  </div>
+  <section>
+    <h2>What CoinScopeAI is not</h2>
+    <div class="box">
+      <p><strong>Not investment advice.</strong> Nothing on this platform constitutes investment advice, financial advice, tax advice, or a recommendation to buy, sell, or hold any asset.</p>
+      <p><strong>Not a fund or asset manager.</strong> CoinScopeAI does not custody, manage, or invest user funds. Users connect their own exchange accounts and make their own trading decisions.</p>
+      <p><strong>Not a registered advisor.</strong> CoinScopeAI is not registered as an investment advisor, broker-dealer, or commodity trading advisor in any jurisdiction.</p>
+      <p><strong>Not a guarantee.</strong> Past testnet signal performance does not guarantee future results. All trading carries risk of loss.</p>
+    </div>
+  </section>
+  <section>
+    <h2>System Risk Thresholds (Canonical — Locked 2026-05-01)</h2>
+    <div class="box">
+      <p>Hard limits enforced by the engine regardless of user configuration. Cannot be overridden by any subscription tier.</p>
+      <table class="th" style="margin-top:12px">
+        <tr><td>Maximum leverage</td><td><strong>10×</strong> per position</td></tr>
+        <tr><td>Maximum open positions</td><td><strong>5</strong> concurrent</td></tr>
+        <tr><td>Daily loss limit</td><td><strong>5%</strong> of account — halts all trading</td></tr>
+        <tr><td>Maximum drawdown</td><td><strong>10%</strong> from peak — triggers kill switch</td></tr>
+        <tr><td>Position heat cap</td><td><strong>80%</strong> total deployed capital</td></tr>
+      </table>
+      <p style="margin-top:12px;font-size:12px;color:#555">Source: <a href="https://github.com/3nz5789/CoinScopeAI">github.com/3nz5789/CoinScopeAI</a> — PCC v2 §8</p>
+    </div>
+  </section>
+  <section>
+    <h2>Contact</h2>
+    <div class="box">
+      <table class="th">
+        <tr><td>General</td><td><a href="mailto:hello@coinscope.ai">hello@coinscope.ai</a></td></tr>
+        <tr><td>Legal / compliance</td><td><a href="mailto:legal@coinscope.ai">legal@coinscope.ai</a></td></tr>
+        <tr><td>Security</td><td><a href="mailto:security@coinscope.ai">security@coinscope.ai</a></td></tr>
+        <tr><td>Data deletion</td><td><a href="mailto:privacy@coinscope.ai">privacy@coinscope.ai</a></td></tr>
+        <tr><td>Jurisdiction</td><td>UAE sole proprietorship, Jordan-resident founder</td></tr>
+      </table>
+    </div>
+  </section>
+</main>
+<footer>
+  © 2026 CoinScopeAI &nbsp;|&nbsp; <a href="/legal/tos" style="color:var(--muted)">Terms</a> &nbsp;|&nbsp; <a href="/legal/risk-disclosures" style="color:var(--muted)">Risk Disclosures</a> &nbsp;|&nbsp; <a href="/legal/data-retention" style="color:var(--muted)">Data Retention</a>
+  <br><br>
+  <span style="font-size:11px;color:#444">CoinScopeAI is not registered as an investment advisor in any jurisdiction. Nothing on this platform constitutes investment advice. Cryptocurrency trading involves substantial risk of loss.</span>
+</footer>
+</body>
+</html>

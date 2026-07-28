@@ -25,7 +25,6 @@ from services.market_data.models import (
     PredictedFunding,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures: mock API responses
 # ---------------------------------------------------------------------------
@@ -112,6 +111,7 @@ ALL_MIDS_RESPONSE = {"BTC": "83050.0", "ETH": "3205.0", "SOL": "145.0"}
 # Helper to mock aiohttp
 # ---------------------------------------------------------------------------
 
+
 class MockResponse:
     def __init__(self, data, status=200):
         self._data = data
@@ -136,7 +136,8 @@ class MockSession:
         self._response_data = response_data
         self.closed = False
 
-    def post(self, url, json=None):
+    def post(self, url, _json=None):
+        _ = url
         return MockResponse(self._response_data)
 
     async def close(self):
@@ -146,6 +147,7 @@ class MockSession:
 # ---------------------------------------------------------------------------
 # Tests: REST Client
 # ---------------------------------------------------------------------------
+
 
 class TestHyperliquidDeepClient:
     @pytest.fixture
@@ -240,6 +242,7 @@ class TestHyperliquidDeepClient:
 # Tests: WebSocket Parser Helpers
 # ---------------------------------------------------------------------------
 
+
 class TestHyperliquidDeepWsParsers:
     def test_parse_l2_book(self):
         book = HyperliquidDeepWs.parse_l2_book(L2_BOOK_RESPONSE)
@@ -296,6 +299,7 @@ class TestHyperliquidDeepWsParsers:
 # ---------------------------------------------------------------------------
 # Tests: WebSocket Subscription Management
 # ---------------------------------------------------------------------------
+
 
 class TestHyperliquidDeepWsSubscriptions:
     def test_subscribe_l2_book(self):

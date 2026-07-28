@@ -4,14 +4,22 @@ Tests for Binance Futures client — message parsing and normalization.
 
 import asyncio
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from services.market_data.base import EventBus
 from services.market_data.binance.client import BinanceFuturesClient
 from services.market_data.models import (
-    EventType, Exchange, MarkPrice, OrderBook, Trade, Side,
-    FundingRate, OpenInterest, MarketEvent,
+    EventType,
+    Exchange,
+    FundingRate,
+    MarketEvent,
+    MarkPrice,
+    OpenInterest,
+    OrderBook,
+    Side,
+    Trade,
 )
 
 
@@ -35,19 +43,21 @@ class TestBinanceMarkPrice:
 
         bus.subscribe(EventType.MARK_PRICE, handler)
 
-        raw = json.dumps({
-            "stream": "btcusdt@markPrice@1s",
-            "data": {
-                "e": "markPriceUpdate",
-                "E": 1700000000000,
-                "s": "BTCUSDT",
-                "p": "50000.50",
-                "i": "49999.00",
-                "P": "50001.00",
-                "r": "0.00010000",
-                "T": 1700000000000,
+        raw = json.dumps(
+            {
+                "stream": "btcusdt@markPrice@1s",
+                "data": {
+                    "e": "markPriceUpdate",
+                    "E": 1700000000000,
+                    "s": "BTCUSDT",
+                    "p": "50000.50",
+                    "i": "49999.00",
+                    "P": "50001.00",
+                    "r": "0.00010000",
+                    "T": 1700000000000,
+                },
             }
-        })
+        )
         await client._handle_combined_message(raw)
 
         assert len(received) == 1
@@ -70,20 +80,22 @@ class TestBinanceBookTicker:
 
         bus.subscribe(EventType.ORDER_BOOK, handler)
 
-        raw = json.dumps({
-            "stream": "btcusdt@bookTicker",
-            "data": {
-                "e": "bookTicker",
-                "u": 1234567890,
-                "s": "BTCUSDT",
-                "b": "50000.00",
-                "B": "1.500",
-                "a": "50001.00",
-                "A": "2.000",
-                "T": 1700000000000,
-                "E": 1700000000000,
+        raw = json.dumps(
+            {
+                "stream": "btcusdt@bookTicker",
+                "data": {
+                    "e": "bookTicker",
+                    "u": 1234567890,
+                    "s": "BTCUSDT",
+                    "b": "50000.00",
+                    "B": "1.500",
+                    "a": "50001.00",
+                    "A": "2.000",
+                    "T": 1700000000000,
+                    "E": 1700000000000,
+                },
             }
-        })
+        )
         await client._handle_combined_message(raw)
 
         assert len(received) == 1
@@ -106,21 +118,23 @@ class TestBinanceAggTrade:
 
         bus.subscribe(EventType.TRADE, handler)
 
-        raw = json.dumps({
-            "stream": "btcusdt@aggTrade",
-            "data": {
-                "e": "aggTrade",
-                "E": 1700000000000,
-                "a": 987654321,
-                "s": "BTCUSDT",
-                "p": "50000.00",
-                "q": "0.100",
-                "f": 100,
-                "l": 100,
-                "T": 1700000000000,
-                "m": False,  # buyer is maker = False → taker is buyer
+        raw = json.dumps(
+            {
+                "stream": "btcusdt@aggTrade",
+                "data": {
+                    "e": "aggTrade",
+                    "E": 1700000000000,
+                    "a": 987654321,
+                    "s": "BTCUSDT",
+                    "p": "50000.00",
+                    "q": "0.100",
+                    "f": 100,
+                    "l": 100,
+                    "T": 1700000000000,
+                    "m": False,  # buyer is maker = False → taker is buyer
+                },
             }
-        })
+        )
         await client._handle_combined_message(raw)
 
         assert len(received) == 1
@@ -139,21 +153,23 @@ class TestBinanceAggTrade:
 
         bus.subscribe(EventType.TRADE, handler)
 
-        raw = json.dumps({
-            "stream": "ethusdt@aggTrade",
-            "data": {
-                "e": "aggTrade",
-                "E": 1700000000000,
-                "a": 123,
-                "s": "ETHUSDT",
-                "p": "3000.00",
-                "q": "1.000",
-                "f": 100,
-                "l": 100,
-                "T": 1700000000000,
-                "m": True,  # seller is maker → taker sold
+        raw = json.dumps(
+            {
+                "stream": "ethusdt@aggTrade",
+                "data": {
+                    "e": "aggTrade",
+                    "E": 1700000000000,
+                    "a": 123,
+                    "s": "ETHUSDT",
+                    "p": "3000.00",
+                    "q": "1.000",
+                    "f": 100,
+                    "l": 100,
+                    "T": 1700000000000,
+                    "m": True,  # seller is maker → taker sold
+                },
             }
-        })
+        )
         await client._handle_combined_message(raw)
 
         trade = received[0].data
@@ -176,7 +192,7 @@ class TestBinanceREST:
             "time": 1700000000000,
         }
 
-        with patch.object(client, '_rest_get', new_callable=AsyncMock, return_value=mock_response):
+        with patch.object(client, "_rest_get", new_callable=AsyncMock, return_value=mock_response):
             await client._poll_open_interest()
 
         # Should receive one per symbol
@@ -204,7 +220,7 @@ class TestBinanceREST:
             "time": 1700000000000,
         }
 
-        with patch.object(client, '_rest_get', new_callable=AsyncMock, return_value=mock_response):
+        with patch.object(client, "_rest_get", new_callable=AsyncMock, return_value=mock_response):
             await client._poll_funding_rate()
 
         btc_events = [e for e in received if e.symbol == "BTCUSDT"]

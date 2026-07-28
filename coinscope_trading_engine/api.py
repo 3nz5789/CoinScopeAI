@@ -39,36 +39,34 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer
-from scanner.volume_scanner import VolumeScanner
-from scanner.pattern_scanner import PatternScanner
-from scanner.funding_rate_scanner import FundingRateScanner
-from scanner.orderbook_scanner import OrderBookScanner
-from scanner.liquidation_scanner import LiquidationScanner
-from signals.confluence_scorer import ConfluenceScorer, Signal
-from signals.entry_exit_calculator import EntryExitCalculator
-from signals.indicator_engine import IndicatorEngine
-from risk.circuit_breaker import CircuitBreaker, BreakerState
-from risk.exposure_tracker import ExposureTracker
-from risk.position_sizer import PositionSizer
-from risk.correlation_analyzer import CorrelationAnalyzer
-from models.sentiment_analyzer import SentimentAnalyzer, SentimentScore
-from models.regime_detector import RegimeDetector, MarketRegime
+from .config import settings
+from .data.binance_rest import BinanceRESTClient
+from .data.cache_manager import CacheManager
+from .data.data_normalizer import DataNormalizer
+from .scanner.volume_scanner import VolumeScanner
+from .scanner.pattern_scanner import PatternScanner
+from .scanner.funding_rate_scanner import FundingRateScanner
+from .scanner.orderbook_scanner import OrderBookScanner
+from .scanner.liquidation_scanner import LiquidationScanner
+from .signals.confluence_scorer import ConfluenceScorer, Signal
+from .signals.entry_exit_calculator import EntryExitCalculator
+from .signals.indicator_engine import IndicatorEngine
+from .risk.circuit_breaker import CircuitBreaker, BreakerState
+from .risk.exposure_tracker import ExposureTracker
+from .risk.position_sizer import PositionSizer
+from .risk.correlation_analyzer import CorrelationAnalyzer
+from .models.sentiment_analyzer import SentimentAnalyzer, SentimentScore
+from .models.regime_detector import RegimeDetector, MarketRegime
 try:
-    import sys, os as _os
-    sys.path.append(_os.path.join(_os.path.dirname(__file__), ".."))
-    from ml.regime_classifier_v3 import RegimeClassifierV3 as _RCV3
-    _MODEL_PATH = _os.path.join(_os.path.dirname(__file__), "..", "ml", "models", "regime_classifier_v3.pkl")
-    _regime_v3 = _RCV3.load(_MODEL_PATH) if _os.path.exists(_MODEL_PATH) else None
+    from .ml.regime_classifier_v3 import RegimeClassifierV3 as _RCV3
+    _MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "ml", "models", "regime_classifier_v3.pkl")
+    _regime_v3 = _RCV3.load(_MODEL_PATH) if os.path.exists(_MODEL_PATH) else None
 except Exception as _e:
     _regime_v3 = None
-from models.anomaly_detector import AnomalyDetector
-from storage.trade_journal import TradeJournal
-from alerts.scale_up_manager import ScaleUpManager
-from utils.logger import get_logger
+from .models.anomaly_detector import AnomalyDetector
+from .storage.trade_journal import TradeJournal
+from .alerts.scale_up_manager import ScaleUpManager
+from .utils.logger import get_logger
 
 # Ensure the project root is on sys.path so the canonical billing package is found.
 import sys
@@ -165,14 +163,14 @@ _norm         = DataNormalizer()
 # Persistent decision journal (docs/risk/risk-framework.md invariant #5)
 # Postgres DSN comes from settings (.env → pydantic), not os.getenv, because
 # pydantic-settings doesn't rehydrate the process environment.
-from storage.decision_journal import DecisionJournal as _DecisionJournal, DecisionEvent as _DecisionEvent
+from .storage.decision_journal import DecisionJournal as _DecisionJournal, DecisionEvent as _DecisionEvent
 _decisions    = _DecisionJournal(
     path   = "logs/decisions.jsonl",
     pg_url = getattr(settings, "decisions_pg_url", "") or None,
 )
 
 # Historical klines store (90-day rolling SQLite; free Binance public API)
-from storage.historical_klines import HistoricalKlinesStore as _KlinesStore
+from .storage.historical_klines import HistoricalKlinesStore as _KlinesStore
 _klines_store = _KlinesStore(path="logs/klines.sqlite")
 _HISTORICAL_INTERVALS    = ["5m", "15m", "1h", "4h"]
 _HISTORICAL_LOOKBACK     = 90
@@ -217,7 +215,7 @@ async def _historical_refresh_loop() -> None:
 
 # Telegram notifier (optional — no-op if credentials not set)
 try:
-    from alerts.telegram_notifier import TelegramNotifier
+    from .alerts.telegram_notifier import TelegramNotifier
     _telegram = TelegramNotifier()
 except Exception as _tg_exc:
     _telegram = None
@@ -314,7 +312,7 @@ class CloseRequest(BaseModel):
 # cached for `_HTF_CACHE_TTL_S` seconds per symbol so we don't hammer
 # Binance — 4h bars don't move every 10 seconds anyway.
 
-from core.multi_timeframe_filter import MultiTimeframeFilter
+from .core.multi_timeframe_filter import MultiTimeframeFilter
 
 _mtf_filter = MultiTimeframeFilter(ema_fast=9, ema_slow=21)
 _HTF_TIMEFRAME = "4h"
@@ -566,7 +564,7 @@ async def _autotrade_consider(signal: dict) -> None:
 
     # Guard 7: correlation — don't double-down on highly correlated pairs
     try:
-        from scanner.base_scanner import SignalDirection as _SDir
+        from .scanner.base_scanner import SignalDirection as _SDir
         sig_dir = _SDir.LONG if signal.get("direction") == "LONG" else _SDir.SHORT
         safe, why = _correlation.is_safe_to_add(symbol, sig_dir, _exposure.open_positions)
         if not safe:
@@ -587,9 +585,9 @@ async def _autotrade_consider(signal: dict) -> None:
         return
 
     try:
-        from signals.confluence_scorer import Signal as _SignalCls
-        from scanner.base_scanner import SignalDirection as _SDir
-        from signals.entry_exit_calculator import TradeSetup as _TS
+        from .signals.confluence_scorer import Signal as _SignalCls
+        from .scanner.base_scanner import SignalDirection as _SDir
+        from .signals.entry_exit_calculator import TradeSetup as _TS
         # Build minimum TradeSetup/Signal that PositionSizer accepts
         sig_dir = _SDir.LONG if side == "BUY" else _SDir.SHORT
         ts = _TS(
@@ -925,7 +923,7 @@ async def _price_feed_loop() -> None:
 
 from collections import deque
 from datetime import datetime, timezone
-from data.data_normalizer import LiquidationOrder as _LiquidationOrder
+from .data.data_normalizer import LiquidationOrder as _LiquidationOrder
 
 _LIQ_WINDOW_S  = 30 * 60               # keep 30 min of events
 _LIQ_MAX_ITEMS = 2_000                 # hard cap per symbol
@@ -1144,8 +1142,8 @@ async def _sync_account_once() -> None:
         # into the private _positions dict because this is an administrative
         # sync (bypassing open_position's max-position guard, which is meant
         # for user-initiated opens, not state reconciliation).
-        from scanner.base_scanner import SignalDirection
-        from risk.exposure_tracker import Position
+        from .scanner.base_scanner import SignalDirection
+        from .risk.exposure_tracker import Position
         from datetime import datetime, timezone
 
         fresh: dict[str, "Position"] = {}
@@ -2042,7 +2040,7 @@ class BacktestRunRequest(BaseModel):
 
 
 async def _run_backtest(job_id: str, req: BacktestRunRequest) -> None:
-    from signals.backtester import Backtester, BacktestConfig
+    from .signals.backtester import Backtester, BacktestConfig
 
     def _trade_to_dict(t) -> dict:
         return {
@@ -2897,7 +2895,7 @@ async def get_regime(
 
         # ── v3 ML classifier (primary) ────────────────────────────────
         if _regime_v3 is not None:
-            from signals.indicator_engine import IndicatorEngine as _IE
+            from .signals.indicator_engine import IndicatorEngine as _IE
             _ie  = _IE()
             ind  = _ie.compute(candles)
             feat = {
@@ -3023,8 +3021,8 @@ async def get_position_size(
     Calculate recommended position size given entry/SL levels and balance.
     Optionally uses Kelly criterion if win_rate and avg_rr are provided.
     """
-    from signals.entry_exit_calculator import TradeSetup
-    from scanner.base_scanner import SignalDirection
+    from .signals.entry_exit_calculator import TradeSetup
+    from .scanner.base_scanner import SignalDirection
 
     direction = SignalDirection.LONG if entry > stop_loss else SignalDirection.SHORT
     sl_dist   = abs(entry - stop_loss)
@@ -3343,7 +3341,7 @@ async def run_validation(
     """
     try:
         import pandas as pd
-        from validation.walk_forward_validation import WalkForwardValidator, fetch_data
+        from .validation.walk_forward_validation import WalkForwardValidator, fetch_data
 
         # fetch_data uses the symbol in BTCUSDT format (no slash)
         df        = fetch_data(symbol.upper(), timeframe, limit)

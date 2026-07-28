@@ -111,7 +111,16 @@ coinscope-mcp-server/dist/
 coinscope_trading_engine/.env
 coinscope_trading_engine/.env.*
 coinscope_trading_engine/logs/
-coinscope_trading_engine/data/
+
+# Data directory source modules are tracked; ignore runtime artifacts only.
+coinscope_trading_engine/data/*.db
+coinscope_trading_engine/data/*.sqlite
+coinscope_trading_engine/data/*.sqlite3
+coinscope_trading_engine/data/*.jsonl
+coinscope_trading_engine/data/*.csv
+coinscope_trading_engine/data/*.parquet
+coinscope_trading_engine/data/raw/
+coinscope_trading_engine/data/processed/
 
 # ── Duplicate engine folders (stale copies) ───────────────────
 coinscope_trading_engine 2/

@@ -14,18 +14,18 @@
 | Memo author | Mohammed (Founder) |
 | Memo date | 2026-07-27 |
 | Reviewers | Strategy Chief of Staff (Scoopy); External Risk Reviewer (TBD) |
-| Decision (template options: PASS / EXTEND / RESTART / KILL) | **Conditional PASS** — pending AWS restoration and data replay |
+| Decision (template options: PASS / EXTEND / RESTART / KILL) | **EXTEND** — 30-day extension required due to signal-quality P0 failures (WFV 6/18, CPCV 0/6) |
 | Next gate evaluated | G1 (Closed Beta) only — G2 not evaluated at this point |
 
 ---
 
 ## 1. Executive Summary (≤200 words)
 
-**Decision: Conditional PASS** for the validation-phase exit.
+**Decision: EXTEND** for the validation-phase exit.
 
 The engine ran for 31 days and 4 hours of uptime on Binance Futures Testnet, with the risk gate rejecting 68% of candidates and the kill switch engaging as recently as 2026-04-22. These three data points suggest the engine stayed online and the risk path remained active throughout the validation window. However, the AWS VPS hosting the validation environment is currently suspended, so the full trade journal, performance curve, and telemetry needed to complete the Production Candidate Criteria scorecard are not available for independent replay.
 
-The recommendation is to treat the validation exit as a **Conditional PASS** under COI-41: the phase is accepted for the metrics we can verify, but G1 unlock cannot proceed until the VPS is restored and the missing scorecard cells are filled. No real-capital or closed-beta access is authorized until that replay is complete and signed off.
+More importantly, repository history contains confirmed signal-quality P0 failures (WFV 6/18, CPCV 0/6). Under the pre-committed decision rule, any P0 failure — regardless of operational data gaps — triggers an **EXTEND** verdict rather than PASS or Conditional PASS. The validation phase is therefore extended by 30 days to address the failed signal-quality criteria before any G1 unlock can be considered. No real-capital or closed-beta access is authorized during the extension.
 
 ---
 
@@ -119,7 +119,7 @@ The recommendation is to treat the validation exit as a **Conditional PASS** und
 - Total P0 criteria evaluated: **3 metrics only** (uptime, gate rejection rate, kill-switch last-engagement date)
 - P0 pass: **0 / 0** formally — insufficient data to assert pass/fail
 - P1 pass: **0 / 0** formally
-- **Any single P0 failure?** ☐ Yes  ☐ No  ☑ **Unable to determine due to suspended VPS**
+- **Any single P0 failure?** ☑ Yes  ☐ No  — Signal-quality P0 failures recorded (WFV 6/18, CPCV 0/6)
 
 ---
 
@@ -134,6 +134,7 @@ The recommendation is to treat the validation exit as a **Conditional PASS** und
 - None independently verifiable without the raw data pack.
 
 ### 4.3 Surprises (negative)
+- **Signal-quality P0 failures** are present in repository history (WFV 6/18, CPCV 0/6). By the pre-committed decision rule, this alone requires an EXTEND verdict.
 - **AWS VPS suspension** occurred after the validation window, blocking access to the full trade journal, telemetry, and observability stack needed to complete this memo mechanically. This is an operational dependency, not an engine defect, but it prevents a clean PASS.
 
 ### 4.4 Near-misses
@@ -174,28 +175,36 @@ Per vendor, one line:
 > - **≥2 P0 fail OR D-category breach observed** → **RESTART**
 > - **Multiple D-category breaches OR kill-switch failure** → **KILL** (full engine review)
 
-**Decision:** ☐ PASS  ☑ **Conditional PASS**  ☐ EXTEND  ☐ RESTART  ☐ KILL
+**Decision:** ☐ PASS  ☐ Conditional PASS  ☑ **EXTEND**  ☐ RESTART  ☐ KILL
 
 **Reasoning (≤150 words):**
 
-The three externally verifiable metrics — 31d 04h uptime, 68% gate rejection, and kill-switch engagement on 2026-04-22 — are consistent with an engine that stayed healthy and risk-disciplined through the validation window. However, the AWS VPS suspension means the full Production Candidate Criteria scorecard cannot be replayed or independently verified today. A mechanical PASS would require data we do not currently possess. A Conditional PASS preserves the positive signal from the slide deck while explicitly blocking G1 unlock until the environment is restored and the remaining P0 cells are filled. No D-category breach is asserted from the available data.
+The three externally verifiable metrics — 31d 04h uptime, 68% gate rejection, and kill-switch engagement on 2026-04-22 — are consistent with an engine that stayed online and risk-disciplined. However, repository history contains confirmed signal-quality P0 failures (WFV 6/18, CPCV 0/6). The pre-committed decision rule is unambiguous: any P0 failure requires EXTEND. The AWS VPS suspension additionally prevents replay of the full scorecard, but it does not override the signal-quality finding. The phase is extended by 30 days to address the failed criteria and re-verify before any G1 unlock.
 
-**If EXTEND/RESTART/KILL:** N/A.
-**Conditional PASS corrective task:** Restore AWS VPS, replay validation logs, complete §3 scorecard, and obtain Founder sign-off before G1 unlock.
+**If EXTEND:** Specify failed criteria and corrective tasks below. A new end date will be set once the signal-quality fixes are validated.
+**Failed criteria:** Signal quality (S) — WFV 6/18, CPCV 0/6.
+**Corrective tasks:**
+1. Diagnose root cause of WFV and CPCV signal-quality failures.
+2. Implement and test fixes in the signal-generation path.
+3. Re-run walk-forward validation and cross-validation to confirm pass.
+4. Restore AWS VPS, replay validation logs, and complete §3 scorecard.
+5. Obtain Founder sign-off before updating this memo to PASS.
 
 ---
 
-## 8. What Unlocks Next (only if PASS)
+## 8. Corrective Work During EXTEND
 
-Because this is a **Conditional PASS**, the items below are **tentative** and require completion of the AWS-replay corrective task first.
+Because the decision is **EXTEND**, the items below are **required** before the memo can be updated to PASS and G1 unlock can be considered.
 
 | Item | Owner | Target date |
 |---|---|---|
+| Diagnose WFV 6/18 and CPCV 0/6 signal-quality failures | Founder | Within 7 days |
+| Implement signal-generation fixes and unit tests | Founder | Within 14 days |
+| Re-run walk-forward validation and cross-validation to confirm pass | Founder | Within 21 days |
 | Restore AWS VPS and replay validation logs | Founder | TBD — pending AWS support |
-| Complete §3 scorecard and sign memo | Founder | Within 7 days of VPS restoration |
+| Complete §3 scorecard and sign memo | Founder | After signal-quality P0 passes |
 | Closed beta cohort recruited | Founder | After memo signed |
 | ToS + Risk Disclosure live | Founder + Counsel | Before first beta invite |
-| Beta onboarding flow live | Founder | Before first beta invite |
 | First beta user invited | Founder | After all G1 criteria pass |
 | First weekly beta review | Founder | Within 7 days of first invite |
 
@@ -244,7 +253,7 @@ Because this is a **Conditional PASS**, the items below are **tentative** and re
 ## 12. Filing instructions
 
 1. Save as `docs/validation_exit_memo_2026-05-09.md` in the repo. ✅
-2. Commit with a message containing the decision (e.g., `docs: validation exit memo — DECISION: Conditional PASS`).
-3. Because the decision is **Conditional PASS**, do **not** open the G1 unlock checklist until the AWS replay corrective task is complete and the memo is updated to a full PASS.
+2. Commit with a message containing the decision (e.g., `docs: validation exit memo — DECISION: EXTEND`).
+3. Because the decision is **EXTEND**, do **not** open the G1 unlock checklist until the failed signal-quality criteria are addressed, the AWS replay corrective task is complete, and the memo is updated to a full PASS.
 4. Update the project state memory file with the corrective task and target replay date.
 5. Notify the external reviewer once the replay is complete and the final decision is recorded.

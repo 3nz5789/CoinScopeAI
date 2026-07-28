@@ -2,15 +2,15 @@
 
 # CoinScopeAI
 
-**AI-powered crypto futures trading intelligence — capital preservation first.**
+**Regime-aware, risk-first trading intelligence for USDT-perpetual crypto futures.**
 
 [![CI](https://github.com/3nz5789/CoinScopeAI/actions/workflows/ci.yml/badge.svg)](https://github.com/3nz5789/CoinScopeAI/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Phase](https://img.shields.io/badge/phase-testnet%20validation-orange)](https://linear.app/coinscopeai)
+[![Phase](https://img.shields.io/badge/phase-P0%20testnet%20validation-orange)](#validation-phase-freeze)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/engine-FastAPI-009688)](https://fastapi.tiangolo.com)
 
-[Dashboard](https://app.coinscope.ai) · [API](https://api.coinscope.ai) · [Linear](https://linear.app/coinscopeai) · [Notion](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) · [Legal](https://app.coinscope.ai/legal)
+[Dashboard](https://app.coinscope.ai) · [API Docs](https://api.coinscope.ai/docs) · [P0 Status](docs/validation/p0-public-summary.md) · [Linear](https://linear.app/coinscopeai) · [Notion](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) · [Disclosures](https://app.coinscope.ai/legal)
 
 </div>
 
@@ -18,67 +18,120 @@
 
 ## What is CoinScopeAI?
 
-CoinScopeAI is a regime-aware, risk-first trading intelligence engine for USDT-perpetual crypto futures. It scans Binance Futures for high-probability setups, gates every candidate through a multi-layer risk engine, and delivers actionable alerts via Telegram — without placing trades autonomously.
+CoinScopeAI is an AI-driven trading intelligence system for Binance USDT-M perpetual futures. It scans the market, scores signal candidates with a multi-factor confluence model, gates every candidate through a layered risk engine, and delivers actionable alerts via Telegram — without placing trades autonomously.
 
 **It is:**
-- A signal scoring and risk gate engine (FixedScorer → HMM regime → Kelly sizer)
-- A capital-preservation system that halts itself when drawdown limits are hit
-- A Telegram-native alert system (`@ScoopyAI_bot`) with real-time regime awareness
+- A signal scoring and regime-aware risk gate engine (Scanner → HMM + v3 classifier → Kelly sizer)
+- A capital-preservation system with automatic circuit breakers and a manual kill switch
+- A Telegram-native alert companion (`@ScoopyAI_bot`) with per-signal regime and confidence context
+- A FastAPI engine serving a React dashboard at `app.coinscope.ai`
 
 **It is not:**
-- An auto-trading bot or execution system that trades on your behalf
-- An investment advice product or fund manager
+- An auto-trading bot or fund manager
 - A signal-selling or copy-trading service
+- Investment advice of any kind
 
-> **Validation phase active.** Engine runs on **Binance Testnet only**. Real-capital trading is gate-locked behind the Production Candidate Criteria v2 §8 readiness checklist.
+> **P0 validation phase active — May 2026.** The engine runs on **Binance Testnet only**. Real-capital trading is gate-locked behind the [Production Candidate Criteria v2 §8](#validation-phase-freeze) readiness checklist.
+
+---
+
+## Readiness
+
+<!-- readiness:begin -->
+
+**Updated:** 2026-05-15 · **Source of truth:** [`docs/validation/p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0 (honesty pass overrides body)
+
+| Field | Value |
+|---|---|
+| Phase | **P0 — testnet validation** (Binance USDT-M Testnet only) |
+| Freeze | **🔒 Active** — see [Validation Phase Freeze](#validation-phase-freeze). P0 runs through ~2026-05-31 |
+| Latest tag | [`v0.1.0-p0.4`](https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0.4) — 2026-05-15, "Trust Stack + Operator Console" |
+| Evidence baseline | [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) — start at §0.5 for the one-paragraph honest summary |
+| Invariant coverage | 12 🟢 · 4 🟡 · 0 🔴 → [`invariant-matrix.md`](docs/validation/invariant-matrix.md) (I4 is a 🟢 candidate — issue [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) closed via [#50](https://github.com/3nz5789/CoinScopeAI/pull/50), pending matrix doc update + p0-evidence-pack §0 refresh per the closing rules) |
+| Open PR-driven blockers | (none — the three previous blockers landed via [#50](https://github.com/3nz5789/CoinScopeAI/pull/50), [#51](https://github.com/3nz5789/CoinScopeAI/pull/51), and [#67](https://github.com/3nz5789/CoinScopeAI/pull/67)) |
+| Macro P0 blocker | **CPCV §0.4 graduation bar fails — 0/6 symbols pass** on the 2026-05-13 run. Requires a founder strategy decision (refine thresholds, add scorer components, or revise the bar). No tracking issue yet — intentionally out of scope for any existing issue. See [`docs/validation/runs/2026-05-13/cpcv.md`](docs/validation/runs/2026-05-13/cpcv.md). |
+| Open operator blockers | COI-68 VPS `.env` patch · COI-69 post-restart verification |
+
+> **P0 graduates to P1 when** the CPCV §0.4 graduation bar passes, both operator COI items complete, and the four 🟡 rows in the invariant matrix flip 🟢 per the matrix's own closing rules. Do not interpret this block in isolation — read against [`p0-evidence-pack.md`](docs/validation/p0-evidence-pack.md) §0.4 and the invariant matrix.
+
+<!-- readiness:end -->
+
+## Start here
+
+Three docs govern day-to-day operation during P0. Read them in this order, and treat them as the source of truth for anything the rest of this README compresses:
+
+| Doc | What it is | When to read it |
+|---|---|---|
+| [Operator Lifecycle](docs/runbooks/operator-workflow.md) | 9-step session lifecycle — every API call, breaker check, and journal step an operator runs per trading day | Before any session; whenever the engine, dashboard, or alerts surface an anomaly |
+| [Validation Proof Hub](docs/validation/p0-evidence-pack.md) | P0 Evidence Pack — what was validated, how, what each artefact proves **and what it does not prove**. §0 (honesty pass) overrides body claims | Before claiming any capability ships in P0; before any review or release decision |
+| [Validation Phase Freeze](#validation-phase-freeze) | What is **blocked** from changing during P0 — thresholds, testnet flag, breaker semantics, ML artifacts, order semantics | Before opening any PR that touches risk, signals, exchange, or ML |
+
+If a claim about CoinScopeAI is not anchored to one of these three, it is not actionable in P0.
+
+---
+
+## Invariant cheatsheet
+
+The six claims this README makes about the system, paired with the code that enforces each one and the tests that catch a regression. The full 16-row matrix — thresholds, regime gating, journaling, hot-path import boundary, drift detection, and the matrix's own integrity check — lives at [`docs/validation/invariant-matrix.md`](docs/validation/invariant-matrix.md).
+
+| Claim | Code | Tests | Matrix |
+|---|---|---|---|
+| P0 runs on Binance Testnet only | `coinscope.env.example` · `configs/environments/staging.yaml` | `tests/test_ci_smoke.py::test_testnet_mode` | 🟢 I7 |
+| No trade bypasses the risk gate | `services/paper_trading/safety.py` · `services/paper_trading/order_manager.py` | `tests/unit/paper_trading/test_safety.py` — every rejection class (BUG-10 is the canonical regression) | 🟢 I1 |
+| No size exceeds the 2% per-trade hard cap | `risk_management/kelly_position_sizer.py` · `services/paper_trading/safety.py` | `tests/unit/paper_trading/test_safety.py` + `scripts/risk_threshold_guardrail.py` | 🟢 I2 |
+| A tripped breaker blocks new entries | `services/paper_trading/safety.py` | Daily-loss · max-drawdown · consecutive-loss tests in `test_safety.py` | 🟢 I3 |
+| Kill switch prevents new entries when engaged | `services/paper_trading/safety.py` · `services/paper_trading/kill.py` | `TestKillSwitch` + `TestSafetyGateKillSwitch` in `test_safety.py` | 🟡 I4 · [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) closed via [#50](https://github.com/3nz5789/CoinScopeAI/pull/50) (flip pending matrix update) |
+| Engine halts on uncertain state — never guesses | `services/paper_trading/safety.py` (`validate_order` fail-closed) | `tests/unit/paper_trading/test_safety.py` (reject-default branch) | 🟢 I6 |
+
+Status colour and matrix ID let you jump straight to the full row in [`invariant-matrix.md`](docs/validation/invariant-matrix.md). 🟡 rows carry a tracking issue — the link is in the Matrix column.
 
 ---
 
 ## Architecture
 
 ```
-            ┌─────────────────────┐
-            │   Binance Futures   │  testnet today · mainnet gated
-            │  REST + WebSocket   │
-            └──────────┬──────────┘
-                       │
-                ┌──────┴──────┐
-                │   Adapter   │  normalizes · reconnects · signs
-                └──────┬──────┘
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-     ┌────────┐   ┌────────┐   ┌────────────┐
-     │Scanner │   │Regime  │   │Market data │
-     │        │   │HMM+v3  │   │cache       │
-     └───┬────┘   └───┬────┘   └─────┬──────┘
-         └─────┬──────┘              │
-               ▼                     │
-          ┌─────────┐◀───────────────┘
-          │ Scorer  │  confluence score 0–100
-          └────┬────┘
-               ▼
-        ┌────────────┐
-        │ Risk Gate  │  regime · heat · daily loss · circuit breakers
-        └─────┬──────┘
-              ▼
-        ┌────────────┐
-        │ Executor   │  orders → Binance Testnet
-        └─────┬──────┘
-              ▼
-         ┌─────────┐        ┌──────────────────────────────┐
-         │ Journal │◀──────▶│  FastAPI :8001               │
-         └─────────┘        │  /scan /risk-gate /regime    │
-                            │  /journal /performance       │
-                            └──────────────┬───────────────┘
-                                           ▼
-                              ┌────────────────────────┐
-                              │  Dashboard             │
-                              │  app.coinscope.ai      │
-                              └────────────────────────┘
+┌─────────────────────────────┐
+│      Binance Futures        │  testnet today · mainnet gated by PCC v2 §8
+│   REST + WebSocket streams  │
+└──────────────┬──────────────┘
+               │ OHLCV · OI · funding · liquidations · CVD
+        ┌──────┴──────┐
+        │   Adapter   │  normalises · rate-limits · reconnects · HMAC-signs
+        └──────┬──────┘
+               │
+   ┌───────────┼────────────┐
+   ▼           ▼            ▼
+┌────────┐ ┌────────┐ ┌──────────────┐
+│Scanner │ │Regime  │ │  Market data │
+│multi-TF│ │HMM+v3  │ │  cache       │
+└───┬────┘ └───┬────┘ └──────┬───────┘
+    └──────┬───┘             │
+           ▼                 │
+     ┌──────────┐◀───────────┘
+     │  Scorer  │  confluence 0–100 · per-signal label
+     └────┬─────┘
+          ▼
+   ┌─────────────┐
+   │  Risk Gate  │  regime · heat · corr · daily loss · drawdown · circuit breakers · kill switch
+   └──────┬──────┘
+          ▼
+   ┌─────────────┐
+   │   Executor  │  → Binance Testnet (mainnet gated by PCC v2 §8)
+   └──────┬──────┘
+          ▼
+   ┌─────────────┐     ┌──────────────────────────────────────────┐
+   │   Journal   │◀───▶│  FastAPI engine  ·  http://localhost:8001  │
+   └─────────────┘     │  /scan  /risk-gate  /position-size        │
+                       │  /regime/:symbol  /performance  /journal   │
+                       └─────────────────┬────────────────────────┘
+                                         ▼
+                              ┌────────────────────┐
+                              │  React Dashboard   │
+                              │  app.coinscope.ai  │
+                              └────────────────────┘
 ```
 
-Full architecture: [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md)
+Full architecture: [`docs/architecture/architecture.md`](docs/architecture/architecture.md)
 
 ---
 
@@ -88,10 +141,10 @@ Full architecture: [`docs/architecture/system-overview.md`](docs/architecture/sy
 |---|---|
 | Engine API | Python 3.11+ · FastAPI · Uvicorn |
 | Task queue | Celery · Redis |
-| Database | PostgreSQL (billing · journal) · SQLite (local dev) |
-| ML / Signals | Scikit-learn · LightGBM · HMM regime classifier (hmmlearn) |
+| Database | PostgreSQL (prod) · SQLite (local dev) |
+| ML / Signals | Scikit-learn · LightGBM · hmmlearn (HMM regime classifier) |
 | Exchange | CCXT — Binance USDT-M Testnet |
-| Dashboard | React 18 · TypeScript · Vite · Tailwind CSS (OKLCH) |
+| Dashboard | React 18 · TypeScript · Vite · Tailwind CSS (OKLCH design system v3) |
 | Alerts | Telegram Bot API (`@ScoopyAI_bot`) |
 | Billing | Stripe |
 | Infra | Docker Compose · DigitalOcean SGP1 · GitHub Actions |
@@ -101,78 +154,78 @@ Full architecture: [`docs/architecture/system-overview.md`](docs/architecture/sy
 
 ## Repository Structure
 
+Present state on `main`. Planned migrations, naming clarifications, and any callouts not yet landed live in [`docs/architecture/repository-roadmap.md`](docs/architecture/repository-roadmap.md) — not here.
+
 ```
 CoinScopeAI/
 │
-├── engine/                         Core trading engine
-│   ├── __init__.py
-│   ├── api.py                      FastAPI router registration
-│   ├── core/                       Shared config, state, base classes
-│   ├── exchange/                   Binance adapter (REST + WebSocket)
-│   ├── integrations/               Exchange integrations (Binance primary, OKX fallback)
-│   ├── monitoring/                 Health checks, metrics
-│   ├── signals/                    Signal scoring pipeline
-│   └── dashboard/                  Dashboard BFF endpoints
+├── engine/                  FastAPI trading engine
+│   ├── api.py                  App entry + router registration
+│   ├── core/                   Pair monitor, orchestrator, shared state
+│   ├── exchange/               Binance Futures Testnet REST/WS clients + executor
+│   ├── integrations/           Notion sync, trade journal, portfolio sync
+│   ├── monitoring/             Health/readiness probes, Prometheus metrics
+│   └── signals/                Confluence scoring pipeline
 │
-├── apps/                           Application layer
-│   ├── core/                       Shared application core
-│   ├── exchange/                   Exchange connectivity
-│   ├── integrations/               Integration layer
-│   ├── monitoring/                 Observability
-│   ├── signals/                    Signal pipeline
-│   └── dashboard/                  Dashboard application
+├── risk_management/         Risk gate, sizer, regime detector
+│   ├── risk_gate.py             Pre-trade gate: regime, heat, daily loss, drawdown
+│   ├── kelly_position_sizer.py  Fractional Kelly with 2% per-trade hard cap
+│   └── hmm_regime_detector.py   HMM regime classifier (bull / chop / bear)
 │
-├── backend/                        Backend services
-├── services/                       Microservices
-├── strategies/                     Trading strategies
-├── risk_management/                Risk gate + position sizing
-├── frontend/                       React dashboard (Vite + Tailwind)
-├── infra/                          Docker + deployment
-├── configs/                        Configuration files
-├── scripts/                        Operator scripts
-│   ├── drift_detector.py           Cross-doc token consistency checker
-│   ├── risk_threshold_guardrail.py Codebase-wide threshold validator
-│   ├── daily_status.sh             Morning engine brief (6 endpoints)
-│   ├── sync_verify.py              Cross-platform structure verifier
-│   ├── auto_sync.py                Session-end auto-sync engine
-│   └── setup_github_labels.py      GitHub label management (27 labels)
-├── docs/                           Technical documentation
-│   ├── architecture/               System overview, component map, design system
-│   │   ├── system-overview.md      Architecture diagram + responsibility boundaries
-│   │   ├── architecture.md         Architecture v5 (canonical)
-│   │   ├── design-system-manifest.md  Design tokens v3
-│   │   └── component-map.md        Component breakdown
-│   ├── decisions/                  Architecture Decision Records
-│   │   ├── adr-0001-fastapi-and-uvicorn.md
-│   │   ├── adr-0002-redis-celery-for-workers.md
-│   │   └── adr-0003-llm-off-hot-path.md
-│   ├── risk/                       Risk framework documentation
-│   │   ├── risk-framework.md       Risk philosophy + invariants
-│   │   ├── risk-gate.md            Gate logic
-│   │   ├── position-sizing.md      Kelly pipeline
-│   │   └── failsafes-and-kill-switches.md
-│   ├── runbooks/                   Operational runbooks
-│   │   ├── daily-ops.md
-│   │   ├── local-development.md
-│   │   ├── digitalocean-deployment.md
-│   │   └── release-checklist.md
-│   └── ml/                         ML documentation
-│       ├── regime-detection.md
-│       └── confidence_scoring_baseline.md
-├── tests/                          Test suite
-├── .github/
-│   ├── workflows/ci.yml            Lint · test · security scan
-│   ├── ISSUE_TEMPLATE/             Bug report, feature request
-│   └── pull_request_template.md
-├── .env.example                    Canonical env template
-├── CLAUDE.md                       AI operator instructions + thresholds
-├── CONTEXT_PRIMER.md               Session on-ramp for AI operators
-├── CONTRIBUTING.md                 Contribution rules + 2-reviewer policy
-├── SECURITY.md                     Vulnerability disclosure
-├── CODEOWNERS                      Auto-review assignments
-├── docker-compose.yml              Local + VPS stack
-└── requirements.txt                Root dependency manifest
+├── services/                Long-running workers
+│   ├── paper_trading/           Engine + safety gate + kill switch + CLI
+│   ├── market_data/             Multi-venue stream recorders + aggregator
+│   └── telegram-bot/            @ScoopyAI_bot worker
+│
+├── apps/dashboard/          React 18 + Vite + Tailwind dashboard
+│
+├── strategies/              Strategy configs · research · backtests (scaffold)
+├── ml_models/               Model training scaffolding
+├── data/                    Pipeline scaffolding (raw / processed / features)
+│
+├── configs/environments/    development.yaml · staging.yaml · production.yaml
+├── infra/docker/            Dockerfiles + docker-compose.{dev,prod}.yml
+├── infra/systemd/           systemd unit files
+├── deploy/systemd/          Production unit installer
+│
+├── scripts/                 Operational + CI gate scripts (see table below)
+├── tests/                   pytest — smoke + unit + directory-boundary
+├── docs/                    Documentation (see index below)
+│
+├── bot/                     Telegram alert helper
+├── notebooks/               Research notebooks
+├── memory/                  Operator memory store
+├── utils/                   Shared helpers
+└── archive/                 Pre-restructure code retained for history
 ```
+
+Root files: `README.md` · `CHANGELOG.md` · `CONTRIBUTING.md` · `SECURITY.md` · `CODEOWNERS` · `Makefile` · `requirements.txt` · `pyproject.toml` · `coinscope.env.example` · `prometheus.yml` · `prometheus-alert-rules.yml`
+
+### Scripts on `main`
+
+| Script | Purpose |
+|---|---|
+| `scripts/risk_threshold_guardrail.py` | Codebase-wide threshold drift scanner |
+| `scripts/evidence_gate.py` | CI gate — sensitive PR must touch proof/freeze/release |
+| `scripts/invariant_matrix_check.py` | CI gate — invariant-matrix citations resolve |
+| `scripts/daily_status_check.py` + `scripts/run_daily_status.sh` | Morning engine brief |
+| `scripts/health_check_paper_trading.py` | Paper-trading health verifier |
+| `scripts/sync_verify.py` | Cross-platform structure verifier |
+| `scripts/test_testnet_connectivity.py` | Binance testnet reachability probe |
+| `scripts/setup_github_labels.py` | Label installer (classic PAT required) |
+
+### Documentation index
+
+| Path | Contents |
+|---|---|
+| `docs/architecture/` | Confluence scoring · design-system manifest |
+| `docs/api/engine-api-contract.md` | Engine API contract |
+| `docs/decisions/` | Architecture decision records |
+| `docs/risk/` | Risk framework · gate · sizing · failsafes |
+| `docs/runbooks/operator-workflow.md` | Trading session lifecycle |
+| `docs/validation/p0-evidence-pack.md` | Validation proof hub |
+| `docs/validation/invariant-matrix.md` | Invariant-to-test mapping |
+| `docs/monitoring/slo-alerts-dashboard.md` | SLO and alert specs |
 
 ---
 
@@ -182,7 +235,7 @@ CoinScopeAI/
 
 - Python 3.11+
 - Docker + Docker Compose
-- Binance Testnet API keys ([testnet.binancefuture.com](https://testnet.binancefuture.com))
+- Binance Testnet API keys — [testnet.binancefuture.com](https://demo-fapi.binance.com)
 
 ### Setup
 
@@ -190,74 +243,97 @@ CoinScopeAI/
 git clone https://github.com/3nz5789/CoinScopeAI.git
 cd CoinScopeAI
 
-python3.11 -m venv .venv
-source .venv/bin/activate
+python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env
-# Edit .env — add BINANCE_TESTNET_API_KEY, TELEGRAM_BOT_TOKEN, NOTION_API_KEY
+cp coinscope.env.example .env
+# Required: BINANCE_FUTURES_TESTNET_API_KEY, BINANCE_FUTURES_TESTNET_API_SECRET
+# Optional: TELEGRAM_BOT_TOKEN, NOTION_TOKEN, STRIPE_SECRET_KEY
 
-docker compose up -d redis
+docker compose up -d redis postgres
 uvicorn engine.api:app --reload --port 8001
 
-curl localhost:8001/health
-curl localhost:8001/ready
+curl http://localhost:8001/health
+curl http://localhost:8001/config | python3 -m json.tool
 ```
 
 Full guide: [`docs/runbooks/local-development.md`](docs/runbooks/local-development.md)
+
+### First scan
+
+```bash
+curl http://localhost:8001/scan | python3 -m json.tool
+curl http://localhost:8001/risk-gate | python3 -m json.tool
+curl http://localhost:8001/regime/BTCUSDT | python3 -m json.tool
+```
 
 ---
 
 ## Engine API
 
+Base URL: `http://localhost:8001` (dev) · `https://api.coinscope.ai` (prod)
+
 | Endpoint | Method | Description |
 |---|---|---|
 | `/health` | GET | Service liveness |
-| `/ready` | GET | All adapters healthy |
-| `/config` | GET | Running configuration + thresholds |
-| `/scan` | GET | Signal scan across tracked symbols |
-| `/risk-gate` | GET | Gate state — daily loss, drawdown, kill switch |
-| `/position-size` | GET | Kelly-based position size for a symbol |
+| `/ready` | GET | All adapters and dependencies healthy |
+| `/config` | GET | Running configuration + locked thresholds |
+| `/scan` | GET | Signal scan — scored candidates across tracked symbols |
+| `/risk-gate` | GET | Gate state: daily loss budget, drawdown, circuit breaker, kill switch |
+| `/position-size` | POST | Kelly-fractional size for a given candidate |
 | `/regime/{symbol}` | GET | HMM regime label + confidence score |
-| `/journal` | GET | Trade journal entries |
-| `/performance` | GET | Rolling win rate, drawdown, profit factor |
-| `/kill-switch` | POST | Engage or disengage kill switch |
-
-Base URL: `http://localhost:8001` (dev) · `https://api.coinscope.ai` (prod)
+| `/journal` | GET | Append-only trade + gate-decision log |
+| `/performance` | GET | Rolling P&L: win rate, profit factor, max drawdown |
+| `/kill-switch` | POST | Engage or disengage manual kill switch |
+| `/circuit-breaker/reset` | POST | Reset a tripped breaker (written reason required) |
 
 ---
 
 ## Canonical Risk Thresholds
 
-Locked **2026-05-01** via PCC v2 §8. Enforced by `scripts/risk_threshold_guardrail.py`.
+Locked **2026-05-01** via PCC v2 §8. Enforced by `scripts/risk_threshold_guardrail.py` on every CI run.
 
-| Threshold | Value | Env var |
+| Threshold | Value | Config var |
 |---|---|---|
-| Max leverage | **10×** per position | `MAX_LEVERAGE=10` |
+| Max leverage | **10x** per position | `MAX_LEVERAGE=10` |
 | Max open positions | **5** concurrent | `MAX_OPEN_POSITIONS=5` |
-| Max drawdown | **10%** from peak | `MAX_DRAWDOWN_PCT=10` |
-| Daily loss limit | **5%** rolling 24h | `MAX_DAILY_LOSS_PCT=5` |
+| Max drawdown | **10%** from peak equity | `max_drawdown_pct: 0.10` |
+| Daily loss limit | **5%** rolling 24h | `max_daily_loss_pct: 0.05` |
 | Position heat cap | **80%** deployed capital | `POSITION_HEAT_CAP_PCT=80` |
+| Per-trade size cap | **2%** of equity | `KELLY_HARD_CAP_PCT=2` |
+
+> These values are immutable during P0 validation. Any PR that changes them is blocked — see [Validation Phase Freeze](#validation-phase-freeze).
+
+---
+
+## Regime System
+
+| Regime | Kelly multiplier | Description |
+|---|---|---|
+| **Trending** | 1.0x | Strong directional momentum — trend-following signals favoured |
+| **Mean-Reverting** | 0.5x | Range-bound — oscillators and S/R levels favoured |
+| **Volatile** | 0.3x | High fluctuations — higher score floor, smaller sizes |
+| **Quiet** | 0.3x | Low vol/volume — tighter slippage tolerances |
 
 ---
 
 ## Key Invariant
 
-> If the risk gate, executor, or adapter is in an uncertain state, **the engine halts — it never guesses.**
+> If the risk gate, executor, or adapter is in an uncertain state, the engine **halts — it never guesses**.
 
-Every circuit breaker, kill switch, and rejection path exists to honor this invariant.
+Every circuit breaker, kill switch, and rejection path enforces this invariant. See [`docs/risk/risk-framework.md`](docs/risk/risk-framework.md) for all 6 invariants.
 
 ---
 
 ## Telegram Bot
 
-**Handle:** `@ScoopyAI_bot` (Chat ID: `7296767446`)
+**Handle:** `@ScoopyAI_bot` — alert threshold: confluence score >= 8.0
 
 | Command | Description |
 |---|---|
 | `/scan` | On-demand market scan |
 | `/performance` | Current P&L snapshot |
-| `/risk-gate` | Risk gate status |
+| `/risk-gate` | Gate state and daily budget remaining |
 
 ---
 
@@ -266,6 +342,7 @@ Every circuit breaker, kill switch, and rejection path exists to honor this inva
 ```bash
 pytest -x -q tests/
 pytest --cov=engine --cov-report=term-missing
+
 python3 scripts/drift_detector.py
 python3 scripts/risk_threshold_guardrail.py
 python3 scripts/sync_verify.py
@@ -275,24 +352,27 @@ python3 scripts/sync_verify.py
 
 ## Architecture Decision Records
 
-| ADR | Decision |
-|---|---|
-| [ADR-0001](docs/decisions/adr-0001-fastapi-and-uvicorn.md) | FastAPI + Uvicorn as engine framework |
-| [ADR-0002](docs/decisions/adr-0002-redis-celery-for-workers.md) | Redis + Celery for async tasks |
-| [ADR-0003](docs/decisions/adr-0003-llm-off-hot-path.md) | LLM calls prohibited on execution path |
+| ADR | Decision | Status |
+|---|---|---|
+| [ADR-0001](docs/decisions/adr-0001-fastapi-and-uvicorn.md) | FastAPI + Uvicorn as engine framework | Accepted |
+| [ADR-0002](docs/decisions/adr-0002-redis-celery-for-workers.md) | Redis + Celery for async task queue | Accepted |
+| [ADR-0003](docs/decisions/adr-0003-llm-off-hot-path.md) | LLM calls prohibited on the hot path | Accepted |
 
 ---
 
 ## Validation Phase Freeze
 
-These changes are **blocked** during testnet validation:
+**P0 validation runs through ~May 31, 2026.** These changes are blocked:
 
-| Blocked | Reason |
+| Blocked | Why |
 |---|---|
-| Any canonical risk threshold change | Invalidates validation cohort |
-| `BINANCE_TESTNET=false` | Real-capital gate is locked |
-| Removing any circuit breaker | Safety regression |
-| Retraining ML artifacts mid-run | Changes signal distribution |
+| Any canonical risk threshold change | Invalidates the validation cohort |
+| Setting `BINANCE_TESTNET=false` | Real-capital gate is locked |
+| Removing or bypassing any circuit breaker | Safety regression |
+| Retraining or replacing ML artifacts mid-run | Changes signal distribution |
+| Changing order submission semantics | Execution integrity |
+
+If your PR touches any of the above, close it and open a `strategy_change` issue instead.
 
 ---
 
@@ -300,16 +380,16 @@ These changes are **blocked** during testnet validation:
 
 | Platform | Link |
 |---|---|
-| Linear (issues) | [linear.app/coinscopeai](https://linear.app/coinscopeai) |
-| Notion (docs) | [CoinScopeAI OS](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) |
-| Drive (files) | [CoinScopeAI folder](https://drive.google.com/drive/folders/1-rhyCJaycpf4GAGM45rxNZcH6MeSzkB8) |
+| Issues & sprints | [linear.app/coinscopeai](https://linear.app/coinscopeai) |
+| Ops knowledge base | [Notion — CoinScopeAI OS](https://www.notion.so/33a29aaf938e81efa983e47b83e15775) |
+| Business docs | [Google Drive](https://drive.google.com/drive/folders/1-rhyCJaycpf4GAGM45rxNZcH6MeSzkB8) |
 | Dashboard | [app.coinscope.ai](https://app.coinscope.ai) |
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Two reviewers required for changes to `risk/`, `risk_management/`, `engine/integrations/`, `.env.example`, `CLAUDE.md`, or `docker-compose.yml`.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Two reviewers required for changes to `risk_management/`, `engine/integrations/`, `coinscope.env.example`, `CLAUDE.md`, or `docker-compose.yml`.
 
 ---
 
@@ -317,4 +397,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Two reviewers required for changes to 
 
 MIT — see [`LICENSE`](LICENSE).
 
-> **Disclaimer:** CoinScopeAI is a risk management and signal intelligence tool. It does not provide investment advice, manage funds, or place trades autonomously. All trading decisions are made solely by the user. See [/legal](https://app.coinscope.ai/legal) for full disclosures.
+> **Disclaimer:** CoinScopeAI is a risk management and signal intelligence tool. It does not provide investment advice, manage funds, or place trades autonomously. All trading decisions are made solely by the operator. See [app.coinscope.ai/legal](https://app.coinscope.ai/legal) for full disclosures.

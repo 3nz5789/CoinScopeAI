@@ -53,8 +53,8 @@ TIMEFRAME = "4h"  # Best-performing timeframe from v2
 def get_target_config() -> TargetConfig:
     """Same target config as v2 4h for fair comparison."""
     return TargetConfig(
-        forward_horizon=6,  # 6 bars = 24h ahead
-        long_threshold=0.008,  # 0.8% move required
+        forward_horizon=6,       # 6 bars = 24h ahead
+        long_threshold=0.008,    # 0.8% move required
         short_threshold=-0.008,
         use_log_returns=True,
     )
@@ -95,26 +95,22 @@ def get_v3_feature_config() -> V3FeatureConfig:
 
 def create_model(model_type: str) -> SignalClassifier:
     if model_type == "lgbm":
-        return LGBMSignalClassifier(
-            LGBMConfig(
-                n_estimators=1000,
-                max_depth=5,
-                learning_rate=0.025,  # Slightly slower for more features
-                min_child_samples=80,
-                early_stopping_rounds=100,
-                subsample=0.8,
-                colsample_bytree=0.7,  # More aggressive column sampling with 162 features
-                reg_alpha=0.15,
-                reg_lambda=1.5,
-            )
-        )
+        return LGBMSignalClassifier(LGBMConfig(
+            n_estimators=1000,
+            max_depth=5,
+            learning_rate=0.025,     # Slightly slower for more features
+            min_child_samples=80,
+            early_stopping_rounds=100,
+            subsample=0.8,
+            colsample_bytree=0.7,    # More aggressive column sampling with 162 features
+            reg_alpha=0.15,
+            reg_lambda=1.5,
+        ))
     elif model_type == "logreg":
-        return LogRegSignalClassifier(
-            LogRegConfig(
-                C=0.3,  # More regularization for more features
-                max_iter=3000,
-            )
-        )
+        return LogRegSignalClassifier(LogRegConfig(
+            C=0.3,                   # More regularization for more features
+            max_iter=3000,
+        ))
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -297,10 +293,8 @@ def train_and_evaluate(
     X_test_clean = np.nan_to_num(X_test, nan=0.0, posinf=0.0, neginf=0.0)
 
     train_metrics = model.fit(
-        X_train_clean,
-        y_train,
-        X_val=X_val_clean,
-        y_val=y_val,
+        X_train_clean, y_train,
+        X_val=X_val_clean, y_val=y_val,
         feature_names=feature_names,
     )
 
@@ -356,11 +350,9 @@ def train_and_evaluate(
     print(f"    Avg Return (Long):   {report.trading_metrics.avg_return_long:.6f}")
     print(f"    Avg Return (Short):  {report.trading_metrics.avg_return_short:.6f}")
     print(f"    Signal PF:           {report.trading_metrics.signal_profit_factor:.4f}")
-    print(
-        f"    Signals: {report.trading_metrics.long_signals}L / "
-        f"{report.trading_metrics.short_signals}S / "
-        f"{report.trading_metrics.neutral_signals}N"
-    )
+    print(f"    Signals: {report.trading_metrics.long_signals}L / "
+          f"{report.trading_metrics.short_signals}S / "
+          f"{report.trading_metrics.neutral_signals}N")
 
     if report.overfit_metrics:
         print("\n  ── Overfitting Detection ──")
@@ -372,11 +364,9 @@ def train_and_evaluate(
     if report.top_features:
         print("\n  ── Top 15 Features ──")
         for name, imp in report.top_features[:15]:
-            marker = (
-                " [NEW]"
-                if any(name.startswith(p) for p in ["funding_", "liq_", "oi_", "basis_", "ob_"])
-                else ""
-            )
+            marker = " [NEW]" if any(name.startswith(p) for p in [
+                "funding_", "liq_", "oi_", "basis_", "ob_"
+            ]) else ""
             print(f"    {name:<35s} {imp:.4f}{marker}")
 
     # Save model with metadata
@@ -477,11 +467,9 @@ def train_and_evaluate(
         print(f"    OOS Accuracy:    {wf_report.ml_metrics.accuracy:.4f}")
         print(f"    OOS F1 (macro):  {wf_report.ml_metrics.f1_macro:.4f}")
         print(f"    OOS Hit Rate:    {wf_report.trading_metrics.signal_hit_rate:.4f}")
-        print(
-            f"    OOS Signals: {wf_report.trading_metrics.long_signals}L / "
-            f"{wf_report.trading_metrics.short_signals}S / "
-            f"{wf_report.trading_metrics.neutral_signals}N"
-        )
+        print(f"    OOS Signals: {wf_report.trading_metrics.long_signals}L / "
+              f"{wf_report.trading_metrics.short_signals}S / "
+              f"{wf_report.trading_metrics.neutral_signals}N")
 
         for w in wf_result.windows:
             acc = float(np.mean(w.test_predictions == w.test_labels))
@@ -500,16 +488,13 @@ def train_and_evaluate(
         # Top WF features (shows which alpha features matter OOS)
         wf_top = sorted(
             wf_result.aggregate_feature_importance.items(),
-            key=lambda x: x[1],
-            reverse=True,
+            key=lambda x: x[1], reverse=True,
         )[:15]
         print("\n    ── Top 15 WF Features ──")
         for name, imp in wf_top:
-            marker = (
-                " [NEW]"
-                if any(name.startswith(p) for p in ["funding_", "liq_", "oi_", "basis_", "ob_"])
-                else ""
-            )
+            marker = " [NEW]" if any(name.startswith(p) for p in [
+                "funding_", "liq_", "oi_", "basis_", "ob_"
+            ]) else ""
             print(f"      {name:<35s} {imp:.4f}{marker}")
         results["walk_forward"]["top_features"] = wf_top
 
@@ -543,30 +528,26 @@ def main():
                 key = f"v3_{model_type}_{symbol}_{TIMEFRAME}"
                 try:
                     results = train_and_evaluate(
-                        symbol,
-                        model_type,
+                        symbol, model_type,
                         run_walk_forward=not args.no_walk_forward,
                     )
                     all_results[key] = results
                 except Exception as e:
                     print(f"\n  ERROR [{key}]: {e}")
                     import traceback
-
                     traceback.print_exc()
     else:
         for model_type in ["lgbm", "logreg"]:
             key = f"v3_{model_type}_{args.symbol}_{TIMEFRAME}"
             try:
                 results = train_and_evaluate(
-                    args.symbol,
-                    model_type,
+                    args.symbol, model_type,
                     run_walk_forward=not args.no_walk_forward,
                 )
                 all_results[key] = results
             except Exception as e:
                 print(f"\n  ERROR [{key}]: {e}")
                 import traceback
-
                 traceback.print_exc()
 
     # Print comparison summary
@@ -574,28 +555,24 @@ def main():
         print(f"\n{'=' * 130}")
         print(" v3 SUMMARY — Phase 2 Alpha Features (4h timeframe)")
         print(f"{'=' * 130}")
-        print(
-            f"{'Config':<35s} {'Feats':>5s} {'Acc':>6s} {'F1':>6s} {'AUC':>6s} "
-            f"{'HitR':>6s} {'PF':>6s} {'WF_Acc':>7s} {'WF_F1':>6s} {'WF_Hit':>7s}"
-        )
+        print(f"{'Config':<35s} {'Feats':>5s} {'Acc':>6s} {'F1':>6s} {'AUC':>6s} "
+              f"{'HitR':>6s} {'PF':>6s} {'WF_Acc':>7s} {'WF_F1':>6s} {'WF_Hit':>7s}")
         print(f"{'-' * 130}")
 
         for key, r in all_results.items():
             ml = r.get("ml_metrics", {})
             tr = r.get("trading_metrics", {})
             wf = r.get("walk_forward", {})
-            print(
-                f"{key:<35s} "
-                f"{r.get('n_features', 0):>5d} "
-                f"{ml.get('accuracy', 0):>6.3f} "
-                f"{ml.get('f1_macro', 0):>6.3f} "
-                f"{ml.get('auc_roc', 0):>6.3f} "
-                f"{tr.get('signal_hit_rate', 0):>6.3f} "
-                f"{tr.get('signal_profit_factor', 0):>6.3f} "
-                f"{wf.get('oos_accuracy', 0):>7.3f} "
-                f"{wf.get('oos_f1_macro', 0):>6.3f} "
-                f"{wf.get('oos_hit_rate', 0):>7.3f}"
-            )
+            print(f"{key:<35s} "
+                  f"{r.get('n_features', 0):>5d} "
+                  f"{ml.get('accuracy', 0):>6.3f} "
+                  f"{ml.get('f1_macro', 0):>6.3f} "
+                  f"{ml.get('auc_roc', 0):>6.3f} "
+                  f"{tr.get('signal_hit_rate', 0):>6.3f} "
+                  f"{tr.get('signal_profit_factor', 0):>6.3f} "
+                  f"{wf.get('oos_accuracy', 0):>7.3f} "
+                  f"{wf.get('oos_f1_macro', 0):>6.3f} "
+                  f"{wf.get('oos_hit_rate', 0):>7.3f}")
 
         # Save aggregate
         agg_path = REPORT_DIR / "v3_aggregate_results.json"

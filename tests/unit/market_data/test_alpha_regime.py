@@ -4,9 +4,8 @@ Tests: signal generation logic, regime classification, EventBus integration.
 """
 
 import time
-from unittest.mock import MagicMock, patch
-
 import pytest
+from unittest.mock import MagicMock, patch
 
 from services.market_data.types import (
     AlphaSignal,
@@ -198,14 +197,12 @@ class TestEngineV2AlphaContext:
         ctx = AlphaContext()
 
         for sig_type in ["funding_extreme", "liquidation_cascade", "basis"]:
-            ctx.update(
-                AlphaSignal(
-                    signal_type=sig_type,
-                    symbol="BTCUSDT",
-                    direction="LONG",
-                    strength=0.7,
-                )
-            )
+            ctx.update(AlphaSignal(
+                signal_type=sig_type,
+                symbol="BTCUSDT",
+                direction="LONG",
+                strength=0.7,
+            ))
 
         features = ctx.get_context("BTCUSDT")
         # Each signal produces: direction, strength, confidence, active = 4 keys
@@ -253,15 +250,13 @@ class TestEngineV2RegimeContext:
         from services.paper_trading.engine_v2 import RegimeContext
 
         ctx = RegimeContext()
-        ctx.update(
-            RegimeState(
-                symbol="BTCUSDT",
-                regime="volatile",
-                confidence=0.9,
-                volatility_percentile=0.95,
-                trend_strength=0.1,
-            )
-        )
+        ctx.update(RegimeState(
+            symbol="BTCUSDT",
+            regime="volatile",
+            confidence=0.9,
+            volatility_percentile=0.95,
+            trend_strength=0.1,
+        ))
 
         features = ctx.get_regime_features("BTCUSDT")
         assert features["regime_volatile"] == 1.0

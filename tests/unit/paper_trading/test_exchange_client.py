@@ -5,14 +5,13 @@ error handling, and kill switch (close all positions).
 """
 
 import time
-from unittest.mock import MagicMock, PropertyMock, patch
-
 import pytest
+from unittest.mock import MagicMock, patch, PropertyMock
 
 from services.paper_trading.config import (
-    _BLOCKED_MAINNET_URLS,
     BINANCE_FUTURES_TESTNET_REST,
     ExchangeConfig,
+    _BLOCKED_MAINNET_URLS,
 )
 from services.paper_trading.exchange_client import (
     BinanceFuturesTestnetClient,
@@ -22,8 +21,8 @@ from services.paper_trading.exchange_client import (
     RateLimitError,
 )
 
-# ── Testnet Enforcement Tests ─────────────────────────────────
 
+# ── Testnet Enforcement Tests ─────────────────────────────────
 
 class TestTestnetEnforcement:
 
@@ -52,7 +51,6 @@ class TestTestnetEnforcement:
 
 # ── Order Result Tests ────────────────────────────────────────
 
-
 class TestOrderResult:
 
     def test_order_result_fields(self):
@@ -78,7 +76,6 @@ class TestOrderResult:
 
 # ── Rate Limiting Tests ───────────────────────────────────────
 
-
 class TestRateLimiting:
 
     def test_min_request_interval(self):
@@ -96,7 +93,6 @@ class TestRateLimiting:
 
 
 # ── Error Handling Tests ──────────────────────────────────────
-
 
 class TestErrorHandling:
 
@@ -118,28 +114,21 @@ class TestErrorHandling:
 
 # ── Config Loading Tests ──────────────────────────────────────
 
-
 class TestConfigLoading:
 
     def test_loads_from_env_vars(self):
-        with patch.dict(
-            "os.environ",
-            {
-                "BINANCE_TESTNET_API_KEY": "env_key",
-                "BINANCE_TESTNET_API_SECRET": "env_secret",
-            },
-        ):
+        with patch.dict("os.environ", {
+            "BINANCE_TESTNET_API_KEY": "env_key",
+            "BINANCE_TESTNET_API_SECRET": "env_secret",
+        }):
             config = ExchangeConfig()
             assert config.api_key == "env_key"
             assert config.api_secret == "env_secret"
 
     def test_explicit_params_override_env(self):
-        with patch.dict(
-            "os.environ",
-            {
-                "BINANCE_TESTNET_API_KEY": "env_key",
-            },
-        ):
+        with patch.dict("os.environ", {
+            "BINANCE_TESTNET_API_KEY": "env_key",
+        }):
             config = ExchangeConfig(api_key="explicit_key")
             assert config.api_key == "explicit_key"
 

@@ -12,33 +12,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
-- `CLAUDE.md` → **v3.0** — replaced generic planning prompt with full Scoopy ops identity; canonical thresholds, pricing, personas, platform topology, phase map, pending actions
-- `CONTEXT_PRIMER.md` → **v2.3** — bumped version, corrected git clone path (`coinscope-ai` → `CoinScopeAI`), corrected Scoopy prompt label (v2 → v3), folded COI-59 into COI-68 gate section
-- `canonical-structure-spec.md` → **v1.2** — version bump for 2026-05-10 path corrections
-- `Claude_Code_Script` — corrected launch path from `~/coinscopeai/scripts` → `/Users/mac/Documents/Claude/Projects/CoinScopeAI`
-- `scripts/daily_status.sh` — corrected hardcoded position cap display from `/3` → `/5` (canonical MAX_OPEN_POSITIONS)
-- `scripts/auto_sync.py` — corrected `REPO_DIR` from `~/Projects/coinscope-ai` → `~/Projects/CoinScopeAI`
-- `scripts/sync_verify.py` — corrected `REPO` from `~/Projects/coinscope-ai` → `~/Projects/CoinScopeAI`
-- `scripts/drift_detector.py` — added `"never quote"` to `HISTORICAL_MARKERS` to prevent false positives on CLAUDE.md v3 operating rules
-- `scripts/risk_threshold_guardrail.py` — updated docstring reference from CLAUDE.md v2 → v3
-- `.env.example` — Stripe price ID keys renamed from stale tier names (Starter/Pro/Elite/Team) → canonical Track B names (Free/Trader/Desk Preview/Desk Full v2); per-seat keys added
-- `stripe_test_price_ids.json` — keys renamed to match canonical Track B tier names
-- `coinscope_trading_engine/core/risk_gate.py` — constructor defaults corrected: `max_daily_loss_pct 0.10→0.05`, `max_drawdown_pct 0.20→0.10` (PCC v2 §8)
-- `coinscope_trading_engine/live/pair_monitor.py` — `_save()` upgraded to atomic write + `OSError` handling; `record_trade()` logs warning on persist failure
-
-### Fixed
-- Stale path `~/coinscopeai/scripts` removed from all operator docs
-- Stale path `~/Projects/coinscope-ai` removed from all scripts (repo renamed to `CoinScopeAI`)
-- Cowork nightly drift-detector task working folder corrected (COI-73 closed)
-
----
-
-## [Unreleased — pre-0.2.0]
-
 ### Added
-
+- `docs/validation/p0-public-summary.md` — one-page outsider-facing P0
+  validation summary covering what is live, what is testnet only, what
+  is blocked, what has passed, and what has not. Linked from the README
+  header alongside Dashboard / API Docs / Disclosures. Hand-curated;
+  refreshed at each tagged release. The internal evidence pack and
+  invariant matrix remain the source of truth.
+- `apps/dashboard/src/components/SignalConsoleCard.tsx` — one-panel operator
+  console view for the primary signal. Surfaces confluence, regime, Kelly
+  size, gate pass/fail, breaker state, and a deterministic action-guidance
+  row (HALT / SKIP / WATCH / CONSIDER / EXECUTE) derived from those five
+  inputs. Collapses a workflow that previously required jumping between
+  Live Scanner, Risk Gate, Position Sizer, and Regime State views.
+- `LiveScanner` now renders the highest-confluence active signal through
+  `SignalConsoleCard` above the existing signal table, with a best-effort
+  gate/breaker join from the risk-gate snapshot until per-signal joins
+  to `/position-size` and `/risk-gate` are wired.
 - Full GitHub repository setup: branch protection on `main`, squash-only merge,
+  auto-delete head branches, required CI status checks (`Tests` + `Security Scan`)
 - PR template with validation-phase gate checklist
 - Issue templates: bug report, feature request, strategy/risk change, config.yml chooser
 - CODEOWNERS covering `risk_management/`, `engine/exchange/`, `engine/integrations/`,

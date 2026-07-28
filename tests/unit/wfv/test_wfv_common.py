@@ -9,7 +9,8 @@ live Binance OHLCV via scripts/run_validation.py.
 import numpy as np
 import pytest
 
-from validation import _common, cpcv_validation, walk_forward_validation
+from validation import _common, walk_forward_validation, cpcv_validation
+
 
 # ── Synthetic data ───────────────────────────────────────────────────
 
@@ -104,9 +105,10 @@ def test_compute_metrics_all_wins_passes():
 def test_compute_metrics_mixed_trades():
     """Mixed wins/losses produce a finite Sharpe and finite max DD."""
     # 60 wins, 40 losses → win rate 0.6, finite Sharpe
-    trades = [
-        _common.Trade(bar_index=i, direction=+1, score=9.0, pnl_pct=+0.01) for i in range(60)
-    ] + [_common.Trade(bar_index=60 + i, direction=+1, score=9.0, pnl_pct=-0.01) for i in range(40)]
+    trades = (
+        [_common.Trade(bar_index=i, direction=+1, score=9.0, pnl_pct=+0.01) for i in range(60)]
+        + [_common.Trade(bar_index=60 + i, direction=+1, score=9.0, pnl_pct=-0.01) for i in range(40)]
+    )
     m = _common.compute_metrics("BTC", "fold_1", trades, 0, 70, 70, 200)
     assert m.n_trades == 100
     assert m.win_rate == pytest.approx(0.6)
@@ -145,8 +147,7 @@ def test_cpcv_runs_end_to_end():
         symbols=("BTCUSDT",),
         timeframe="4h",
         ohlcv_provider=_synthetic_provider,
-        n_groups=6,
-        k=2,
+        n_groups=6, k=2,
     )
     # C(6,2) = 15 paths × 1 symbol
     assert len(result.per_path) == 15
@@ -162,8 +163,7 @@ def test_cpcv_purging_skipped_at_data_edges():
         symbols=("BTCUSDT",),
         timeframe="4h",
         ohlcv_provider=_synthetic_provider,
-        n_groups=6,
-        k=2,
+        n_groups=6, k=2,
     )
     # No path should have a negative or zero test-bar count for ALL its
     # constituent groups — at least one path passes through the edge

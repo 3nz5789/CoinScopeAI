@@ -39,7 +39,6 @@ from typing import Any, Optional
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
-
 # Load .env if present (simple parser, no dependency on python-dotenv)
 def load_dotenv(path: str = ".env") -> None:
     env_file = Path(path)
@@ -55,16 +54,13 @@ def load_dotenv(path: str = ".env") -> None:
         if key and key not in os.environ:
             os.environ[key] = value
 
-
 load_dotenv()
 
-ENGINE_URL = os.environ.get("COINSCOPEAI_BASE_URL", "http://localhost:8001")
-TESTNET_BASE_URL = os.environ.get(
-    "BINANCE_FUTURES_TESTNET_BASE_URL", "https://testnet.binancefuture.com"
-)
-TESTNET_API_KEY = os.environ.get("BINANCE_FUTURES_TESTNET_API_KEY", "")
-TESTNET_SECRET = os.environ.get("BINANCE_FUTURES_TESTNET_API_SECRET", "")
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+ENGINE_URL       = os.environ.get("COINSCOPEAI_BASE_URL", "http://localhost:8001")
+TESTNET_BASE_URL = os.environ.get("BINANCE_FUTURES_TESTNET_BASE_URL", "https://testnet.binancefuture.com")
+TESTNET_API_KEY  = os.environ.get("BINANCE_FUTURES_TESTNET_API_KEY", "")
+TESTNET_SECRET   = os.environ.get("BINANCE_FUTURES_TESTNET_API_SECRET", "")
+TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 TIMEOUT = 8  # seconds per HTTP request
@@ -73,37 +69,17 @@ TIMEOUT = 8  # seconds per HTTP request
 
 IS_TTY = sys.stdout.isatty()
 
-
 def _c(code: str, text: str) -> str:
     return f"\033[{code}m{text}\033[0m" if IS_TTY else text
 
-
-def green(t: str) -> str:
-    return _c("32", t)
-
-
-def red(t: str) -> str:
-    return _c("31", t)
-
-
-def yellow(t: str) -> str:
-    return _c("33", t)
-
-
-def cyan(t: str) -> str:
-    return _c("36", t)
-
-
-def bold(t: str) -> str:
-    return _c("1", t)
-
-
-def dim(t: str) -> str:
-    return _c("2", t)
-
+def green(t: str)  -> str: return _c("32", t)
+def red(t: str)    -> str: return _c("31", t)
+def yellow(t: str) -> str: return _c("33", t)
+def cyan(t: str)   -> str: return _c("36", t)
+def bold(t: str)   -> str: return _c("1",  t)
+def dim(t: str)    -> str: return _c("2",  t)
 
 # ─── HTTP helpers ─────────────────────────────────────────────────────────────
-
 
 def http_get(url: str, headers: Optional[dict] = None, timeout: int = TIMEOUT) -> tuple[int, Any]:
     """Returns (status_code, parsed_json_or_None)."""
@@ -140,7 +116,6 @@ def binance_signed_get(path: str, params: dict) -> tuple[int, Any]:
 
 # ─── Check functions ──────────────────────────────────────────────────────────
 
-
 class CheckResult:
     def __init__(self, name: str):
         self.name = name
@@ -155,7 +130,7 @@ class CheckResult:
         return self
 
     def warn(self, status: str = "WARN") -> "CheckResult":
-        self.ok = True  # not fatal
+        self.ok = True   # not fatal
         self.status = status
         return self
 
@@ -223,18 +198,11 @@ def check_risk_gate() -> CheckResult:
 
     # Normalise field names
     daily_loss = float(data.get("daily_loss_pct") or data.get("dailyLossPct") or 0)
-    drawdown = float(data.get("drawdown_pct") or data.get("drawdownPct") or 0)
-    heat = float(data.get("position_heat") or data.get("positionHeat") or 0)
-    killed = bool(data.get("kill_switch") or data.get("killSwitch") or False)
+    drawdown   = float(data.get("drawdown_pct")   or data.get("drawdownPct")   or 0)
+    heat       = float(data.get("position_heat")  or data.get("positionHeat")  or 0)
+    killed     = bool(data.get("kill_switch")      or data.get("killSwitch")    or False)
 
-    r.data.update(
-        {
-            "daily_loss_pct": daily_loss,
-            "drawdown_pct": drawdown,
-            "position_heat": heat,
-            "kill_switch": killed,
-        }
-    )
+    r.data.update({"daily_loss_pct": daily_loss, "drawdown_pct": drawdown, "position_heat": heat, "kill_switch": killed})
     r.add(f"Daily Loss:     {daily_loss:.2f}% (limit 5%)")
     r.add(f"Drawdown:       {drawdown:.2f}% (limit 10%)")
     r.add(f"Position Heat:  {heat:.1f}% (limit 80%)")
@@ -273,10 +241,8 @@ def check_signals_24h() -> CheckResult:
             recent.append(s)  # include if we can't parse timestamp
 
     # Direction breakdown
-    longs = sum(1 for s in recent if (s.get("direction") or s.get("side") or "").upper() == "LONG")
-    shorts = sum(
-        1 for s in recent if (s.get("direction") or s.get("side") or "").upper() == "SHORT"
-    )
+    longs  = sum(1 for s in recent if (s.get("direction") or s.get("side") or "").upper() == "LONG")
+    shorts = sum(1 for s in recent if (s.get("direction") or s.get("side") or "").upper() == "SHORT")
 
     r.data.update({"signals_24h": len(recent), "longs": longs, "shorts": shorts})
     r.add(f"Signals fired (24h): {len(recent)}")
@@ -286,9 +252,7 @@ def check_signals_24h() -> CheckResult:
     # Journal trades
     j_code, j_data = http_get(f"{ENGINE_URL}/journal")
     if j_code == 200:
-        trades = (
-            j_data if isinstance(j_data, list) else j_data.get("trades", j_data.get("data", []))
-        )
+        trades = j_data if isinstance(j_data, list) else j_data.get("trades", j_data.get("data", []))
         if isinstance(trades, list):
             recent_trades = []
             for t in trades:
@@ -299,15 +263,9 @@ def check_signals_24h() -> CheckResult:
                         recent_trades.append(t)
                 except Exception:
                     pass
-            wins = sum(
-                1 for t in recent_trades if float(t.get("pnl") or t.get("realized_pnl") or 0) > 0
-            )
-            total_pnl = sum(
-                float(t.get("pnl") or t.get("realized_pnl") or 0) for t in recent_trades
-            )
-            r.data.update(
-                {"trades_24h": len(recent_trades), "wins_24h": wins, "pnl_24h": total_pnl}
-            )
+            wins  = sum(1 for t in recent_trades if float(t.get("pnl") or t.get("realized_pnl") or 0) > 0)
+            total_pnl = sum(float(t.get("pnl") or t.get("realized_pnl") or 0) for t in recent_trades)
+            r.data.update({"trades_24h": len(recent_trades), "wins_24h": wins, "pnl_24h": total_pnl})
             r.add(f"Trades closed (24h): {len(recent_trades)}")
             if recent_trades:
                 r.add(f"  Wins:  {wins} / {len(recent_trades)}")
@@ -325,31 +283,14 @@ def check_performance() -> CheckResult:
     if not isinstance(data, dict):
         return r.warn("UNEXPECTED FORMAT")
 
-    total_return_pct = float(
-        data.get("total_return_pct") or data.get("totalReturnPct") or data.get("return_pct") or 0
-    )
-    sharpe = float(data.get("sharpe_ratio") or data.get("sharpeRatio") or data.get("sharpe") or 0)
-    max_dd_pct = float(
-        data.get("max_drawdown_pct") or data.get("maxDrawdownPct") or data.get("drawdown_pct") or 0
-    )
-    win_rate = float(data.get("win_rate") or data.get("winRate") or 0)
-    total_trades = int(
-        data.get("total_trades") or data.get("totalTrades") or data.get("num_trades") or 0
-    )
-    open_positions = int(
-        data.get("open_positions") or data.get("openPositions") or data.get("num_open") or 0
-    )
+    total_return_pct = float(data.get("total_return_pct") or data.get("totalReturnPct") or data.get("return_pct") or 0)
+    sharpe           = float(data.get("sharpe_ratio")     or data.get("sharpeRatio")     or data.get("sharpe")     or 0)
+    max_dd_pct       = float(data.get("max_drawdown_pct") or data.get("maxDrawdownPct")  or data.get("drawdown_pct") or 0)
+    win_rate         = float(data.get("win_rate")         or data.get("winRate")          or 0)
+    total_trades     = int(data.get("total_trades")       or data.get("totalTrades")      or data.get("num_trades") or 0)
+    open_positions   = int(data.get("open_positions")     or data.get("openPositions")    or data.get("num_open")   or 0)
 
-    r.data.update(
-        {
-            "return_pct": total_return_pct,
-            "sharpe": sharpe,
-            "max_dd_pct": max_dd_pct,
-            "win_rate": win_rate,
-            "total_trades": total_trades,
-            "open_positions": open_positions,
-        }
-    )
+    r.data.update({"return_pct": total_return_pct, "sharpe": sharpe, "max_dd_pct": max_dd_pct, "win_rate": win_rate, "total_trades": total_trades, "open_positions": open_positions})
     r.add(f"Total Return:    {total_return_pct:+.2f}%")
     r.add(f"Sharpe Ratio:    {sharpe:.2f}")
     r.add(f"Max Drawdown:    {max_dd_pct:.2f}%")
@@ -368,9 +309,7 @@ def check_binance_testnet() -> CheckResult:
     r = CheckResult("Binance Futures Testnet")
 
     if not TESTNET_API_KEY or not TESTNET_SECRET:
-        return r.warn("NO CREDENTIALS").add(
-            "Set BINANCE_FUTURES_TESTNET_API_KEY and _SECRET in .env"
-        )
+        return r.warn("NO CREDENTIALS").add("Set BINANCE_FUTURES_TESTNET_API_KEY and _SECRET in .env")
 
     # Account balance
     code, data = binance_signed_get("/fapi/v2/account", {})
@@ -380,19 +319,12 @@ def check_binance_testnet() -> CheckResult:
         return r.fail(f"HTTP {code}").add(f"Could not reach testnet: {TESTNET_BASE_URL}")
 
     if isinstance(data, dict):
-        total_wallet = float(data.get("totalWalletBalance", 0))
+        total_wallet  = float(data.get("totalWalletBalance", 0))
         unrealized_pnl = float(data.get("totalUnrealizedProfit", 0))
-        total_equity = float(data.get("totalMarginBalance", 0))
-        available = float(data.get("availableBalance", 0))
+        total_equity  = float(data.get("totalMarginBalance", 0))
+        available     = float(data.get("availableBalance", 0))
 
-        r.data.update(
-            {
-                "wallet_balance": total_wallet,
-                "unrealized_pnl": unrealized_pnl,
-                "total_equity": total_equity,
-                "available": available,
-            }
-        )
+        r.data.update({"wallet_balance": total_wallet, "unrealized_pnl": unrealized_pnl, "total_equity": total_equity, "available": available})
         r.add(f"Wallet Balance:   ${total_wallet:,.2f} USDT")
         r.add(f"Unrealized P&L:   ${unrealized_pnl:+,.2f} USDT")
         r.add(f"Total Equity:     ${total_equity:,.2f} USDT")
@@ -403,8 +335,8 @@ def check_binance_testnet() -> CheckResult:
         r.data["open_positions"] = len(positions)
         r.add(f"Open Positions:   {len(positions)}")
         for pos in positions[:5]:  # show up to 5
-            sym = pos.get("symbol", "?")
-            amt = float(pos.get("positionAmt", 0))
+            sym  = pos.get("symbol", "?")
+            amt  = float(pos.get("positionAmt", 0))
             upnl = float(pos.get("unrealizedProfit", 0))
             r.add(f"  {sym}: {amt:+.4f} | uPnL ${upnl:+.2f}")
 
@@ -417,12 +349,12 @@ def check_recording_daemon() -> CheckResult:
     # Try the engine's recording endpoint first
     code, data = http_get(f"{ENGINE_URL}/recording")
     if code == 200 and isinstance(data, dict):
-        eps = data.get("events_per_second") or data.get("eventsPerSecond") or 0
-        total = data.get("total_events") or data.get("totalEvents") or 0
-        size = data.get("data_size") or data.get("dataSize") or "unknown"
-        uptime = data.get("uptime") or "unknown"
-        hb = data.get("last_heartbeat") or data.get("lastHeartbeat") or "unknown"
-        conns = data.get("exchange_connections") or data.get("exchangeConnections") or []
+        eps      = data.get("events_per_second") or data.get("eventsPerSecond") or 0
+        total    = data.get("total_events")       or data.get("totalEvents")      or 0
+        size     = data.get("data_size")          or data.get("dataSize")         or "unknown"
+        uptime   = data.get("uptime")             or "unknown"
+        hb       = data.get("last_heartbeat")     or data.get("lastHeartbeat")    or "unknown"
+        conns    = data.get("exchange_connections") or data.get("exchangeConnections") or []
 
         r.data.update({"eps": eps, "total_events": total, "data_size": size, "uptime": uptime})
         r.add(f"Events/sec:      {eps}")
@@ -434,8 +366,8 @@ def check_recording_daemon() -> CheckResult:
         if conns:
             r.add("Exchange Connections:")
             for c in conns:
-                name = c.get("name", "?")
-                status = c.get("status", "?")
+                name    = c.get("name", "?")
+                status  = c.get("status", "?")
                 latency = c.get("latency", "?")
                 icon = "✓" if status == "connected" else "⚠" if status == "degraded" else "✗"
                 r.add(f"  {icon} {name}: {status} ({latency} ms)")
@@ -473,7 +405,6 @@ def check_recording_daemon() -> CheckResult:
 
 # ─── Report rendering ─────────────────────────────────────────────────────────
 
-
 def render_report(checks: list[CheckResult], elapsed: float) -> str:
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     lines = []
@@ -487,11 +418,7 @@ def render_report(checks: list[CheckResult], elapsed: float) -> str:
 
     all_ok = all(c.ok for c in checks)
     critical = [c for c in checks if not c.ok]
-    warnings = [
-        c
-        for c in checks
-        if c.ok and c.status not in ("OK", "RUNNING", "CONNECTED", "HEALTHY", "ALL OK", "NOMINAL")
-    ]
+    warnings = [c for c in checks if c.ok and c.status not in ("OK", "RUNNING", "CONNECTED", "HEALTHY", "ALL OK", "NOMINAL")]
 
     if all_ok and not warnings:
         lines.append(green(bold("  ✅  ALL SYSTEMS NOMINAL")))
@@ -527,11 +454,7 @@ def render_telegram(checks: list[CheckResult]) -> str:
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     all_ok = all(c.ok for c in checks)
     critical = [c for c in checks if not c.ok]
-    warnings = [
-        c
-        for c in checks
-        if c.ok and c.status not in ("OK", "RUNNING", "CONNECTED", "HEALTHY", "ALL OK", "NOMINAL")
-    ]
+    warnings = [c for c in checks if c.ok and c.status not in ("OK", "RUNNING", "CONNECTED", "HEALTHY", "ALL OK", "NOMINAL")]
 
     if all_ok and not warnings:
         header = "\u2705 <b>CoinScopeAI \u2014 All Systems Nominal</b>"
@@ -543,11 +466,7 @@ def render_telegram(checks: list[CheckResult]) -> str:
     lines = [header, f"<i>{now_utc}</i>", ""]
 
     for c in checks:
-        icon = (
-            "\u2705"
-            if (c.ok and c.status in ("OK", "RUNNING", "CONNECTED", "HEALTHY", "ALL OK", "NOMINAL"))
-            else ("\U0001f534" if not c.ok else "\u26a0")
-        )
+        icon = "\u2705" if (c.ok and c.status in ("OK", "RUNNING", "CONNECTED", "HEALTHY", "ALL OK", "NOMINAL")) else ("\U0001f534" if not c.ok else "\u26a0")
         lines.append(f"{icon} <b>{c.name}</b>: <code>{c.status}</code>")
         # Add key data points only
         for detail in c.details[:3]:
@@ -562,20 +481,14 @@ def render_telegram(checks: list[CheckResult]) -> str:
     lines.append("<b>\U0001f4ca Key Metrics</b>")
     if perf_check and perf_check.data:
         d = perf_check.data
-        lines.append(
-            f"  Return: <code>{d.get('return_pct', 0):+.2f}%</code> | Sharpe: <code>{d.get('sharpe', 0):.2f}</code> | Win Rate: <code>{d.get('win_rate', 0):.1f}%</code>"
-        )
+        lines.append(f"  Return: <code>{d.get('return_pct', 0):+.2f}%</code> | Sharpe: <code>{d.get('sharpe', 0):.2f}</code> | Win Rate: <code>{d.get('win_rate', 0):.1f}%</code>")
     if risk_check and risk_check.data:
         d = risk_check.data
         ks = "\U0001f534 ARMED" if d.get("kill_switch") else "\U0001f7e2 SAFE"
-        lines.append(
-            f"  Daily Loss: <code>{d.get('daily_loss_pct', 0):.2f}%</code> | Drawdown: <code>{d.get('drawdown_pct', 0):.2f}%</code> | Kill Switch: {ks}"
-        )
+        lines.append(f"  Daily Loss: <code>{d.get('daily_loss_pct', 0):.2f}%</code> | Drawdown: <code>{d.get('drawdown_pct', 0):.2f}%</code> | Kill Switch: {ks}")
     if testnet_check and testnet_check.data:
         d = testnet_check.data
-        lines.append(
-            f"  Wallet: <code>${d.get('wallet_balance', 0):,.2f}</code> | uPnL: <code>${d.get('unrealized_pnl', 0):+,.2f}</code>"
-        )
+        lines.append(f"  Wallet: <code>${d.get('wallet_balance', 0):,.2f}</code> | uPnL: <code>${d.get('unrealized_pnl', 0):+,.2f}</code>")
 
     return "\n".join(lines)
 
@@ -602,7 +515,6 @@ def save_log(report: str) -> Path:
     log_path = logs_dir / f"status_{ts}.log"
     # Strip ANSI codes for log file
     import re
-
     clean = re.sub(r"\033\[[0-9;]*m", "", report)
     log_path.write_text(clean)
     return log_path
@@ -610,12 +522,11 @@ def save_log(report: str) -> Path:
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="CoinScopeAI Daily Status Check")
-    parser.add_argument("--log", action="store_true", help="Save report to logs/ directory")
+    parser.add_argument("--log",      action="store_true", help="Save report to logs/ directory")
     parser.add_argument("--telegram", action="store_true", help="Send summary to Telegram bot")
-    parser.add_argument("--json", action="store_true", help="Output raw JSON (for machine parsing)")
+    parser.add_argument("--json",     action="store_true", help="Output raw JSON (for machine parsing)")
     args = parser.parse_args()
 
     print(dim("  Running checks…"))
@@ -638,16 +549,7 @@ def main() -> int:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "all_ok": all(c.ok for c in checks),
             "elapsed_s": round(elapsed, 2),
-            "checks": [
-                {
-                    "name": c.name,
-                    "ok": c.ok,
-                    "status": c.status,
-                    "details": c.details,
-                    "data": c.data,
-                }
-                for c in checks
-            ],
+            "checks": [{"name": c.name, "ok": c.ok, "status": c.status, "details": c.details, "data": c.data} for c in checks],
         }
         print(json.dumps(output, indent=2))
         return 0 if all(c.ok for c in checks) else 1

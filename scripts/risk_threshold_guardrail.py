@@ -12,7 +12,7 @@ This one scans the entire codebase including .py, .yml, .json, .toml, .env*.
 
 Use as a pre-commit hook or in CI.
 
-Canonical ceilings (per CLAUDE.md v3):
+Canonical ceilings (per CLAUDE.md v2):
   max_leverage         = 10x
   max_drawdown         = 10%
   daily_loss_limit     = 5%
@@ -30,17 +30,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 CODE_GLOBS = ["**/*.py", "**/*.yml", "**/*.yaml", "**/*.json", "**/*.toml", "**/*.env*"]
-EXCLUDE_DIRS = {
-    "tests",
-    "archive",
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    "pytest-cache-files-lw31l5ev",
-    "manus_setup",
-    "manus_upload",
+EXCLUDE_DIRS = {"tests",
+    "archive", "node_modules", ".git", "__pycache__", ".venv", "venv",
+    "pytest-cache-files-lw31l5ev", "manus_setup", "manus_upload",
     "legacy_2026-04",
 }
 

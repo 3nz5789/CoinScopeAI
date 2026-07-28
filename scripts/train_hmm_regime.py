@@ -27,7 +27,6 @@ Usage:
   DATABASE_URL=postgresql://coinscopeai:devpassword@localhost:5432/coinscopeai_dev \
       python3 scripts/train_hmm_regime.py
 """
-
 from __future__ import annotations
 
 import argparse
@@ -73,7 +72,6 @@ LOG = logging.getLogger("train_hmm_regime")
 
 # ─── HMM filter / one-step prediction ───────────────────────────────────────
 
-
 def _log_emissions(model: GaussianHMM, X: np.ndarray) -> np.ndarray:
     """Log P(obs | state) per (time, state). Avoids hmmlearn's private API."""
     T, _ = X.shape
@@ -81,10 +79,7 @@ def _log_emissions(model: GaussianHMM, X: np.ndarray) -> np.ndarray:
     out = np.empty((T, K), dtype=np.float64)
     for k in range(K):
         out[:, k] = multivariate_normal.logpdf(
-            X,
-            mean=model.means_[k],
-            cov=model.covars_[k],
-            allow_singular=True,
+            X, mean=model.means_[k], cov=model.covars_[k], allow_singular=True,
         )
     return out
 
@@ -125,16 +120,15 @@ def one_step_prediction_accuracy(
     train_len = len(X_train)
     log_A = np.log(model.transmat_ + 1e-300)
 
-    log_filtered = _forward_log_filtered(model, X_full)  # (T, K)
+    log_filtered = _forward_log_filtered(model, X_full)         # (T, K)
     # one-step ahead: predicted distribution at t+1 = filtered_t @ A
     # in log space: logsumexp_j(log_filtered[t, j] + log_A[j, k])
     log_pred_next = logsumexp(
-        log_filtered[:-1, :, None] + log_A[None, :, :],
-        axis=1,
-    )  # (T-1, K)
-    predicted_next_state = np.argmax(log_pred_next, axis=1)  # length T-1
+        log_filtered[:-1, :, None] + log_A[None, :, :], axis=1,
+    )                                                            # (T-1, K)
+    predicted_next_state = np.argmax(log_pred_next, axis=1)      # length T-1
 
-    viterbi_full = model.predict(X_full)  # length T
+    viterbi_full = model.predict(X_full)                          # length T
 
     # Compare for indices in val. predicted_next_state[t-1] predicts state at t.
     val_indices = np.arange(train_len, len(X_full))
@@ -144,7 +138,6 @@ def one_step_prediction_accuracy(
 
 
 # ─── State → regime labelling ───────────────────────────────────────────────
-
 
 @dataclass
 class StateStats:
@@ -163,15 +156,13 @@ def _compute_state_stats(states: np.ndarray, features: pd.DataFrame) -> List[Sta
             out.append(StateStats(k, 0, 0.0, 0.0, 0.0))
             continue
         sub = features[mask]
-        out.append(
-            StateStats(
-                state=k,
-                n=int(mask.sum()),
-                mean_log_return_abs=float(sub["log_return"].abs().mean()),
-                mean_volatility=float(sub["volatility"].mean()),
-                mean_volume_ratio=float(sub["volume_ratio"].mean()),
-            )
-        )
+        out.append(StateStats(
+            state=k,
+            n=int(mask.sum()),
+            mean_log_return_abs=float(sub["log_return"].abs().mean()),
+            mean_volatility=float(sub["volatility"].mean()),
+            mean_volume_ratio=float(sub["volume_ratio"].mean()),
+        ))
     return out
 
 
@@ -224,42 +215,23 @@ def load_ohlcv(conn, symbol: str) -> pd.DataFrame:
     with conn.cursor() as cur:
         cur.execute(OHLCV_SQL, (symbol,))
         rows = cur.fetchall()
-    return pd.DataFrame(
-        rows,
-        columns=[
-            "open_time",
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "trades",
-        ],
-    )
+    return pd.DataFrame(rows, columns=[
+        "open_time", "open", "high", "low", "close", "volume", "trades",
+    ])
 
 
-def upsert_registry(
-    conn, *, symbol: str, path: str, trained_at: datetime, val_accuracy: float, active: bool
-) -> None:
+def upsert_registry(conn, *, symbol: str, path: str, trained_at: datetime,
+                    val_accuracy: float, active: bool) -> None:
     with conn.cursor() as cur:
         cur.execute(
             UPSERT_REGISTRY_SQL,
-            (
-                MODEL_TYPE,
-                symbol,
-                MODEL_VERSION,
-                path,
-                trained_at,
-                round(val_accuracy, 4),
-                list(FEATURE_SET),
-                active,
-            ),
+            (MODEL_TYPE, symbol, MODEL_VERSION, path, trained_at,
+             round(val_accuracy, 4), list(FEATURE_SET), active),
         )
     conn.commit()
 
 
 # ─── Training driver ────────────────────────────────────────────────────────
-
 
 @dataclass
 class TrainResult:
@@ -297,9 +269,7 @@ def train_symbol(features: pd.DataFrame, symbol: str) -> TrainResult:
     if not getattr(model.monitor_, "converged", False):
         LOG.warning(
             "[%s] EM did not converge after %d iter (history=%s)",
-            symbol,
-            N_ITER,
-            model.monitor_.history[-3:],
+            symbol, N_ITER, model.monitor_.history[-3:],
         )
 
     train_states = model.predict(X_train)
@@ -359,7 +329,6 @@ def save_pickle(results: List[TrainResult], trained_at: datetime, out_dir: Path)
 
 # ─── CLI ────────────────────────────────────────────────────────────────────
 
-
 def _render_report(results: List[TrainResult], gate: float) -> str:
     lines: List[str] = []
     lines.append("=" * 78)
@@ -402,9 +371,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument("--symbols", nargs="+", default=list(SYMBOLS))
     parser.add_argument("--out-dir", default="models", help="Pickle output dir.")
-    parser.add_argument(
-        "--gate", type=float, default=0.60, help="Min val_accuracy required to mark a model active."
-    )
+    parser.add_argument("--gate", type=float, default=0.60,
+                        help="Min val_accuracy required to mark a model active.")
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -422,13 +390,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 raise RuntimeError(f"[{sym}] no rows in ohlcv_1h")
             features = compute_features(df)
             res = train_symbol(features, sym)
-            LOG.info(
-                "[%s] train=%d val=%d val_acc=%.4f",
-                sym,
-                res.train_bars,
-                res.val_bars,
-                res.val_accuracy,
-            )
+            LOG.info("[%s] train=%d val=%d val_acc=%.4f",
+                     sym, res.train_bars, res.val_bars, res.val_accuracy)
             results.append(res)
 
         pickle_path = save_pickle(results, trained_at, Path(args.out_dir))

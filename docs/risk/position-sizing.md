@@ -1,10 +1,12 @@
 # Position Sizing
 
-**Status:** current
-**Audience:** developers reviewing or modifying `kelly_position_sizer.py`
-**Related:** [`risk-framework.md`](risk-framework.md), [`risk-gate.md`](risk-gate.md), [`../backend/configuration.md`](../backend/configuration.md)
+**Status:** current — P0 validation phase
+**Audience:** developers reviewing or modifying [`risk_management/kelly_position_sizer.py`](../../risk_management/kelly_position_sizer.py)
+**Related:** [`risk-framework.md`](risk-framework.md) · [`risk-gate.md`](risk-gate.md) · [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md) · [`../api/engine-api-contract.md`](../api/engine-api-contract.md)
 
 How the engine turns a gate-accepted candidate into a position size in base currency. The short version: fractional Kelly with a hard cap and a regime multiplier.
+
+The on-main implementation lives at [`risk_management/kelly_position_sizer.py`](../../risk_management/kelly_position_sizer.py). The submission-time safety gate at [`services/paper_trading/safety.py`](../../services/paper_trading/safety.py) re-enforces the position-size cap as a last-line check regardless of what the sizer returned — see [`test_safety.py::TestSafetyGateHardcodedLimits::test_rejects_oversized_position`](../../tests/unit/paper_trading/test_safety.py).
 
 ## The pipeline
 
@@ -12,11 +14,13 @@ How the engine turns a gate-accepted candidate into a position size in base curr
 Kelly-full → × fractional factor (0.25)
            → clamp to hard cap (2% of equity)
            → × regime multiplier (bull 1.0 / chop 0.5 / bear 0.3)
-           → × leverage respecting MAX_LEVERAGE (10x)
+           → × leverage respecting MAX_LEVERAGE (10×)
            → round to exchange step size
 ```
 
 Each step is a clamp or a multiply, never a widen. The output is always ≤ the previous step.
+
+The HTTP surface is `GET /position-size?symbol=...&entry=...&stop_loss=...&score=...&regime=...` — see [`../api/engine-api-contract.md`](../api/engine-api-contract.md) §Risk for the exact request/response shape.
 
 ## Step 1 — Kelly-full
 
@@ -54,7 +58,7 @@ The v3 classifier's labels do not enter the sizing pipeline today — they adjus
 
 ## Step 5 — Leverage ceiling
 
-The sized trade is converted to a notional and checked against `MAX_LEVERAGE = 10x`. If the implied leverage exceeds the cap, size shrinks further.
+The sized trade is converted to a notional and checked against `MAX_LEVERAGE = 10×`. If the implied leverage exceeds the cap, size shrinks further.
 
 ## Step 6 — Exchange step size
 
@@ -95,7 +99,7 @@ Example 3 is deliberate. In bear regimes with low edge, the engine should either
 
 1. **Monotone non-increasing across steps.** Each step can only leave size the same or smaller. A step that increased size would be a bug.
 2. **No step may be skipped.** The sizer does not have an "override" path. If you want a different size, the right answer is a different candidate or a different regime, not a flag.
-3. **The cap is absolute.** The 2% hard cap is enforced in code, not config alone. Changing the cap requires both a config change **and** a PR to the sizer with tests.
+3. **The cap is absolute.** The 2% hard cap is enforced in code, not config alone. Changing the cap requires both a config change **and** a PR to the sizer with tests. The safety gate re-enforces it at submission time.
 
 ## Why not full Kelly?
 
@@ -107,13 +111,13 @@ A defensible fractional factor is bounded by the operator's tolerance for missed
 
 - The hard cap dominates at typical edges, so a larger fractional factor adds nothing for those candidates.
 - For low-edge candidates (where the fractional factor matters most), smaller sizes compound more predictably.
-- Post-validation WFV will revisit this choice with real data.
+- Post-P0 walk-forward analysis will revisit this choice with real data. The validator's current state on `main` is catalogued in [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.
 
 ## Why these regime multipliers?
 
 Bull 1.0 is the baseline — we trust the HMM labeling in trending regimes. Chop 0.5 is a mechanical discount for the reduced expected duration of directional moves. Bear 0.3 is deeper than chop because bear regimes are where the engine has historically produced worse outcomes on analogous strategies; a 30% multiplier ensures we are barely in the market.
 
-These numbers are locked during validation. Changing them post-validation is a `risk-logic` PR with two reviewers and tests over fixture regimes.
+These numbers are locked during validation. Changing them post-validation is a risk-logic PR with two reviewers and tests over fixture regimes.
 
 ## How to add or remove a step
 
@@ -125,14 +129,8 @@ You almost certainly don't need to. But if you do:
 
 ## Testing
 
-Unit tests for the sizer live at `coinscope_trading_engine/tests/test_kelly_position_sizer*.py`. They cover:
+Unit tests for the sizer should live alongside the implementation under `tests/`. The current safety-gate test suite ([`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py)) covers the position-size cap enforcement at submission time. The state of dedicated sizer tests on `main` — and what's pending — is catalogued in [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.
 
-- Kelly-full computation for a variety of edge/odds combinations.
-- Fractional factor clamp.
-- Hard-cap clamp.
-- Each regime multiplier.
-- Leverage ceiling clamp.
-- Step-size rounding.
-- The monotone-non-increasing invariant across steps.
+A fixture-over-regimes test is cheap and catches most classes of error — that pattern is the right starting point when the dedicated sizer tests land.
 
-When changing the sizer, update these tests. A fixture-over-regimes test is cheap and catches most classes of error.
+When changing the sizer, every step in the pipeline above gets at least one test covering its clamp behavior.

@@ -17,6 +17,7 @@
 
 ## Table of Contents
 
+0. [Honesty pass — v0.1.0-p0.1](#0-honesty-pass--v010-p01-added-2026-05-13)
 1. [What P0 is and is not](#1-what-p0-is-and-is-not)
 2. [Validation scope](#2-validation-scope)
 3. [Pre-flight bug fix record (16/16 resolved)](#3-pre-flight-bug-fix-record)
@@ -29,6 +30,97 @@
 10. [What was not validated in P0](#10-what-was-not-validated-in-p0)
 11. [P1 readiness criteria](#11-p1-readiness-criteria)
 12. [Document trail](#12-document-trail)
+
+---
+
+## 0. Honesty pass — v0.1.0-p0.1 (added 2026-05-13)
+
+> **Read this first.** The original publication of this document (PR #32, 2026-05-13) made claims about artifacts that exist on side branches but had not yet merged to `main`. This section maps each claim in sections 1–12 below to its actual status on `main` as of this commit, so a reader can distinguish *what P0 has proven* from *what P0 intends to prove once the in-flight branches merge*.
+>
+> Where the body of this document conflicts with the tables in this section, **§0 overrides**. The body is preserved as design intent and a roadmap for the missing work, not as a record of proof.
+
+### 0.1 Verifiable on `main`
+
+These claims are backed by files currently committed to `main`:
+
+| Claim | Backing artifact on `main` |
+|---|---|
+| 15-test CI smoke suite | `tests/test_ci_smoke.py` |
+| 30-test directory-boundary suite | `tests/test_directory_boundaries.py` |
+| Paper-trading 4-layer safety gate (fail-closed on both activate and deactivate, see qualifier below) | `services/paper_trading/safety.py` (~400 lines, layers: kill switch → hardcoded limits → configurable limits → state checks) |
+| Kill-switch implementation (activate / deactivate-with-required-reason / persistent flag / CLI) | `services/paper_trading/safety.py::KillSwitch` + `services/paper_trading/kill.py` |
+
+> **Fail-closed qualifier.** The *activate* path is fail-closed — any breach of a hardcoded limit (daily loss, drawdown) triggers `KillSwitch.activate()` automatically. The *deactivate* path is now also gated at the method level: `KillSwitch.deactivate(reason: str)` requires a non-empty positional argument (`TypeError` if omitted, `ValueError` if empty/whitespace). A programmatic caller that tries to silently disable the safety layer fails at runtime. The reason is logged at WARN level for audit. Hardened via [issue #47](https://github.com/3nz5789/CoinScopeAI/issues/47).
+| Kill-switch + safety-gate test coverage | `tests/unit/paper_trading/test_safety.py` (~360 lines, 7 test classes covering kill switch, reduce-only bypass, hardcoded limits, configurable limits, state checks, counters, config enforcement) |
+| Paper-trading additional coverage | `tests/unit/paper_trading/test_engine_integration.py`, `test_order_manager.py`, `test_alerting.py`, `test_exchange_client.py`, `test_signal_engine.py` |
+| Market-data unit coverage (14 test files) | `tests/unit/market_data/*` |
+| 16-bug pre-flight fix record | `docs/BUG_FIXES_COMPREHENSIVE.md` (note: path is `docs/`, **not** `coinscope_trading_engine/`) |
+| API contract reference (40+ endpoints) | `docs/api/engine-api-contract.md` |
+| SLOs + alert rules + dashboard spec | `docs/monitoring/slo-alerts-dashboard.md` |
+| Prometheus configuration | `prometheus-alert-rules.yml`, `prometheus.yml` (repo root) |
+| Validation safe-vs-experimental ADR | `docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md` |
+| CI workflow (test + security jobs) | `.github/workflows/ci.yml` |
+| Canonical risk thresholds (PCC v2 §8) | `services/paper_trading/config.py` hardcoded constants + env example |
+| **Operator session-lifecycle runbook** (9-step session workflow) | `docs/runbooks/operator-workflow.md` |
+| **Risk framework** (philosophy, invariants, thresholds, 6-layer defense) | `docs/risk/risk-framework.md` |
+| **Risk gate** (13-step contract, decision shape, journaling) | `docs/risk/risk-gate.md` |
+| **Position sizing** (Kelly pipeline, regime multipliers, worked examples) | `docs/risk/position-sizing.md` |
+| **Failsafes and kill switches** (three breakers + manual kill switch, reset rules, operator/developer hard rules) | `docs/risk/failsafes-and-kill-switches.md` |
+| **Walk-forward + CPCV validator** (offline harness; ADR-0005 boundary-safe) | [`validation/walk_forward_validation.py`](../../validation/walk_forward_validation.py) + [`validation/cpcv_validation.py`](../../validation/cpcv_validation.py) + [`scripts/run_validation.py`](../../scripts/run_validation.py) |
+| **Validator output** (signed, dated, reproducible) | [`docs/validation/runs/2026-05-13/{wfv,cpcv}.{csv,md}`](runs/2026-05-13/) |
+
+### 0.2 Claimed but **not** on `main` — design intent, not yet proof
+
+These claims appear in the body below but the cited artifact does not exist on `main`:
+
+| Claimed artifact (where in this doc) | Actual location | Status |
+|---|---|---|
+| `tests/test_invariants.py` — 65 invariant tests (§4) | Branch `test/invariant-failure-modes` | **Not merged.** The kill-switch and breaker invariants it claims to prove are *partially* proven on `main` via `tests/unit/paper_trading/test_safety.py` instead, at the paper-trading safety layer rather than at the dedicated invariant-suite level. |
+| ~~`docs/runbooks/operator-workflow.md`~~ (§7, §12) | **NOW ON `main`** — see §0.1; landed via [issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43). The session-level "9-step lifecycle" is covered. The wider operator role (onboarding, weekly review, incident response) remains in the Drive workspace operator-lifecycle.md. | ✓ Resolved (session lifecycle) |
+| ~~`docs/risk/risk-framework.md`~~ (§12) | **NOW ON `main`** — see §0.1; landed via [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45). Reconciled against on-main code paths and PCC v2 §8 thresholds. | ✓ Resolved |
+| ~~`docs/risk/risk-gate.md`, `docs/risk/position-sizing.md`, `docs/risk/failsafes-and-kill-switches.md`~~ (§12) | **NOW ON `main`** — see §0.1; landed via [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45). The failsafes doc had the "deactivate requires written reason" clause dropped per PR #42 decision; reset endpoint paths corrected from `POST /kill-switch` to `POST /circuit-breaker/trip` / `reset` per the actual on-main API contract. | ✓ Resolved |
+| `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` (§3, §12) | Path does not exist on `main` | **Wrong path.** The file is at `docs/BUG_FIXES_COMPREHENSIVE.md`. The 16/16 claim itself holds; only the cited path is wrong. |
+| ~~`coinscope_trading_engine/validation/walk_forward_validation.py`~~ (§5) | **NOW ON `main` at `validation/walk_forward_validation.py`** (canonical path, per ADR-0005). Landed via [issue #46](https://github.com/3nz5789/CoinScopeAI/issues/46) with a real run on 2026-05-13 (full P0 watchlist, 18 WFV folds + 90 CPCV paths). | ✓ Resolved — see §0.1 row + §5 actuals |
+| Any path under `coinscope_trading_engine/` (§3, §12) | Path does not exist on `main` | Multiple §12 entries reference this directory; it does not exist anywhere in the current tree. |
+
+### 0.3 Tag state
+
+`v0.1.0-p0` was cut at commit `a4025ec5` on 2026-05-12 20:52 (+03:00). Three PRs merged to `main` **after** the tag cut:
+
+| PR | Merged at | Brought in |
+|---|---|---|
+| #27 Docs/api contract | 2026-05-12 22:15 | `docs/api/engine-api-contract.md`, `docs/monitoring/slo-alerts-dashboard.md` |
+| #31 Feat/signal decision cards | 2026-05-13 00:30 | (note: this PR *removed* a draft `tests/test_invariants.py`; the file landed only on `test/invariant-failure-modes`) |
+| #32 Docs/p0 evidence pack | 2026-05-13 00:41 | this document |
+
+So the `v0.1.0-p0` tag pre-dates every documentation artifact this evidence pack relies on. Reading the tag in isolation will significantly underrepresent the actual P0 evidence on `main` — and conversely, reading this doc against the tag will surface "missing" files that are present on current `main`.
+
+A new tag `v0.1.0-p0.1` will be cut at the merge commit of the honesty-pass PR that introduces this section, capturing the doc as it now reads against the artifacts it now actually backs.
+
+### 0.4 Updated P1 hard gates (overrides §11)
+
+The original §11 hard-gate checklist had multiple aspirational `[x]` marks. Accurate state on `main`:
+
+- [x] All 16 pre-flight bugs resolved — `docs/BUG_FIXES_COMPREHENSIVE.md`
+- [ ] **65 invariant tests green on `main`** — exists only on `test/invariant-failure-modes`; merge pending
+- [x] 30 boundary tests green on `main` — `tests/test_directory_boundaries.py`
+- [x] `v0.1.0-p0` tag published — but the tag is **pre-evidence**; `v0.1.0-p0.1` (this PR) is the first honest baseline
+- [x] **Operator workflow runbook documented** — session-lifecycle landed at `docs/runbooks/operator-workflow.md` via [issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43); wider operator role still in Drive
+- [x] **Risk framework doc current on `main`** — `docs/risk/{risk-framework,risk-gate,position-sizing,failsafes-and-kill-switches}.md` landed via [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45). Reconciled against on-main code paths and PCC v2 §8 thresholds.
+- [x] **WFV + CPCV validator landed on `main`** — `validation/{walk_forward_validation,cpcv_validation}.py` + outputs at `docs/validation/runs/2026-05-13/` via [issue #46](https://github.com/3nz5789/CoinScopeAI/issues/46)
+- [ ] **CPCV bar met (worst-vs-median Sharpe drop ≤ 30%)** — **bar evaluable now, currently FAILING.** 0/6 symbols pass on the 2026-05-13 run. 4 of 6 symbols have negative median Sharpe; only ETHUSDT has meaningful positive median (+2.43) and its drop is 190%. Closing this gate requires strategy work (threshold tuning, additional scorer components), not validator work. See §5 actuals.
+- [x] API contract documented — `docs/api/engine-api-contract.md`
+- [x] SLOs and alert rules defined — `docs/monitoring/slo-alerts-dashboard.md`
+- [ ] COI-68: VPS `.env` patch + `docker restart` (operator action, unchanged)
+- [ ] COI-69: Post-restart verification (blocked by COI-68, unchanged)
+
+P0 graduation now requires the **three** `[ ]` items above to flip — the invariant suite merge (#44), the CPCV bar (now evaluable and currently failing — strategy work required), and the COI-68/69 operator actions.
+
+> **The CPCV failure is the most consequential P0 finding to date.** It means the strategy in its current form does not have the cross-fold consistency the committed v1 bar requires. This is exactly what validation is supposed to surface; the next decision is whether to refine thresholds, add scorer components, or revise the bar — each option needs its own issue and rationale.
+
+### 0.5 What P0 has actually proven on `main` (the honest one-paragraph summary)
+
+The CoinScopeAI engine ships a **paper-trading safety gate** (`services/paper_trading/safety.py`) implementing four layers in this order — kill switch → hardcoded limits → configurable limits → state checks — backed by ~360 lines of unit tests in `tests/unit/paper_trading/test_safety.py` covering every rejection class. The *activate* path is fail-closed; the *deactivate* path's method-level guard is in flight on PR #50 (issue #47). The on-main paper-trading safety gate, three risk framework docs (framework, gate, position-sizing, failsafes), the operator session-lifecycle runbook, and now a **walk-forward + CPCV validator with a signed 2026-05-13 run** are all on `main`. **What has not yet landed:** the dedicated 65-test invariant suite (#44) and the deactivate-path hardening (#47, in flight). **What the validator has now surfaced:** the strategy at the BUG-2 thresholds (8.0/4.0) does **not** meet the committed §0.4 CPCV bar — 0/6 symbols currently pass. P0 → P1 graduation requires the invariant suite merge, the deactivate hardening, the COI-68/69 operator actions, AND a meaningful response to the CPCV finding (threshold tuning, scorer components, or a revised bar). **Not before.**
 
 ---
 
@@ -211,25 +303,64 @@ The walk-forward validator (`validation/walk_forward_validation.py`) splits 4h O
 
 **Important caveat:** The walk-forward validator uses a simplified signal simulation (±1% per trade) rather than actual ATR-based stop/TP fills. It measures signal *direction quality*, not realized trade P&L. See [Section 9](#9-known-limitations) for the full limitations.
 
-### Reported outputs (structural validation, not forward returns)
+### Reported outputs (actual WFV + CPCV results — 2026-05-13)
 
-The outputs below represent the structural validation run against historical data. They are **not** live P0 trading results — they are pre-P0 signal quality evidence.
+The validator was built and run as part of [issue #46](https://github.com/3nz5789/CoinScopeAI/issues/46). Code lives at [`validation/walk_forward_validation.py`](../../validation/walk_forward_validation.py) and [`validation/cpcv_validation.py`](../../validation/cpcv_validation.py); runner at [`scripts/run_validation.py`](../../scripts/run_validation.py); outputs at [`docs/validation/runs/2026-05-13/`](runs/2026-05-13/). The original illustrative §5 table (struck through below) is preserved for reference.
 
-| Symbol | Fold | Bars (OOS) | Trades | Sharpe | Max DD | Win Rate | Pass |
+The numbers below are **real, reproducible, signed by the run date.** They are also **uncomfortable** — they show the scorer at the BUG-2 (8.0 LONG / 4.0 SHORT) thresholds does not yet have the consistent positive edge that the §0.4 graduation bar requires across CPCV folds.
+
+#### Walk-forward summary (full P0 watchlist, 6 symbols × 3 folds = 18 folds)
+
+- Folds run: **18** · Folds passing the §5 bar (Sharpe > 0.8 AND max DD > -25%): **6 (33%)**
+- Sharpe (min / median / max): **−6.80 / +0.58 / +5.47**
+- Per-symbol pass rate: BTCUSDT 0/3 · ETHUSDT 2/3 · BNBUSDT 1/3 · SOLUSDT 2/3 · XRPUSDT 0/3 · DOGEUSDT 1/3
+- Full per-fold detail in [`runs/2026-05-13/wfv.md`](runs/2026-05-13/wfv.md) and [`wfv.csv`](runs/2026-05-13/wfv.csv)
+
+#### CPCV summary (full P0 watchlist, C(6,2) = 15 paths × 6 symbols = 90 paths)
+
+- Paths run: **90**
+- Symbols passing the §0.4 bar (worst-vs-median Sharpe drop ≤ 30%): **0 / 6**
+- Per-symbol median Sharpe: BTCUSDT −0.23 · ETHUSDT +2.43 · BNBUSDT 0.00 · SOLUSDT −0.47 · XRPUSDT −0.50 · DOGEUSDT −0.99
+- Only ETHUSDT has a meaningfully positive median Sharpe; even there the worst-vs-median drop is **190%** (well above the 30% bar)
+- Full per-path detail in [`runs/2026-05-13/cpcv.md`](runs/2026-05-13/cpcv.md) and [`cpcv.csv`](runs/2026-05-13/cpcv.csv)
+
+#### Known validator-vs-live divergence: liquidity sub-score
+
+The validator runs offline against historical OHLCV — no order-book data is available. The on-main `FixedScorer.score_liquidity` expects a `bid_ask_spread` input; the validator substitutes **`spread = high − low`** as a public-data proxy. This is **wrong-class**: high-low is a volatility/range measure, not a liquidity measure. The proxy enters a thresholded signal-generation system, so its effect on per-fold Sharpe is **path-dependent and unmeasured**. Quantifying impact on either the §5 absolute-Sharpe finding or the §0.4 cross-fold-consistency finding requires re-running the validator with a different liquidity proxy and comparing — tracked as a follow-up. Until then, both numbers below are **outputs of a validator pipeline with a known divergence from live**, not calibrated estimates of live performance.
+
+#### What this means
+
+The scorer at the current canonical thresholds (≥ 8.0 LONG, ≤ 4.0 SHORT per BUG-2 fix) produces:
+
+- A trade on ~60-70% of test bars (signal density is high)
+- A win rate around 0.5 (statistical noise — directional accuracy is near coin-flip on these out-of-sample folds)
+- Wide fold-to-fold variance — best fold Sharpe is +5.47, worst is −6.80
+- Median Sharpe across CPCV paths is **negative for 4 of 6 symbols**, near-zero for one, and meaningfully positive only for ETHUSDT
+
+This is a **real P0 graduation finding.** Two interpretations are consistent with the data:
+
+1. **The thresholds are too permissive.** 8.0/4.0 generates trades on the majority of bars; tightening (e.g., ≥ 9.5 / ≤ 2.5) would reduce trade count and may improve directional accuracy.
+2. **The scorer needs additional components.** The on-main `FixedScorer` covers momentum/trend/volatility/volume/entry/liquidity. The v3 ML classifier, HMM regime detector, and futures-specific filters (funding rate, OI delta) are not included in this validation harness — they would, in principle, gate which signals trade.
+
+Both are testable. Neither is in scope for issue #46 — the validator's job is to produce evidence, not interpret it.
+
+#### Original illustrative table (struck through, retained for traceability)
+
+> 🚫 The numbers below were illustrative placeholders in the original §5; they had no traceable source. Real numbers above replace them.
+
+| ~~Symbol~~ | ~~Fold~~ | ~~Bars (OOS)~~ | ~~Trades~~ | ~~Sharpe~~ | ~~Max DD~~ | ~~Win Rate~~ | ~~Pass~~ |
 |---|---|---|---|---|---|---|---|
-| BTCUSDT | 1 | ~100 | ~45 | 1.12 | -8.3% | 58% | ✅ |
-| BTCUSDT | 2 | ~100 | ~52 | 0.94 | -11.2% | 55% | ✅ |
-| BTCUSDT | 3 | ~100 | ~38 | 1.31 | -6.7% | 61% | ✅ |
-| ETHUSDT | 1 | ~100 | ~49 | 0.89 | -13.4% | 54% | ✅ |
-| ETHUSDT | 2 | ~100 | ~44 | 1.05 | -9.8% | 57% | ✅ |
-| ETHUSDT | 3 | ~100 | ~41 | 1.18 | -7.2% | 59% | ✅ |
-| SOLUSDT | 1 | ~100 | ~57 | 0.86 | -18.7% | 52% | ✅ |
-| SOLUSDT | 2 | ~100 | ~63 | 0.91 | -14.1% | 55% | ✅ |
-| SOLUSDT | 3 | ~100 | ~48 | 1.22 | -9.3% | 60% | ✅ |
+| ~~BTCUSDT~~ | ~~1~~ | ~~~100~~ | ~~~45~~ | ~~1.12~~ | ~~-8.3%~~ | ~~58%~~ | ~~✅~~ |
+| ~~BTCUSDT~~ | ~~2~~ | ~~~100~~ | ~~~52~~ | ~~0.94~~ | ~~-11.2%~~ | ~~55%~~ | ~~✅~~ |
+| ~~BTCUSDT~~ | ~~3~~ | ~~~100~~ | ~~~38~~ | ~~1.31~~ | ~~-6.7%~~ | ~~61%~~ | ~~✅~~ |
+| ~~ETHUSDT~~ | ~~1~~ | ~~~100~~ | ~~~49~~ | ~~0.89~~ | ~~-13.4%~~ | ~~54%~~ | ~~✅~~ |
+| ~~ETHUSDT~~ | ~~2~~ | ~~~100~~ | ~~~44~~ | ~~1.05~~ | ~~-9.8%~~ | ~~57%~~ | ~~✅~~ |
+| ~~ETHUSDT~~ | ~~3~~ | ~~~100~~ | ~~~41~~ | ~~1.18~~ | ~~-7.2%~~ | ~~59%~~ | ~~✅~~ |
+| ~~SOLUSDT~~ | ~~1~~ | ~~~100~~ | ~~~57~~ | ~~0.86~~ | ~~-18.7%~~ | ~~52%~~ | ~~✅~~ |
+| ~~SOLUSDT~~ | ~~2~~ | ~~~100~~ | ~~~63~~ | ~~0.91~~ | ~~-14.1%~~ | ~~55%~~ | ~~✅~~ |
+| ~~SOLUSDT~~ | ~~3~~ | ~~~100~~ | ~~~48~~ | ~~1.22~~ | ~~-9.3%~~ | ~~60%~~ | ~~✅~~ |
 
-**All 9 folds passed the structural validation criteria.**
-
-> ⚠️ **Interpretation note:** These Sharpe ratios and win rates are outputs of the simplified WFV simulation, not live trading results. Do not interpret them as expected forward returns. The WFV confirms the scoring system produces directionally consistent signals across out-of-sample windows — it does not validate that the system will be profitable in live markets.
+~~**All 9 folds passed the structural validation criteria.**~~ — claim retracted.
 
 ### What the WFV does and does not prove
 
@@ -262,14 +393,16 @@ The outputs below represent the structural validation run against historical dat
 
 ### 6-layer defense integrity
 
-| Layer | Component | Validated by |
-|---|---|---|
-| Layer 1 — Signal quality | FixedScorer / ConfluenceScorer floor | WFV (9 folds), BUG-2 fix |
-| Layer 2 — Pre-trade gate | RiskGate.check() | Invariant tests Sections 1, 4, 10 |
-| Layer 3 — Sizing discipline | PositionSizer Kelly pipeline | Invariant tests Section 6 |
-| Layer 4 — Execution guardrails | ATR stops + TP on entry | Operator workflow Step 6 |
-| Layer 5 — Circuit breakers | CircuitBreaker state machine | Invariant tests Sections 1–10 (65 tests) |
-| Layer 6 — Kill switch | Manual halt propagation | Invariant test Section 7 |
+> **§0.2 override:** the "Invariant tests Section N" references below point to `tests/test_invariants.py`, which is on branch `test/invariant-failure-modes`, not on `main`. The "Validated by" column reflects design intent. The **actually-on-main** validation column is added on the right.
+
+| Layer | Component | Validated by (design intent) | Actually on `main` |
+|---|---|---|---|
+| Layer 1 — Signal quality | FixedScorer / ConfluenceScorer floor | ~~WFV (9 folds)~~ retracted, BUG-2 fix | BUG-2 fix in `docs/BUG_FIXES_COMPREHENSIVE.md` |
+| Layer 2 — Pre-trade gate | RiskGate.check() | ~~Invariant tests Sections 1, 4, 10~~ | `risk_management/risk_gate.py` exists; no dedicated invariant suite on `main` |
+| Layer 3 — Sizing discipline | PositionSizer Kelly pipeline | ~~Invariant tests Section 6~~ | `risk_management/kelly_position_sizer.py` exists; no dedicated test on `main` |
+| Layer 4 — Execution guardrails | ATR stops + TP on entry | ~~Operator workflow Step 6~~ runbook not on `main` | code present; no dedicated test on `main` |
+| Layer 5 — Circuit breakers | CircuitBreaker state machine | ~~Invariant tests Sections 1–10 (65 tests)~~ | **Paper-trading safety gate** in `services/paper_trading/safety.py` triggers `KillSwitch.activate()` on daily-loss + drawdown breach; covered by `tests/unit/paper_trading/test_safety.py::TestSafetyGateHardcodedLimits` |
+| Layer 6 — Kill switch | Manual halt propagation | ~~Invariant test Section 7~~ | `services/paper_trading/safety.py::KillSwitch` + `services/paper_trading/kill.py` CLI; covered by `test_safety.py::TestKillSwitch` and `TestSafetyGateKillSwitch` (kill-switch evaluated first in the gate) |
 
 ### Risk invariants confirmed unbreakable by test suite
 
@@ -422,16 +555,18 @@ These are not bugs. They are honest constraints that anyone reading this documen
 
 ## 11. P1 Readiness Criteria
 
+> **Status overridden by §0.4.** The original list below claimed multiple hard gates were satisfied that were not, in fact, satisfied on `main`. The list is preserved here for traceability; the operative version is [§0.4 Updated P1 hard gates](#04-updated-p1-hard-gates-overrides-11).
+
 P0 is complete when all of the following are true. P1 begins when COI-68 is resolved.
 
 ### Hard gates (must be true)
 
 - [x] All 16 pre-flight bugs resolved
-- [x] 65 invariant tests green on `main`
+- [ ] ~~65 invariant tests green on `main`~~ — see §0.4; only on `test/invariant-failure-modes` branch
 - [x] 30 boundary tests green on `main`
-- [x] `v0.1.0-p0` tag published with pre-release notes
-- [x] Operator workflow documented and followed for ≥ 3 sessions
-- [x] Risk framework doc current and reviewed
+- [x] `v0.1.0-p0` tag published with pre-release notes — but see §0.3; the tag is pre-evidence
+- [ ] ~~Operator workflow documented and followed for ≥ 3 sessions~~ — see §0.4; runbook does not exist
+- [ ] ~~Risk framework doc current and reviewed~~ — see §0.4; `docs/risk/` files not on `main`
 - [x] API contract documented (40+ endpoints)
 - [x] SLOs and alert rules defined (8 SLOs, 12 alerts)
 - [ ] **COI-68: VPS `.env` patch + `docker restart` (operator action)**
@@ -453,40 +588,46 @@ P1 = real capital, small size (≤ $100 per trade initially), mainnet Binance US
 
 ## 12. Document Trail
 
-All documents referenced in this evidence pack are committed to the repo and/or Notion.
+> **Many paths in the original trail were wrong or aspirational.** This section is rewritten to label each row as **On `main`** / **On side branch** / **Not yet written** / **In Drive workspace**. Cross-check against §0.1 and §0.2.
 
-| Document | Location |
-|---|---|
-| Risk framework | `docs/risk/risk-framework.md` |
-| Risk gate mechanics | `docs/risk/risk-gate.md` |
-| Position sizing | `docs/risk/position-sizing.md` |
-| Failsafes and kill switches | `docs/risk/failsafes-and-kill-switches.md` |
-| Operator workflow | `docs/runbooks/operator-workflow.md` |
-| SLOs + alert rules | `docs/monitoring/slo-alerts-dashboard.md` |
-| API contract | `docs/api/engine-api-contract.md` |
-| Bug fix record | `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` |
-| Invariant test suite | `tests/test_invariants.py` |
-| Directory boundary tests | `tests/test_directory_boundaries.py` |
-| Walk-forward validator | `coinscope_trading_engine/validation/walk_forward_validation.py` |
-| ADR-0005 (boundary isolation) | `docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md` |
-| CI workflow | `.github/workflows/ci.yml` |
-| v0.1.0-p0 release notes | `https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0` |
-| This document | `docs/validation/p0-evidence-pack.md` |
+| Document | Location | Status |
+|---|---|---|
+| Risk framework | `docs/risk/risk-framework.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). |
+| Risk gate mechanics | `docs/risk/risk-gate.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). Code at [`risk_management/risk_gate.py`](../../risk_management/risk_gate.py). |
+| Position sizing | `docs/risk/position-sizing.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). Code at [`risk_management/kelly_position_sizer.py`](../../risk_management/kelly_position_sizer.py). |
+| Failsafes and kill switches | `docs/risk/failsafes-and-kill-switches.md` | **On `main`** ([issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45)). Code at [`services/paper_trading/safety.py`](../../services/paper_trading/safety.py) (`KillSwitch` class) and [`services/paper_trading/kill.py`](../../services/paper_trading/kill.py) (CLI). |
+| Operator workflow (session lifecycle, 9 steps) | `docs/runbooks/operator-workflow.md` | **On `main`** ([issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43)). The wider operator role (onboarding, weekly review, incident) remains in Drive `04 — Development/docs/runbooks/operator-lifecycle.md` until ported. |
+| SLOs + alert rules | `docs/monitoring/slo-alerts-dashboard.md` | **On `main`** (PR #27). |
+| API contract | `docs/api/engine-api-contract.md` | **On `main`** (PR #27). |
+| Bug fix record | `docs/BUG_FIXES_COMPREHENSIVE.md` | **On `main`.** Original §3/§12 path `coinscope_trading_engine/BUG_FIXES_COMPREHENSIVE.md` is wrong — that directory does not exist. |
+| Invariant test suite | (target: `tests/test_invariants.py`) | **On branch `test/invariant-failure-modes`, not merged.** PR #31 explicitly removed a draft of this file from `main` before merging. The kill-switch and breaker invariants are *partially* proven on `main` via `tests/unit/paper_trading/test_safety.py` instead. |
+| Directory boundary tests | `tests/test_directory_boundaries.py` | **On `main`** (PR #32). |
+| Paper-trading safety gate (real proof on `main`) | `services/paper_trading/safety.py` + `tests/unit/paper_trading/test_safety.py` | **On `main`.** This is the actual code-side proof of the kill switch and risk-rejection contract on `main` today. |
+| Walk-forward validator | (claimed: `coinscope_trading_engine/validation/walk_forward_validation.py`) | **Not committed.** Path does not exist on `main` or on any branch located so far. The 9-fold WFV results table in §5 is **preliminary external analysis**, not reproducible from this repo. |
+| ADR-0005 (boundary isolation) | `docs/decisions/adr-0005-validation-safe-vs-experimental-boundaries.md` | **On `main`** (PR #32). |
+| CI workflow | `.github/workflows/ci.yml` | **On `main`** (commit `4494d57`). |
+| v0.1.0-p0 release notes | `https://github.com/3nz5789/CoinScopeAI/releases/tag/v0.1.0-p0` | Tag exists but is **pre-evidence**; see §0.3. |
+| v0.1.0-p0.1 honest baseline | (this PR) | The tag will be cut at the merge commit of this PR. |
+| This document | `docs/validation/p0-evidence-pack.md` | **On `main`** (PR #32). Annotated by §0 in this PR. |
 
 ### Linear issue trail
 
+> **§0.4 supersedes the `✅ Done` marks below where the deliverable was not actually on `main`.** Items kept here for traceability.
+>
+> **Note on unverified rows:** rows below marked `✅ Done` without an annotation were **not independently re-verified during this honesty pass**. They are inherited from the original COI-95 publication. Treat as "claimed done, not audited here."
+
 | Issue | Title | Status |
 |---|---|---|
-| COI-86 | Remove committed node_modules | ✅ Done |
-| COI-87 | Metadata consistency pass | ✅ Done |
-| COI-88 | Publish v0.1.0-p0 release | ✅ Done |
-| COI-89 | Canonical operator workflow | ✅ Done |
-| COI-90 | Invariant test suite (65 tests) | ✅ Done |
-| COI-91 | SLOs + alert rules + dashboard spec | ✅ Done |
-| COI-92 | Engine API contract reference | ✅ Done |
-| COI-93 | Directory boundary enforcement | ✅ Done |
-| COI-94 | Signal decision card redesign | ✅ Done |
-| COI-95 | P0 evidence pack (this document) | ✅ Done |
+| COI-86 | Remove committed node_modules | ✅ Done (not re-verified in this pass) |
+| COI-87 | Metadata consistency pass | ✅ Done (not re-verified in this pass) |
+| COI-88 | Publish v0.1.0-p0 release | ✅ Done — but tag is pre-evidence (§0.3) |
+| COI-89 | Canonical operator workflow | ⚠️ **Partial — session lifecycle landed.** `docs/runbooks/operator-workflow.md` is on `main` via [issue #43](https://github.com/3nz5789/CoinScopeAI/issues/43). The wider operator role (onboarding, weekly review, incident response) is still in Drive only — close fully when ported to `docs/runbooks/operator-lifecycle.md` |
+| COI-90 | Invariant test suite (65 tests) | ⚠️ **Tests not on `main`** — exist on `test/invariant-failure-modes`; see §0.2 |
+| COI-91 | SLOs + alert rules + dashboard spec | ✅ Done — on `main` |
+| COI-92 | Engine API contract reference | ✅ Done — on `main` |
+| COI-93 | Directory boundary enforcement | ✅ Done — on `main` |
+| COI-94 | Signal decision card redesign | ✅ Done (not re-verified in this pass) |
+| COI-95 | P0 evidence pack (this document) | ❌ **Shipped with claims unsupported by `main`** — specifically the 65-test invariant suite, the operator-workflow runbook, and the `docs/risk/` files. This honesty-pass PR is the correction. |
 | COI-68 | VPS env patch + restart | 🔴 Pending operator |
 | COI-69 | Post-restart verification | 🔴 Blocked by COI-68 |
 

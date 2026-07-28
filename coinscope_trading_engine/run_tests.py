@@ -8,6 +8,7 @@ Usage: python run_tests.py
 import sys
 import os
 import time
+import argparse
 
 # Allow running this file directly (python coinscope_trading_engine/run_tests.py)
 # while still supporting relative imports.
@@ -209,8 +210,18 @@ def test_kronos_signal():
 
 # ── Run all tests ──────────────────────────────────────────────────
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="CoinScopeAI System Tests")
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Skip slow tests (e.g., Kronos model inference) for rapid local iteration.",
+    )
+    args = parser.parse_args()
+
     print("=" * 50)
     print(" CoinScopeAI System Tests")
+    if args.fast:
+        print(" (fast mode: skipping Kronos Signal)")
     print("=" * 50)
 
     test("Scoring Engine", test_scoring)
@@ -221,7 +232,8 @@ if __name__ == "__main__":
     test("Testnet Executor", test_executor)
     test("Scale Manager", test_scale_manager)
     test("FastAPI Import", test_api_import)
-    test("Kronos Signal", test_kronos_signal)
+    if not args.fast:
+        test("Kronos Signal", test_kronos_signal)
 
     print("\n" + "=" * 50)
     print(" TEST RESULTS")

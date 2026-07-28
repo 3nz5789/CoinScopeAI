@@ -10,18 +10,17 @@ Features:
   - Testnet / mainnet URL driven by config — no hardcoding
 """
 
+from collections import deque
 import hashlib
 import hmac
 import math
 import time
-from collections import deque
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from config import BinanceConfig
-
 
 # ── Custom exceptions ─────────────────────────────────────────────────────────
 

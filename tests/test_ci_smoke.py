@@ -5,6 +5,7 @@ No assumptions about file contents beyond what's confirmed in git.
 """
 
 import os
+
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

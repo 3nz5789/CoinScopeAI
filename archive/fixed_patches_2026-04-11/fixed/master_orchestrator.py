@@ -10,23 +10,24 @@ Coordinates:
 6. Order execution
 """
 
+from datetime import datetime
 import os
 import sys
 import time
-import requests
+
 import pandas as pd
-import numpy as np
-from datetime import datetime
+import requests
 
 # Adjust sys.path for module imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.scoring_fixed import FixedScorer
-from core.risk_gate import RiskGate
 from core.multi_timeframe_filter import MultiTimeframeFilter
+from core.risk_gate import RiskGate
+from core.scoring_fixed import FixedScorer
+
+from intelligence.finbert_sentiment_filter import MockSentimentFilter
 from intelligence.hmm_regime_detector import EnsembleRegimeDetector
 from intelligence.kelly_position_sizer import KellyRiskController
-from intelligence.finbert_sentiment_filter import MockSentimentFilter
 from intelligence.whale_signal_filter import WhaleSignalFilter
 
 # Binance Futures requires BTCUSDT format — no slash separator
@@ -94,7 +95,7 @@ class CoinScopeOrchestrator:
         """Detect market regime using HMM"""
         returns = df["close"].pct_change().dropna().values
         vol = pd.Series(returns).rolling(20).std().dropna().values
-        
+
         if len(returns) < 50:
             return {"regime": "chop", "confidence": 0.5}
 
@@ -113,7 +114,7 @@ class CoinScopeOrchestrator:
         """Scan single pair for trading signals"""
         print(f"\n[SCAN] {symbol}")
         df_4h = self.fetch_bars(symbol, "4h", 300)
-        
+
         if df_4h.empty or len(df_4h) < 100:
             return {"symbol": symbol, "signal": "NO_DATA"}
 
@@ -197,36 +198,36 @@ class CoinScopeOrchestrator:
         print(f"\n{'='*55}")
         print(f" CoinScopeAI Full Scan | {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
         print(f"{'='*55}")
-        
+
         results = []
         for pair in self.pairs:  # BUG-3 FIX: use instance attribute
             result = self.scan_pair(pair)
             results.append(result)
             time.sleep(0.5)  # rate limit
-        
+
         self._print_summary(results)
         return results
 
     def _print_summary(self, results: list):
         """Print scan summary"""
         print(f"\n{'─'*55}")
-        print(f" SCAN SUMMARY")
+        print(" SCAN SUMMARY")
         print(f"{'─'*55}")
-        
+
         active = [r for r in results if r.get("signal") in ("LONG", "SHORT")]
         for r in active:
             print(f" ✅ {r['symbol']:12s} {r['signal']:6s} | "
                   f"Regime: {r['regime']:4s} | "
                   f"Kelly: ${r.get('kelly_usd', 0):.2f} | "
                   f"Price: ${r.get('price', 0):.4f}")
-        
+
         if not active:
             print(" No active signals — market in consolidation")
-        
+
         blocked = [r for r in results if "BLOCKED" in r.get("signal", "")]
         if blocked:
             print(f"\n Blocked signals: {len(blocked)}")
-        
+
         print(f"{'─'*55}\n")
 
     def run_loop(self, interval_seconds: int = 14400):

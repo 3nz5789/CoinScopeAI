@@ -3,10 +3,13 @@ Billing Models — Pydantic schemas for subscription state and webhook events.
 """
 
 from __future__ import annotations
-from enum import Enum
+
 from datetime import datetime
+from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
+
 try:
     from pydantic import EmailStr
 except ImportError:

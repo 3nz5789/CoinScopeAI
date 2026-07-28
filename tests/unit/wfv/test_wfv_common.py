@@ -9,8 +9,7 @@ live Binance OHLCV via scripts/run_validation.py.
 import numpy as np
 import pytest
 
-from validation import _common, walk_forward_validation, cpcv_validation
-
+from validation import _common, cpcv_validation, walk_forward_validation
 
 # ── Synthetic data ───────────────────────────────────────────────────
 

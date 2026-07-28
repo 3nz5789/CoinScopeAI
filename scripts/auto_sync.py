@@ -10,7 +10,10 @@ Usage:
     python3 scripts/auto_sync.py --verify     # run sync_verify.py after
 """
 
-import os, sys, subprocess, argparse
+import os
+import sys
+import subprocess
+import argparse
 from datetime import datetime, timezone
 
 REPO_DIR   = os.path.expanduser("~/Projects/CoinScopeAI")
@@ -96,9 +99,12 @@ stale  = [i for i in bad   if os.path.exists(os.path.join(COWORK_DIR, i))]
 if not miss_d and not miss_f and not stale:
     ok("Mac root canonical — all checks pass")
 else:
-    if miss_d: err(f"Missing dirs", ", ".join(miss_d))
-    if miss_f: err(f"Missing files", ", ".join(miss_f))
-    if stale:  err(f"Stale items at root", ", ".join(stale))
+    if miss_d:
+        err(f"Missing dirs", ", ".join(miss_d))
+    if miss_f:
+        err(f"Missing files", ", ".join(miss_f))
+    if stale:
+        err(f"Stale items at root", ", ".join(stale))
 
 # 5. Env
 section("5. .env.example Values")

@@ -14,9 +14,8 @@ Desk Full      $1,199/mo   $14,388/yr
 All amounts in USD cents for Stripe API.
 """
 
-import os
 from dataclasses import dataclass, field
-from typing import Optional
+import os
 
 
 @dataclass

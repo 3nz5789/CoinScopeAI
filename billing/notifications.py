@@ -5,11 +5,12 @@ Extends the project's existing TelegramAlerts pattern with billing-specific
 messages. Falls back to console logging if bot credentials are absent.
 """
 
-import os
-import logging
-import requests
 from datetime import datetime
+import logging
+import os
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 

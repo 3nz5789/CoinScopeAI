@@ -4,7 +4,11 @@ sync_verify.py — CoinScopeAI Cross-Platform Sync Verifier
 Run: python3 scripts/sync_verify.py
 """
 
-import os, subprocess, sys, urllib.request, json
+import os
+import subprocess
+import sys
+import urllib.request
+import json
 
 G="\033[92m"; R="\033[91m"; E="\033[0m"; B="\033[1m"
 results = []

@@ -5,8 +5,8 @@ Run all system tests in sequence.
 Usage: python run_tests.py
 """
 
-import sys
 import os
+import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -34,9 +34,8 @@ def test(name: str, fn):
 
 def test_scoring():
     """Test scoring engine"""
-    import numpy as np
-
     from core.scoring_fixed import FixedScorer
+    import numpy as np
 
     np.random.seed(42)
     n = 500

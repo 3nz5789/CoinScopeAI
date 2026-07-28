@@ -27,15 +27,15 @@ from __future__ import annotations
 
 import argparse
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Load .env before importing settings
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent / ".env")
 
-import stripe
-
+import stripe  # noqa: E402
 
 PLANS = [
     {

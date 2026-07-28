@@ -7,16 +7,19 @@ Run:
     python -m pytest tests/test_billing_webhook.py -v
 """
 
-import os
-import json
-import time
-import hmac
-import hashlib
-import tempfile
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+import hashlib
+import hmac
+import json
+import os
+import pathlib
+import sys
+import tempfile
+import time
+from unittest.mock import MagicMock, patch
+
 from fastapi.testclient import TestClient
+import pytest
 
 # ── Test environment setup ────────────────────────────────────────────────────
 TEST_WEBHOOK_SECRET = "whsec_test_secret_1234567890abcdef"
@@ -32,11 +35,10 @@ os.environ["STRIPE_PRICE_DESK_PREVIEW_ANNUAL"]  = TEST_PRICE_DESK_PREVIEW_ANNUAL
 os.environ["TELEGRAM_BOT_TOKEN"]         = ""   # Disable telegram in tests
 os.environ["TELEGRAM_CHAT_ID"]           = ""
 
-import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
-from billing.models import SubscriptionTier, SubscriptionStatus, BillingInterval
-from billing.subscription_store import SubscriptionStore, SubscriptionRecord
+from billing.models import BillingInterval, SubscriptionStatus, SubscriptionTier  # noqa: E402
+from billing.subscription_store import SubscriptionRecord, SubscriptionStore  # noqa: E402
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

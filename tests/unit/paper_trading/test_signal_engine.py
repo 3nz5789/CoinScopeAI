@@ -4,14 +4,14 @@ Tests cover: candle buffering, feature extraction, model inference,
 signal filtering, and integration with the backtesting strategy interface.
 """
 
-import time
-import pytest
-import numpy as np
-from unittest.mock import MagicMock, patch
 from pathlib import Path
+import time
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
 
 from services.paper_trading.config import TradingConfig
-
 
 # ── Signal Engine Import Guard ────────────────────────────────
 # The signal engine depends on the ML models which may not be

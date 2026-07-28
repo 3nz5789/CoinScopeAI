@@ -22,26 +22,26 @@ Price → Tier resolution:
 Runs on port 8002 (separate from main engine on 8001).
 """
 
-import os
+from datetime import datetime, timezone
 import json
 import logging
-import stripe
-from datetime import datetime, timezone
+import os
 from typing import Optional
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import stripe
 
-from .models import (
-    SubscriptionRecord,
-    SubscriptionTier,
-    SubscriptionStatus,
-    BillingInterval,
-)
-from .subscription_store import SubscriptionStore
-from .notifications import BillingNotifier
 from .customer_portal import router as portal_router
+from .models import (
+    BillingInterval,
+    SubscriptionRecord,
+    SubscriptionStatus,
+    SubscriptionTier,
+)
+from .notifications import BillingNotifier
+from .subscription_store import SubscriptionStore
 
 logger = logging.getLogger(__name__)
 
@@ -367,7 +367,7 @@ def _handle_invoice_payment_succeeded(event_id: str, event_type: str, data: dict
     customer_id     = data.get("customer", "")
     subscription_id = data.get("subscription", "")
     amount_paid     = data.get("amount_paid", 0)   # cents
-    currency        = data.get("currency", "usd")
+    data.get("currency", "usd")
 
     if amount_paid == 0:
         logger.debug(f"[Billing] Zero-amount invoice for {customer_id} — skipping notify")

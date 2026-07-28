@@ -22,15 +22,15 @@ Frontend URLs (set to match your deployed dashboard):
     BILLING_CANCEL_URL             https://yourdomain.com/pricing
 """
 
-import os
 import logging
+import os
 from typing import Literal
 
-import stripe
-from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
+import stripe
 
 from billing.config import get_price_id, list_plans
 

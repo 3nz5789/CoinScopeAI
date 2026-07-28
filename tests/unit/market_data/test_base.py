@@ -4,10 +4,15 @@ Tests for base exchange client infrastructure: EventBus, RateLimiter.
 
 import asyncio
 import time
+
 import pytest
+
 from services.market_data.base import EventBus, RateLimiter
 from services.market_data.models import (
-    EventType, Exchange, MarketEvent, MarkPrice,
+    EventType,
+    Exchange,
+    MarketEvent,
+    MarkPrice,
 )
 
 

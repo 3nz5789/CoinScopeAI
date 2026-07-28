@@ -17,12 +17,12 @@ COI-81: corrupt-file quarantine (SLO: No Silent Data Loss) — read side
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import logging
 import os
-import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
+import tempfile
 from typing import Any
 
 _log = logging.getLogger(__name__)

@@ -16,13 +16,14 @@ Run:
     pytest tests/test_coinscopeai.py -v
 """
 
-import sys
-import os
 import json
-import pytest
-import numpy as np
-import tempfile
+import os
 import shutil
+import sys
+import tempfile
+
+import numpy as np
+import pytest
 
 # ---------------------------------------------------------------------------
 # Path helpers — adjust if your project root differs
@@ -540,7 +541,7 @@ class TestTradeJournal:
         j = self._journal(tmp_journal_path)
         e1 = j.log_open("BTC/USDT", "BUY", "bull", 0.78, 68_000, 0.001, 20.0)
         j.log_close(e1.id, 69_000, 0.0147, 14.7)
-        e2 = j.log_open("ETH/USDT", "BUY", "bull", 0.70, 2_000, 0.01, 10.0)
+        j.log_open("ETH/USDT", "BUY", "bull", 0.70, 2_000, 0.01, 10.0)
         # e2 remains OPEN
         trades = j.get_recent_trades(days=1)
         assert len(trades) == 1
@@ -817,9 +818,9 @@ class TestEndToEndFlow:
 
     def test_full_pipeline_long_trade(self, tmp_journal_path, sample_ohlcv, tmp_path):
         """Simulate: score → kelly → risk gate → journal → executor."""
-        from scoring_fixed import FixedScorer
         from kelly_position_sizer import KellyRiskController
         from risk_gate import RiskGate
+        from scoring_fixed import FixedScorer
         from trade_journal import TradeJournal
 
         c, h, lo, v, sp = sample_ohlcv
@@ -959,8 +960,8 @@ class TestEdgeCases:
         assert stats["confirmed_signals"] == 0
 
     def test_scale_manager_correct_account_progression(self):
-        from scale_up_manager import ScaleUpManager, PROFILES
-        sm = ScaleUpManager()
+        from scale_up_manager import PROFILES, ScaleUpManager
+        ScaleUpManager()
         # Account sizes should increase with each profile
         account_sizes = [p.account_usd for p in PROFILES]
         assert account_sizes == sorted(account_sizes), "Profiles should increase in account size"

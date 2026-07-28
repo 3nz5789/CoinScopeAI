@@ -23,7 +23,6 @@ import pytest
 # ---------------------------------------------------------------------------
 # COI-5 — atomic_write_json primitive
 # ---------------------------------------------------------------------------
-
 from utils.io import atomic_write_json
 
 
@@ -84,8 +83,8 @@ class TestAtomicWriteJson:
 
 try:
     from coinscope_trading_engine.live.trade_monitor import (  # type: ignore[import]
-        TradeMonitor,
         STATE_ARCHIVED,
+        TradeMonitor,
     )
     TRADE_MONITOR_AVAILABLE = True
 except ImportError:
@@ -140,8 +139,8 @@ class TestSelfCancel:
 
 try:
     from coinscope_trading_engine.live.daily_session_state import (  # type: ignore[import]
-        DailySessionState,
         MAX_LOG_SIZE,
+        DailySessionState,
     )
     SESSION_STATE_AVAILABLE = True
 except ImportError:

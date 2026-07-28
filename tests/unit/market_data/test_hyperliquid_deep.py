@@ -25,7 +25,6 @@ from services.market_data.models import (
     PredictedFunding,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures: mock API responses
 # ---------------------------------------------------------------------------
@@ -136,7 +135,8 @@ class MockSession:
         self._response_data = response_data
         self.closed = False
 
-    def post(self, url, json=None):
+    def post(self, url, _json=None):
+        _ = url
         return MockResponse(self._response_data)
 
     async def close(self):

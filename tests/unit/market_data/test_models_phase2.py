@@ -3,6 +3,7 @@ Tests for CoinScopeAI Phase 2 — Data Models
 """
 
 import time
+
 import pytest
 
 from services.market_data.models import (
@@ -27,7 +28,6 @@ from services.market_data.models import (
     SignalDirection,
     Trade,
 )
-
 
 # ---------------------------------------------------------------------------
 # OrderBookLevel

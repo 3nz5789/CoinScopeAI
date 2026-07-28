@@ -14,12 +14,12 @@ fail, the executor will cancel the entry and report the error cleanly.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import logging
 from typing import Literal
 
-from client import BinanceFuturesRestClient, BinanceAPIError, RateLimitError
+from client import BinanceAPIError, BinanceFuturesRestClient, RateLimitError
 
 logger = logging.getLogger("TradeExecutor")
 logging.basicConfig(
@@ -201,14 +201,14 @@ class TradeExecutor:
                         f"min_notional=${filters.get('min_notional', '?')}")
 
             # ── Step 2: Get current mark price as entry reference ─────────────
-            logger.info(f"  Fetching mark price…")
+            logger.info("  Fetching mark price…")
             mark_data    = self.client.get_mark_price(symbol)
             entry_price  = float(mark_data["markPrice"])
             funding_rate = float(mark_data["lastFundingRate"]) * 100
             logger.info(f"  Mark price: ${entry_price:,.4f}  |  Funding: {funding_rate:+.4f}%")
 
             # ── Step 3: Get account balance ───────────────────────────────────
-            logger.info(f"  Fetching account balance…")
+            logger.info("  Fetching account balance…")
             account   = self.client.get_account()
             balance   = float(account["availableBalance"])
             total_bal = float(account["totalWalletBalance"])

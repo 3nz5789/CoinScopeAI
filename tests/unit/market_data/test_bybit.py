@@ -4,14 +4,21 @@ Tests for Bybit client — message parsing and normalization.
 
 import asyncio
 import json
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from services.market_data.base import EventBus
 from services.market_data.bybit.client import BybitClient
 from services.market_data.models import (
-    EventType, Exchange, OrderBook, Trade, Side,
-    FundingRate, OpenInterest, MarketEvent,
+    EventType,
+    Exchange,
+    FundingRate,
+    MarketEvent,
+    OpenInterest,
+    OrderBook,
+    Side,
+    Trade,
 )
 
 

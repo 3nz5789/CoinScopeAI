@@ -19,15 +19,14 @@ Alert strategy:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 import os
 import time
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-import requests
-
 from funding_rate_store import FundingRateRecord, FundingRateStore
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -252,14 +251,14 @@ class FundingRateAlerter:
 
         # Build the Telegram message
         lines = [
-            f"💓 *Funding Rate Heartbeat*",
+            "💓 *Funding Rate Heartbeat*",
             f"_{self._ts_utc()}_\n",
             f"Monitoring: `{stats['unique_symbols']}` symbols",
             f"Alerts fired: `{self._alerts_fired}` total\n",
         ]
 
         if extremes:
-            lines.append(f"🚨 *EXTREME* (|rate| > 0.05%)\n")
+            lines.append("🚨 *EXTREME* (|rate| > 0.05%)\n")
             for r in sorted(extremes, key=lambda x: abs(x.funding_rate), reverse=True)[:5]:
                 ann = r.funding_rate * 3 * 365
                 bias = "👆 LONG" if r.funding_rate > 0 else "👇 SHORT"
@@ -269,7 +268,7 @@ class FundingRateAlerter:
             lines.append("")
 
         if highs:
-            lines.append(f"⚠️ *HIGH* (|rate| > 0.02%)\n")
+            lines.append("⚠️ *HIGH* (|rate| > 0.02%)\n")
             for r in sorted(highs, key=lambda x: abs(x.funding_rate), reverse=True)[:5]:
                 ann = r.funding_rate * 3 * 365
                 bias = "👆 LONG" if r.funding_rate > 0 else "👇 SHORT"

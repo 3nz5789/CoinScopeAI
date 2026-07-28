@@ -5,13 +5,14 @@ error handling, and kill switch (close all positions).
 """
 
 import time
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
 
 from services.paper_trading.config import (
+    _BLOCKED_MAINNET_URLS,
     BINANCE_FUTURES_TESTNET_REST,
     ExchangeConfig,
-    _BLOCKED_MAINNET_URLS,
 )
 from services.paper_trading.exchange_client import (
     BinanceFuturesTestnetClient,
@@ -20,7 +21,6 @@ from services.paper_trading.exchange_client import (
     OrderResult,
     RateLimitError,
 )
-
 
 # ── Testnet Enforcement Tests ─────────────────────────────────
 

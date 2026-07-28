@@ -21,10 +21,10 @@ Environment (.env file):
 import sys
 import time
 
-from config import load_config, startup_check, trade_params
-from client import BinanceFuturesRestClient, BinanceAPIError
-from trade_executor import Signal, PositionSizer, TradeExecutor
+from client import BinanceAPIError, BinanceFuturesRestClient
+from trade_executor import PositionSizer, Signal, TradeExecutor
 
+from config import load_config, startup_check, trade_params
 
 # ── Default signal (simulates what the scanner outputs) ───────────────────────
 # Override via command-line args: python run_trade.py BTCUSDT LONG 10.5

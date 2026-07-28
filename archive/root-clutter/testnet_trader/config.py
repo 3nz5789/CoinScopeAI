@@ -10,9 +10,9 @@ Usage:
     startup_check(cfg)
 """
 
+from dataclasses import dataclass
 import os
 import sys
-from dataclasses import dataclass
 
 from dotenv import load_dotenv  # pip install python-dotenv
 
@@ -64,11 +64,11 @@ def load_config() -> BinanceConfig:
         )
 
     env_label = "TESTNET ⚠️  (paper money)" if is_testnet else "MAINNET 🔴 (REAL FUNDS)"
-    print(f"\n[Config] ══════════════════════════════════════")
+    print("\n[Config] ══════════════════════════════════════")
     print(f"[Config]  Environment : {env_label}")
     print(f"[Config]  REST URL    : {rest_url}")
     print(f"[Config]  WS URL      : {ws_url}")
-    print(f"[Config] ══════════════════════════════════════\n")
+    print("[Config] ══════════════════════════════════════\n")
 
     return BinanceConfig(
         rest_url=rest_url,

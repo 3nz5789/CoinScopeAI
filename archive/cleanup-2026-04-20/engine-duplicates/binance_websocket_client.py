@@ -16,17 +16,17 @@ Fix (2026-04-11): Added reconnect loop, proper connected/authenticated state
 """
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import os
 import time
+from typing import Dict
 import uuid
-from datetime import datetime
-from typing import Dict, Optional, Callable, Any
-import hashlib
-import hmac
+
 import websockets
-from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 logging.basicConfig(
     level=logging.INFO,
@@ -261,7 +261,7 @@ class BinanceWebSocketClient:
         except Exception:
             self.pending_requests.pop(request_id, None)
             raise
-    
+
     async def _send_request(self, method: str, params: Dict = None) -> Dict:
         """Send an authenticated request and return the result payload."""
         if not self.authenticated:
@@ -279,21 +279,21 @@ class BinanceWebSocketClient:
             return response.get("result", {})
         error = response.get("error", {})
         raise Exception(f"API Error {response.get('status')}: {error}")
-    
+
     async def get_account(self) -> Dict:
         """Get account information"""
         return await self._send_request("account.status")
-    
+
     async def get_balance(self) -> Dict:
         """Get account balance"""
         account = await self._send_request("account.status")
         return account.get("balances", [])
-    
+
     async def get_positions(self) -> list:
         """Get open positions"""
         account = await self._send_request("account.status")
         return account.get("positions", [])
-    
+
     async def place_order(
         self,
         symbol: str,
@@ -309,45 +309,45 @@ class BinanceWebSocketClient:
             "side": side,
             "type": order_type,
         }
-        
+
         if quantity:
             params["quantity"] = str(quantity)
         if price:
             params["price"] = str(price)
-        
+
         params.update(kwargs)
-        
+
         return await self._send_request("order.place", params)
-    
+
     async def cancel_order(self, symbol: str, order_id: int = None, client_order_id: str = None) -> Dict:
         """Cancel an order"""
         params = {"symbol": symbol}
-        
+
         if order_id:
             params["orderId"] = order_id
         if client_order_id:
             params["origClientOrderId"] = client_order_id
-        
+
         return await self._send_request("order.cancel", params)
-    
+
     async def get_open_orders(self, symbol: str = None) -> list:
         """Get open orders"""
         params = {}
         if symbol:
             params["symbol"] = symbol
-        
+
         result = await self._send_request("openOrders.status", params)
         return result if isinstance(result, list) else [result]
-    
+
     async def get_order(self, symbol: str, order_id: int = None, client_order_id: str = None) -> Dict:
         """Get order status"""
         params = {"symbol": symbol}
-        
+
         if order_id:
             params["orderId"] = order_id
         if client_order_id:
             params["origClientOrderId"] = client_order_id
-        
+
         return await self._send_request("order.status", params)
 
 

@@ -5,11 +5,12 @@ Extends the project's existing TelegramAlerts pattern with billing-specific
 messages. Falls back to console logging if bot credentials are absent.
 """
 
-import os
-import logging
-import requests
 from datetime import datetime
+import logging
+import os
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ class BillingNotifier:
         emoji, name = self.TIER_META.get(tier.lower(), ("❓", tier))
         interval_label = "Annual 📅" if interval == "year" else "Monthly"
         self._send(
-            f"💰 *New Subscriber\!*\n"
+            f"💰 *New Subscriber\\!*\n"
             f"Plan: {emoji} *{name}* ({interval_label})\n"
             f"Email: `{email or 'unknown'}`\n"
             f"Customer: `{customer_id}`\n"

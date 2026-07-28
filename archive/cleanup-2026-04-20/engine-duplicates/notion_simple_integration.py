@@ -28,12 +28,13 @@ Usage:
   notion.export_trades(trades_list)
 """
 
-import os
+from datetime import datetime, timezone
 import json
 import logging
-import requests
-from datetime import datetime, timezone
+import os
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger("SimpleNotionIntegration")
 
@@ -248,7 +249,7 @@ class SimpleNotionIntegration:
         direction = _map_direction(d.get("side", "LONG"))
         regime    = _map_regime(d.get("regime", "chop"))
         opened_at = d.get("opened_at", datetime.now(timezone.utc).isoformat())
-        closed_at = d.get("closed_at", "")
+        d.get("closed_at", "")
 
         entry_price  = d.get("entry_price", 0.0)
         exit_price   = d.get("exit_price",  0.0)

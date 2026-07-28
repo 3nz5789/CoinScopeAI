@@ -23,10 +23,9 @@ Validation-phase policy:
 import asyncio
 import logging
 import os
+from pathlib import Path
 import signal
 import sys
-import time
-from pathlib import Path
 
 # ── Load .env before importing project modules ──────────────────────────────
 try:
@@ -43,9 +42,9 @@ except ImportError:
     pass  # python-dotenv not installed — rely on shell-exported vars
 
 # ── Project imports ──────────────────────────────────────────────────────────
-from funding_rate_store import FundingRateStore
-from funding_rate_ingestion import FundingRatePipeline, IngestionConfig
 from funding_rate_alert import FundingRateAlerter
+from funding_rate_ingestion import FundingRatePipeline, IngestionConfig
+from funding_rate_store import FundingRateStore
 
 # ---------------------------------------------------------------------------
 # Logging

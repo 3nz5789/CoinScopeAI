@@ -17,16 +17,16 @@ Tests cover:
 from __future__ import annotations
 
 import asyncio
+from datetime import date
 import gzip
 import io
 import json
+from pathlib import Path
 import struct
 import tempfile
+from unittest.mock import MagicMock
 import zipfile
 import zlib
-from datetime import date
-from pathlib import Path
-from unittest.mock import MagicMock
 
 import orjson
 import pytest
@@ -64,7 +64,6 @@ from services.market_data.streams.orderbook import LocalOrderBook, OrderBookStre
 from services.market_data.streams.recorder import StreamRecorder
 from services.market_data.streams.replay import ReplayEngine
 from services.market_data.streams.trades import TradeStream
-
 
 # ===========================================================================
 # Helpers: capture on_msg closure and run one REST poll iteration

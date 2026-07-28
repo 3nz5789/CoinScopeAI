@@ -4,12 +4,13 @@ Tests cover: enabled/disabled state, message formatting (via _send_async mock),
 stats counting, and all public notification methods.
 """
 
-import pytest
+import time
 from unittest.mock import patch
 
-from services.paper_trading.config import TelegramConfig
-from services.paper_trading.alerting import TelegramAlerter
+import pytest
 
+from services.paper_trading.alerting import TelegramAlerter
+from services.paper_trading.config import TelegramConfig
 
 # ── Fixtures ──────────────────────────────────────────────────
 
@@ -223,7 +224,7 @@ class TestStats:
             })
             alerter.error(component="test", error_msg="test error")
             # _send_async spawns threads; wait briefly for them to complete
-            import time; time.sleep(0.1)
+            time.sleep(0.1)
         stats = alerter.get_stats()
         assert stats["messages_sent"] == 2
         assert stats["errors"] == 0  # send errors, not alert errors
@@ -237,8 +238,8 @@ class TestStats:
         assert stats["enabled"] is False
 
     def test_message_count_increments(self, alerter):
-        import unittest.mock as mock
         import time
+        import unittest.mock as mock
         mock_resp = mock.MagicMock()
         mock_resp.status_code = 200
         with patch.object(alerter._session, "post", return_value=mock_resp):

@@ -42,11 +42,9 @@ import os
 import time
 from typing import Callable, List, Optional
 
+from funding_rate_store import FundingRateRecord, FundingRateStore
 import requests
 import websockets
-from websockets.exceptions import ConnectionClosed
-
-from funding_rate_store import FundingRateRecord, FundingRateStore
 
 logger = logging.getLogger(__name__)
 

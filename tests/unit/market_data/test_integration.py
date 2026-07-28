@@ -31,7 +31,6 @@ from services.market_data.models import (
 )
 from services.market_data.regime.enricher import RegimeEnricher
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

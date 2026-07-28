@@ -4,14 +4,22 @@ Tests for Binance Futures client — message parsing and normalization.
 
 import asyncio
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from services.market_data.base import EventBus
 from services.market_data.binance.client import BinanceFuturesClient
 from services.market_data.models import (
-    EventType, Exchange, MarkPrice, OrderBook, Trade, Side,
-    FundingRate, OpenInterest, MarketEvent,
+    EventType,
+    Exchange,
+    FundingRate,
+    MarketEvent,
+    MarkPrice,
+    OpenInterest,
+    OrderBook,
+    Side,
+    Trade,
 )
 
 

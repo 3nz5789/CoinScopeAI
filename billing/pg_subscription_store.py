@@ -25,9 +25,9 @@ All public methods are async and safe to call from concurrent FastAPI handlers.
 
 from __future__ import annotations
 
-import os
-import logging
 from datetime import datetime, timezone
+import logging
+import os
 from typing import Optional
 
 import asyncpg

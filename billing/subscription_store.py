@@ -8,20 +8,18 @@ Tables:
 All writes are transactional. Thread-safe via connection-per-call pattern.
 """
 
+from contextlib import contextmanager
+from datetime import datetime
+import logging
 import os
 import sqlite3
-import json
-import logging
-from datetime import datetime
 from typing import Optional
-from contextlib import contextmanager
 
 from .models import (
-    SubscriptionRecord,
-    SubscriptionTier,
-    SubscriptionStatus,
     BillingInterval,
-    WebhookEventRecord,
+    SubscriptionRecord,
+    SubscriptionStatus,
+    SubscriptionTier,
 )
 
 logger = logging.getLogger(__name__)

@@ -24,13 +24,13 @@ Webhook events fired by portal actions (all handled by webhook_handler.py):
   invoice.payment_failed          → payment method update failed
 """
 
-import os
 import logging
+import os
 from typing import Optional
 
-import stripe
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
+import stripe
 
 from .subscription_store import SubscriptionStore
 

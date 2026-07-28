@@ -3,17 +3,28 @@ Tests for all scan engines.
 """
 
 import time
+
 import pytest
+
 from services.market_data.base import EventBus
 from services.market_data.models import (
-    EventType, Exchange, MarkPrice, OpenInterest, FundingRate,
-    OrderBook, OrderBookLevel, Trade, Side, MarketEvent, ScanSignal,
+    EventType,
+    Exchange,
+    FundingRate,
+    MarketEvent,
+    MarkPrice,
+    OpenInterest,
+    OrderBook,
+    OrderBookLevel,
+    ScanSignal,
+    Side,
+    Trade,
 )
 from services.market_data.scanner.base_scanner import ScannerConfig
 from services.market_data.scanner.breakout_oi import BreakoutOIScanner
 from services.market_data.scanner.funding_extreme import FundingExtremeScanner
-from services.market_data.scanner.spread_divergence import SpreadDivergenceScanner
 from services.market_data.scanner.liquidity_deterioration import LiquidityDeteriorationScanner
+from services.market_data.scanner.spread_divergence import SpreadDivergenceScanner
 
 
 @pytest.fixture
@@ -22,13 +33,13 @@ def bus():
 
 
 def _make_config(**overrides):
-    defaults = dict(
-        symbols=["BTCUSDT"],
-        exchanges=[Exchange.BINANCE],
-        window_seconds=300,
-        scan_interval=1.0,
-        thresholds={},
-    )
+    defaults = {
+        "symbols": ["BTCUSDT"],
+        "exchanges": [Exchange.BINANCE],
+        "window_seconds": 300,
+        "scan_interval": 1.0,
+        "thresholds": {},
+    }
     defaults.update(overrides)
     return ScannerConfig(**defaults)
 

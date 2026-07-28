@@ -13,13 +13,15 @@ Run:
 All Stripe API calls are mocked — no real network traffic.
 """
 
+from datetime import datetime, timezone
 import os
+import pathlib
 import sys
 import tempfile
-import pathlib
+import time
+from unittest.mock import MagicMock, patch
+
 import pytest
-from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
 
 # ── Environment setup (must precede any billing imports) ──────────────────────
 os.environ["STRIPE_SECRET_KEY"] = "sk_test_portal_test_key"
@@ -31,14 +33,15 @@ os.environ["TELEGRAM_CHAT_ID"] = ""
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
 from fastapi.testclient import TestClient
-from billing.webhook_handler import app
-from billing.subscription_store import SubscriptionStore
+
 from billing.models import (
-    SubscriptionRecord,
-    SubscriptionTier,
-    SubscriptionStatus,
     BillingInterval,
+    SubscriptionRecord,
+    SubscriptionStatus,
+    SubscriptionTier,
 )
+from billing.subscription_store import SubscriptionStore
+from billing.webhook_handler import app
 
 client = TestClient(app)
 
@@ -105,12 +108,12 @@ class TestGetCustomerIdByEmail:
 
     def test_returns_most_recent_on_duplicate_email(self, tmp_store):
         """Edge case: same email, two customer IDs (data integrity issue) — return latest."""
-        now = datetime.now(timezone.utc)
+        datetime.now(timezone.utc)
         rec1 = _sample_record(customer_id="cus_old", email="dup@test.com")
         rec2 = _sample_record(customer_id="cus_new", email="dup@test.com")
         # Insert older record first, newer second (updated_at is set by upsert)
         tmp_store.upsert_subscription(rec1)
-        import time; time.sleep(0.01)  # ensure updated_at differs
+        time.sleep(0.01)  # ensure updated_at differs
         tmp_store.upsert_subscription(rec2)
         result = tmp_store.get_customer_id_by_email("dup@test.com")
         # Should return the more recently updated record

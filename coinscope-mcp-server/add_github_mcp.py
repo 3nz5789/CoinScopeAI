@@ -4,7 +4,9 @@ Adds the GitHub MCP server to ~/.claude.json.
 Run: python3 add_github_mcp.py
 It will prompt you to paste the token — no shell quoting issues.
 """
-import json, pathlib, sys
+import json
+import pathlib
+import sys
 
 config_path = pathlib.Path.home() / ".claude.json"
 

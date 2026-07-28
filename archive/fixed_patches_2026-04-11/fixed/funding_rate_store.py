@@ -25,12 +25,12 @@ Dedup constraint: UNIQUE(symbol, next_funding_time)
 
 from __future__ import annotations
 
-import logging
-import sqlite3
-import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+import logging
 from pathlib import Path
+import sqlite3
+import time
 from typing import Generator, List, Optional
 
 logger = logging.getLogger(__name__)

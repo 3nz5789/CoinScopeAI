@@ -29,7 +29,6 @@ import numpy as np
 
 from . import _common
 
-
 DEFAULT_SYMBOLS = (
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT",
 )

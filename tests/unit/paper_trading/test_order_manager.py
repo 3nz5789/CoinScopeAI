@@ -5,11 +5,12 @@ SL/TP monitoring, stale order cleanup, portfolio summary, and callbacks.
 """
 
 import time
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from services.paper_trading.config import TradingConfig
-from services.paper_trading.exchange_client import OrderResult, ExchangeError
+from services.paper_trading.exchange_client import ExchangeError, OrderResult
 from services.paper_trading.order_manager import (
     ManagedOrder,
     OrderManager,
@@ -18,13 +19,13 @@ from services.paper_trading.order_manager import (
 )
 from services.paper_trading.safety import KillSwitch, OrderRequest, SafetyGate
 
-
 # ── Fixtures ──────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
 def clean_kill_file():
     """Ensure kill switch file is cleaned before/after each test."""
     from pathlib import Path
+
     from services.paper_trading.safety import KillSwitch
     Path(KillSwitch.KILL_FILE).unlink(missing_ok=True)
     yield

@@ -5,20 +5,20 @@ state persistence, daily reset, and heartbeat.
 """
 
 import json
-import time
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.paper_trading.config import (
-    PaperTradingConfig,
-    TradingConfig,
-    ExchangeConfig,
-    TelegramConfig,
     HARDCODED_TESTNET_ONLY,
+    ExchangeConfig,
+    PaperTradingConfig,
+    TelegramConfig,
+    TradingConfig,
 )
-from services.paper_trading.safety import KillSwitch, SafetyGate, OrderRequest
-
+from services.paper_trading.safety import KillSwitch, OrderRequest, SafetyGate
 
 # ── Fixtures ──────────────────────────────────────────────────
 

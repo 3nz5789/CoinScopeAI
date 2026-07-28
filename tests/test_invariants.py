@@ -26,8 +26,8 @@ Run:
 from __future__ import annotations
 
 import json
-import time
 from pathlib import Path
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -37,14 +37,14 @@ import pytest
 # ---------------------------------------------------------------------------
 
 try:
-    import sys
     import os
+    import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "coinscope_trading_engine"))
 
     from coinscope_trading_engine.risk.circuit_breaker import (
-        CircuitBreaker,
         BreakerState,
+        CircuitBreaker,
         TripEvent,
     )
     CB_AVAILABLE = True
@@ -52,9 +52,9 @@ except ImportError:
     CB_AVAILABLE = False
 
 try:
-    from coinscope_trading_engine.risk.position_sizer import PositionSizer, PositionSize
-    from coinscope_trading_engine.signals.entry_exit_calculator import TradeSetup
+    from coinscope_trading_engine.risk.position_sizer import PositionSize, PositionSizer
     from coinscope_trading_engine.scanner.base_scanner import SignalDirection
+    from coinscope_trading_engine.signals.entry_exit_calculator import TradeSetup
     SIZER_AVAILABLE = True
 except ImportError:
     SIZER_AVAILABLE = False
@@ -570,8 +570,10 @@ class TestTripHistoryIntegrity:
 
     def test_trip_events_are_ordered_chronologically(self):
         cb = CircuitBreaker()
-        cb.trip("a"); cb.reset()
-        cb.trip("b"); cb.reset()
+        cb.trip("a")
+        cb.reset()
+        cb.trip("b")
+        cb.reset()
         cb.trip("c")
         reasons = [e.reason for e in cb._trip_history]
         assert reasons == ["a", "b", "c"]
@@ -590,7 +592,8 @@ class TestTripHistoryIntegrity:
     def test_status_reflects_current_trip_count(self):
         cb = CircuitBreaker()
         for i in range(3):
-            cb.trip(f"trip {i}"); cb.reset()
+            cb.trip(f"trip {i}")
+            cb.reset()
         status = cb.status()
         assert status["trip_count"] == 3
 

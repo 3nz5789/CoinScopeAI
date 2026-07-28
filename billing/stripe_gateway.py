@@ -20,13 +20,11 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
 from pathlib import Path
-from typing import Optional
+import time
 
+from fastapi import APIRouter, Depends, HTTPException
 import stripe
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from fastapi.responses import JSONResponse
 
 from billing.models import (
     PLAN_CATALOGUE,
@@ -37,10 +35,8 @@ from billing.models import (
     PortalResponse,
     SubscriptionInfo,
     SubscriptionStatus,
-    WebhookResponse,
     SubscriptionTier,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +163,7 @@ async def get_subscription() -> SubscriptionInfo:
     if sub_id and _STRIPE_READY and (time.time() - last_checked > 300):
         try:
             sub    = stripe.Subscription.retrieve(sub_id)
-            tier   = state.get("tier")
+            state.get("tier")
             state.update({
                 "status":               sub.status,
                 "current_period_end":   sub.current_period_end,

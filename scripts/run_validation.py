@@ -31,7 +31,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from validation import _common, walk_forward_validation, cpcv_validation
+from validation import _common, walk_forward_validation, cpcv_validation  # noqa: E402
 
 
 def write_wfv_outputs(result: walk_forward_validation.WFVResult, out_dir: Path) -> None:

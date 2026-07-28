@@ -5,10 +5,10 @@ Saves all trades to logs/journal.json for audit trail and performance analysis.
 Can be swapped for PostgreSQL in production.
 """
 
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 import json
 import os
-from datetime import datetime, timedelta
-from dataclasses import dataclass, asdict
 
 
 @dataclass
@@ -139,7 +139,7 @@ class TradeJournal:
         pnls = [e.pnl_pct for e in closed]
         wins = [p for p in pnls if p > 0]
         losses = [p for p in pnls if p < 0]
-        
+
         import numpy as np
         equity = np.cumsum(pnls) + 10000
         peak = np.maximum.accumulate(equity)
@@ -149,7 +149,7 @@ class TradeJournal:
             if np.std(pnls) > 0
             else 0
         )
-        
+
         return {
             "total_trades": len(closed),
             "win_rate": round(len(wins) / len(pnls), 3),

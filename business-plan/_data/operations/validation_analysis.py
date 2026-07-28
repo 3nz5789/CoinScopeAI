@@ -34,15 +34,15 @@ Stdlib only — no pip installs needed.
 """
 from __future__ import annotations
 
-import json
-import os
-import sys
-import urllib.request
-import urllib.error
 from collections import defaultdict
 from datetime import datetime, timezone
+import json
+import os
 from pathlib import Path
+import sys
 from typing import Any
+import urllib.error
+import urllib.request
 
 ENGINE = os.environ.get("COINSCOPE_ENGINE", "http://localhost:8001").rstrip("/")
 SINCE = os.environ.get("VALIDATION_SINCE", "2026-04-10")
@@ -169,7 +169,7 @@ position_records = items(position_size_log)
 risk_gate_records = items(risk_gate_log)
 scan_records = items(scan_log)
 
-log(f"\n  Row counts:")
+log("\n  Row counts:")
 log(f"    journal:        {len(journal_records)}")
 log(f"    performance:    {'present' if performance else 'EMPTY'}")
 log(f"    scan_log:       {len(scan_records)}")
@@ -285,7 +285,7 @@ d5_pass = len(heat_violations) == 0
 
 log(f"  D1 max drawdown observed:  {max_dd:.2%}  (≤10%)  [{status(d1_pass)}]")
 log(f"  D2 daily loss approx:      {negative_days} negative days of {days_total} total")
-log(f"      (refine to >5% threshold once per-day equity is available)")
+log("      (refine to >5% threshold once per-day equity is available)")
 log(f"  D3 leverage >10x:          {len(lev_violations)}  (=0)  [{status(d3_pass)}]")
 log(f"  D4 max concurrent posns:   {max_concurrent}  (≤3)  [{status(d4_pass)}]")
 log(f"  D4 windows >3:             {windows_over_3}  (=0)")
@@ -351,7 +351,7 @@ for r in journal_records:
             sl_attached += 1
 sl_rate = (sl_attached / sl_total) if sl_total else None
 if sl_rate is not None:
-    log(f"\n=== X3 SL ATTACHMENT RATE ===")
+    log("\n=== X3 SL ATTACHMENT RATE ===")
     log(f"  {sl_attached} of {sl_total} = {sl_rate:.1%}  (must be 100%)  "
         f"[{status(sl_rate == 1.0)}]")
 

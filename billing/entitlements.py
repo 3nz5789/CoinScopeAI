@@ -24,8 +24,8 @@ the static dict is a fallback for offline / test environments.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from .pg_subscription_store import PgSubscriptionStore

@@ -7,10 +7,11 @@ loss tracking, cooldown logic, and reduce-only bypass.
 
 import json
 import os
-import time
-import pytest
 from pathlib import Path
+import time
 from unittest.mock import patch
+
+import pytest
 
 from services.paper_trading.config import (
     HARDCODED_MAX_CONCURRENT_POSITIONS,
@@ -27,7 +28,6 @@ from services.paper_trading.safety import (
     SafetyGate,
     SafetyState,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────
 

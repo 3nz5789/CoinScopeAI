@@ -3,13 +3,21 @@ Tests for OKX client — message parsing and normalization.
 """
 
 import json
+
 import pytest
+
 from services.market_data.base import EventBus
-from services.market_data.okx.client import OKXClient, _inst_id, _symbol_from_inst
 from services.market_data.models import (
-    EventType, Exchange, MarkPrice, OrderBook, FundingRate,
-    OpenInterest, Ticker, MarketEvent,
+    EventType,
+    Exchange,
+    FundingRate,
+    MarketEvent,
+    MarkPrice,
+    OpenInterest,
+    OrderBook,
+    Ticker,
 )
+from services.market_data.okx.client import OKXClient, _inst_id, _symbol_from_inst
 
 
 @pytest.fixture

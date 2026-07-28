@@ -13,11 +13,11 @@ Run with:
     pytest tests/test_billing_schema.py -v
 """
 
-import os
-import sys
 import asyncio
 import inspect
+import os
 from pathlib import Path
+import sys
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

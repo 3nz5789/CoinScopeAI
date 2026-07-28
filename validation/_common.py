@@ -17,8 +17,8 @@ close. This matches docs/validation/p0-evidence-pack.md §5's
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Iterable, List, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Iterable, List, Sequence
 
 import numpy as np
 
@@ -113,7 +113,7 @@ def score_bars(ohlcv: np.ndarray) -> np.ndarray:
     from engine.signals.scoring_fixed import FixedScorer
 
     scorer = FixedScorer()
-    opens = ohlcv[:, 1]
+    ohlcv[:, 1]
     highs = ohlcv[:, 2]
     lows = ohlcv[:, 3]
     closes = ohlcv[:, 4]

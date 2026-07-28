@@ -145,7 +145,7 @@ def check() -> int:
             )
             continue
 
-        record = dict(zip(HEADER, cells))
+        record = dict(zip(HEADER, cells, strict=False))
         rowid = record["ID"]
         status = record["Status"]
         row_count += 1

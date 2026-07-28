@@ -4,8 +4,9 @@ Tests: signal generation logic, regime classification, EventBus integration.
 """
 
 import time
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from services.market_data.types import (
     AlphaSignal,

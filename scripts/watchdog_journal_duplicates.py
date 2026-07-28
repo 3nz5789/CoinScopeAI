@@ -125,11 +125,11 @@ def find_duplicates(
         bucketed[key].append((ts, e))
 
     dupes: list[tuple[dict[str, Any], dict[str, Any], float]] = []
-    for key, items in bucketed.items():
+    for _key, items in bucketed.items():
         if len(items) < 2:
             continue
         items.sort(key=lambda x: x[0])
-        for (t_a, a), (t_b, b) in zip(items, items[1:]):
+        for (t_a, a), (t_b, b) in zip(items, items[1:], strict=False):
             delta = t_b - t_a
             if delta <= window_s:
                 dupes.append((a, b, delta))

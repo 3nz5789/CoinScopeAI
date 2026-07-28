@@ -130,40 +130,99 @@ def build_forecast_timestamps(
     return pd.Series(future)
 
 
-def run_forecast(args: argparse.Namespace) -> pd.DataFrame:
-    """End-to-end Kronos forecast on Binance futures data."""
-    os.environ.setdefault("HF_HOME", args.hf_cache)
-    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", args.hf_cache)
+def run_forecast_dict(config: dict) -> pd.DataFrame:
+    """
+    End-to-end Kronos forecast on Binance futures data.
 
-    print(f"Fetching {args.lookback} klines for {args.symbol} @ {args.interval}")
-    df = fetch_klines(args.symbol, args.interval, args.lookback)
+    Parameters
+    ----------
+    config : dict
+        Keys mirror the CLI arguments: symbol, interval, lookback, pred_len,
+        model, tokenizer, max_context, temperature, top_p, sample_count, hf_cache.
+
+    Returns
+    -------
+    pd.DataFrame
+        Forecasted OHLCV with a leading 'timestamp' column.
+    """
+    symbol = config.get("symbol", DEFAULT_SYMBOL)
+    interval = config.get("interval", DEFAULT_INTERVAL)
+    lookback = int(config.get("lookback", DEFAULT_LOOKBACK))
+    pred_len = int(config.get("pred_len", DEFAULT_PRED_LEN))
+    model_name = config.get("model", DEFAULT_MODEL)
+    tokenizer_name = config.get("tokenizer", DEFAULT_TOKENIZER)
+    max_context = int(config.get("max_context", 512))
+    temperature = float(config.get("temperature", 1.0))
+    top_p = float(config.get("top_p", 0.9))
+    sample_count = int(config.get("sample_count", 1))
+    hf_cache = config.get("hf_cache", DEFAULT_HF_CACHE)
+
+    os.environ.setdefault("HF_HOME", hf_cache)
+    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", hf_cache)
+
+    print(f"Fetching {lookback} klines for {symbol} @ {interval}")
+    df = fetch_klines(symbol, interval, lookback)
     print(f"  Range: {df['timestamps'].iloc[0]} → {df['timestamps'].iloc[-1]}")
 
-    print(f"Loading tokenizer: {args.tokenizer}")
-    tokenizer = KronosTokenizer.from_pretrained(args.tokenizer, cache_dir=args.hf_cache)
+    print(f"Loading tokenizer: {tokenizer_name}")
+    tokenizer = KronosTokenizer.from_pretrained(tokenizer_name, cache_dir=hf_cache)
 
-    print(f"Loading model: {args.model}")
-    model = Kronos.from_pretrained(args.model, cache_dir=args.hf_cache)
+    print(f"Loading model: {model_name}")
+    model = Kronos.from_pretrained(model_name, cache_dir=hf_cache)
 
-    predictor = KronosPredictor(model, tokenizer, max_context=args.max_context)
+    predictor = KronosPredictor(model, tokenizer, max_context=max_context)
 
-    y_timestamp = build_forecast_timestamps(
-        df["timestamps"].iloc[-1], args.pred_len, args.interval
-    )
+    y_timestamp = build_forecast_timestamps(df["timestamps"].iloc[-1], pred_len, interval)
 
-    print(f"Running forecast for {args.pred_len} candles...")
+    print(f"Running forecast for {pred_len} candles...")
     pred_df = predictor.predict(
         df=df[["open", "high", "low", "close", "volume", "amount"]],
         x_timestamp=df["timestamps"],
         y_timestamp=y_timestamp,
-        pred_len=args.pred_len,
-        T=args.temperature,
-        top_p=args.top_p,
-        sample_count=args.sample_count,
+        pred_len=pred_len,
+        T=temperature,
+        top_p=top_p,
+        sample_count=sample_count,
     )
 
     pred_df.insert(0, "timestamp", y_timestamp.values)
     return pred_df
+
+
+def build_summary(pred_df: pd.DataFrame, config: dict) -> dict:
+    """Build a JSON-serialisable summary from a forecast DataFrame."""
+    last_close = float(pred_df["close"].iloc[-1])
+    first_close = float(pred_df["close"].iloc[0])
+    direction = "LONG" if last_close > first_close else "SHORT" if last_close < first_close else "NEUTRAL"
+
+    return {
+        "model": config.get("model", DEFAULT_MODEL),
+        "symbol": config.get("symbol", DEFAULT_SYMBOL),
+        "interval": config.get("interval", DEFAULT_INTERVAL),
+        "pred_len": config.get("pred_len", DEFAULT_PRED_LEN),
+        "direction": direction,
+        "last_forecast_close": round(last_close, 4),
+        "first_forecast_close": round(first_close, 4),
+        "forecast": json.loads(pred_df.to_json(orient="records", date_format="iso")),
+    }
+
+
+def run_forecast(args: argparse.Namespace) -> pd.DataFrame:
+    """CLI-compatible wrapper around run_forecast_dict."""
+    config = {
+        "symbol": args.symbol,
+        "interval": args.interval,
+        "lookback": args.lookback,
+        "pred_len": args.pred_len,
+        "model": args.model,
+        "tokenizer": args.tokenizer,
+        "max_context": args.max_context,
+        "temperature": args.temperature,
+        "top_p": args.top_p,
+        "sample_count": args.sample_count,
+        "hf_cache": args.hf_cache,
+    }
+    return run_forecast_dict(config)
 
 
 def main() -> int:
@@ -184,15 +243,29 @@ def main() -> int:
     parser.add_argument("--output", default="", help="Optional CSV path to save predictions")
     args = parser.parse_args()
 
-    pred_df = run_forecast(args)
+    config = {
+        "symbol": args.symbol,
+        "interval": args.interval,
+        "lookback": args.lookback,
+        "pred_len": args.pred_len,
+        "model": args.model,
+        "tokenizer": args.tokenizer,
+        "max_context": args.max_context,
+        "temperature": args.temperature,
+        "top_p": args.top_p,
+        "sample_count": args.sample_count,
+        "hf_cache": args.hf_cache,
+    }
+
+    pred_df = run_forecast_dict(config)
 
     print("\nForecast:")
     print(pred_df.head(args.pred_len).to_string(index=False))
 
-    # Compute a naive directional signal for downstream use
-    last_close = float(pred_df["close"].iloc[-1])
-    first_close = float(pred_df["close"].iloc[0])
-    direction = "LONG" if last_close > first_close else "SHORT" if last_close < first_close else "NEUTRAL"
+    summary = build_summary(pred_df, config)
+    direction = summary["direction"]
+    first_close = summary["first_forecast_close"]
+    last_close = summary["last_forecast_close"]
     print(f"\nKronos directional bias: {direction} ({first_close:.2f} → {last_close:.2f})")
 
     if args.output:
@@ -201,17 +274,6 @@ def main() -> int:
         pred_df.to_csv(out_path, index=False)
         print(f"\nSaved predictions to {out_path}")
 
-    # Emit a JSON summary that the engine could consume
-    summary = {
-        "model": args.model,
-        "symbol": args.symbol,
-        "interval": args.interval,
-        "pred_len": args.pred_len,
-        "direction": direction,
-        "last_forecast_close": round(last_close, 4),
-        "first_forecast_close": round(first_close, 4),
-        "forecast": json.loads(pred_df.to_json(orient="records", date_format="iso")),
-    }
     print("\nJSON summary:")
     print(json.dumps(summary, indent=2, default=str))
 

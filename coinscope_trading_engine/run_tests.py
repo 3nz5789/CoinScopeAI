@@ -154,6 +154,21 @@ def test_api_import():
     print("  FastAPI import OK")
 
 
+def test_kronos_signal():
+    """Test Kronos signal generator schema (best-effort; venv optional)."""
+    from .signals.kronos_signal import generate_kronos_signal
+
+    sig = generate_kronos_signal(symbol="BTCUSDT", lookback=60, pred_len=6)
+    assert "symbol" in sig
+    assert "direction" in sig
+    assert "score" in sig
+    assert "strength" in sig
+    assert "forecast" in sig
+    assert sig["symbol"] == "BTCUSDT"
+    assert sig["direction"] in ("LONG", "SHORT", "NEUTRAL")
+    print(f"  Kronos signal: {sig['direction']} score={sig['score']:.1f} strength={sig['strength']}")
+
+
 # ── Run all tests ──────────────────────────────────────────────────
 if __name__ == "__main__":
     print("=" * 50)
@@ -168,6 +183,7 @@ if __name__ == "__main__":
     test("Testnet Executor", test_executor)
     test("Scale Manager", test_scale_manager)
     test("FastAPI Import", test_api_import)
+    test("Kronos Signal", test_kronos_signal)
 
     print("\n" + "=" * 50)
     print(" TEST RESULTS")

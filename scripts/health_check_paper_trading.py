@@ -8,7 +8,6 @@ Tests all components before starting the engine:
 - Order manager
 - Risk gate state
 """
-
 import os
 import sys
 import time
@@ -16,16 +15,14 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, "/home/ubuntu/coinscope-ai")
 
-API_KEY = os.environ.get("BINANCE_TESTNET_API_KEY", "")
+API_KEY    = os.environ.get("BINANCE_TESTNET_API_KEY", "")
 API_SECRET = os.environ.get("BINANCE_TESTNET_API_SECRET", "")
-TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TG_TOKEN   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 results = []
 
-
 def sep(title):
     print(f"\n{'─'*60}\n  {title}\n{'─'*60}")
-
 
 def chk(label, passed, detail=""):
     status = "✓" if passed else "✗"
@@ -35,7 +32,6 @@ def chk(label, passed, detail=""):
     print(msg)
     results.append((label, passed))
     return passed
-
 
 # ── 1. Exchange Client ────────────────────────────────────────
 sep("1. EXCHANGE CLIENT")
@@ -75,9 +71,7 @@ try:
 
 except Exception as e:
     chk("Exchange client initialization", False, str(e))
-    import traceback
-
-    traceback.print_exc()
+    import traceback; traceback.print_exc()
 
 # ── 2. Safety Gate ────────────────────────────────────────────
 sep("2. SAFETY GATE")
@@ -91,11 +85,9 @@ try:
         symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT"],
         timeframe="4h",
     )
-    chk(
-        "TradingConfig clamped to hardcoded limits",
+    chk("TradingConfig clamped to hardcoded limits",
         trading_cfg.leverage <= 5,
-        f"leverage={trading_cfg.leverage}, max_dd={trading_cfg.max_drawdown_pct:.0%}",
-    )
+        f"leverage={trading_cfg.leverage}, max_dd={trading_cfg.max_drawdown_pct:.0%}")
 
     safety = SafetyGate(trading_cfg)
     status = safety.get_status()
@@ -112,9 +104,7 @@ except Exception as e:
     chk("Safety gate initialization", False, str(e))
     safety = None  # ensure variable exists for later sections
     trading_cfg = None
-    import traceback
-
-    traceback.print_exc()
+    import traceback; traceback.print_exc()
 
 # ── 3. Signal Engine (Model Loading) ─────────────────────────
 sep("3. SIGNAL ENGINE (ML MODELS)")
@@ -130,38 +120,29 @@ try:
     if model_files:
         # List available v2 4h models
         v2_4h_models = [f for f in model_files if "v2" in str(f) and "4h" in str(f)]
-        chk(
-            "v2 4h models available",
-            len(v2_4h_models) > 0,
-            f"{len(v2_4h_models)} v2 4h models found",
-        )
+        chk("v2 4h models available", len(v2_4h_models) > 0,
+            f"{len(v2_4h_models)} v2 4h models found")
 
         # Try loading the signal engine with a v2 model
         import joblib  # noqa: E402 I001
-
         btc_model_path = models_dir / "v2" / "logreg_BTCUSDT_4h.joblib"
         chk("BTCUSDT 4h LogReg model exists", btc_model_path.exists(), str(btc_model_path))
 
         if btc_model_path.exists():
             import pandas as pd
-
             engine = MLSignalEngine()
             engine.load_model(str(btc_model_path))
             chk("MLSignalEngine loads BTCUSDT model", engine._model is not None)
 
             # Initialize buffer for BTCUSDT with empty DataFrame
             engine.initialize_buffer("BTCUSDT", pd.DataFrame())
-            chk(
-                "Candle buffer initialized for BTCUSDT",
+            chk("Candle buffer initialized for BTCUSDT",
                 "BTCUSDT" in engine._buffers,
-                f"buffer size: {len(engine._buffers.get('BTCUSDT', []))} candles",
-            )
+                f"buffer size: {len(engine._buffers.get('BTCUSDT', []))} candles")
 
 except Exception as e:
     chk("Signal engine initialization", False, str(e))
-    import traceback
-
-    traceback.print_exc()
+    import traceback; traceback.print_exc()
 
 # ── 4. Alerting System ────────────────────────────────────────
 sep("4. ALERTING SYSTEM")
@@ -178,11 +159,9 @@ try:
     stats = alerter.get_stats()
 
     chk("TelegramAlerter instantiated", True)
-    chk(
-        "Alerter enabled status",
+    chk("Alerter enabled status",
         True,  # Just check it has a valid state
-        f"enabled={stats['enabled']} (token {'valid' if tg_cfg.enabled else 'placeholder — alerts disabled'})",
-    )
+        f"enabled={stats['enabled']} (token {'valid' if tg_cfg.enabled else 'placeholder — alerts disabled'})")
 
     if not tg_cfg.enabled:
         print("     → NOTE: Telegram token is placeholder. Alerts will be logged locally only.")
@@ -209,17 +188,13 @@ try:
     chk("No pending orders", len(om.open_orders) == 0)
 
     summary = om.get_portfolio_summary()
-    chk(
-        "Portfolio summary available",
+    chk("Portfolio summary available",
         "open_positions" in summary,
-        f"positions={summary.get('open_positions', 0)}, equity={summary.get('total_unrealized_pnl', 0):.2f} USDT unrealized PnL",
-    )
+        f"positions={summary.get('open_positions', 0)}, equity={summary.get('total_unrealized_pnl', 0):.2f} USDT unrealized PnL")
 
 except Exception as e:
     chk("Order manager initialization", False, str(e))
-    import traceback
-
-    traceback.print_exc()
+    import traceback; traceback.print_exc()
 
 # ── 6. Live Market Data Spot Check ───────────────────────────
 sep("6. LIVE MARKET DATA SPOT CHECK")
@@ -239,7 +214,7 @@ except Exception as e:
 sep("HEALTH CHECK SUMMARY")
 passed = sum(1 for _, p in results if p)
 failed = sum(1 for _, p in results if not p)
-total = len(results)
+total  = len(results)
 print(f"  Passed: {passed}/{total}")
 print(f"  Failed: {failed}/{total}")
 if failed > 0:

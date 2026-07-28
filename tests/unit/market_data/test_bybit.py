@@ -4,21 +4,14 @@ Tests for Bybit client — message parsing and normalization.
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, patch
-
 import pytest
+from unittest.mock import AsyncMock, patch
 
 from services.market_data.base import EventBus
 from services.market_data.bybit.client import BybitClient
 from services.market_data.models import (
-    EventType,
-    Exchange,
-    FundingRate,
-    MarketEvent,
-    OpenInterest,
-    OrderBook,
-    Side,
-    Trade,
+    EventType, Exchange, OrderBook, Trade, Side,
+    FundingRate, OpenInterest, MarketEvent,
 )
 
 
@@ -42,19 +35,17 @@ class TestBybitOrderBook:
 
         bus.subscribe(EventType.ORDER_BOOK, handler)
 
-        raw = json.dumps(
-            {
-                "topic": "orderbook.1.BTCUSDT",
-                "type": "snapshot",
-                "ts": 1700000000000,
-                "data": {
-                    "s": "BTCUSDT",
-                    "b": [["50000.00", "1.500"]],
-                    "a": [["50001.00", "2.000"]],
-                    "u": 12345,
-                },
+        raw = json.dumps({
+            "topic": "orderbook.1.BTCUSDT",
+            "type": "snapshot",
+            "ts": 1700000000000,
+            "data": {
+                "s": "BTCUSDT",
+                "b": [["50000.00", "1.500"]],
+                "a": [["50001.00", "2.000"]],
+                "u": 12345,
             }
-        )
+        })
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -78,14 +69,12 @@ class TestBybitOrderBook:
         bids = [[str(50000 - i), str(1.0 + i * 0.1)] for i in range(50)]
         asks = [[str(50001 + i), str(0.5 + i * 0.1)] for i in range(50)]
 
-        raw = json.dumps(
-            {
-                "topic": "orderbook.50.ETHUSDT",
-                "type": "snapshot",
-                "ts": 1700000000000,
-                "data": {"s": "ETHUSDT", "b": bids, "a": asks, "u": 99999},
-            }
-        )
+        raw = json.dumps({
+            "topic": "orderbook.50.ETHUSDT",
+            "type": "snapshot",
+            "ts": 1700000000000,
+            "data": {"s": "ETHUSDT", "b": bids, "a": asks, "u": 99999},
+        })
         await client._handle_message(raw)
 
         ob = received[0].data
@@ -103,23 +92,21 @@ class TestBybitTrades:
 
         bus.subscribe(EventType.TRADE, handler)
 
-        raw = json.dumps(
-            {
-                "topic": "publicTrade.BTCUSDT",
-                "type": "snapshot",
-                "ts": 1700000000000,
-                "data": [
-                    {
-                        "i": "trade123",
-                        "T": 1700000000000,
-                        "p": "50000.00",
-                        "v": "0.100",
-                        "S": "Buy",
-                        "s": "BTCUSDT",
-                    }
-                ],
-            }
-        )
+        raw = json.dumps({
+            "topic": "publicTrade.BTCUSDT",
+            "type": "snapshot",
+            "ts": 1700000000000,
+            "data": [
+                {
+                    "i": "trade123",
+                    "T": 1700000000000,
+                    "p": "50000.00",
+                    "v": "0.100",
+                    "S": "Buy",
+                    "s": "BTCUSDT",
+                }
+            ]
+        })
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -137,23 +124,14 @@ class TestBybitTrades:
 
         bus.subscribe(EventType.TRADE, handler)
 
-        raw = json.dumps(
-            {
-                "topic": "publicTrade.ETHUSDT",
-                "type": "snapshot",
-                "ts": 1700000000000,
-                "data": [
-                    {
-                        "i": "t1",
-                        "T": 1700000000000,
-                        "p": "3000",
-                        "v": "5.0",
-                        "S": "Sell",
-                        "s": "ETHUSDT",
-                    },
-                ],
-            }
-        )
+        raw = json.dumps({
+            "topic": "publicTrade.ETHUSDT",
+            "type": "snapshot",
+            "ts": 1700000000000,
+            "data": [
+                {"i": "t1", "T": 1700000000000, "p": "3000", "v": "5.0", "S": "Sell", "s": "ETHUSDT"},
+            ]
+        })
         await client._handle_message(raw)
 
         trade = received[0].data
@@ -188,10 +166,14 @@ class TestBybitREST:
 
         mock_resp = {
             "retCode": 0,
-            "result": {"list": [{"openInterest": "12000.5", "timestamp": "1700000000000"}]},
+            "result": {
+                "list": [
+                    {"openInterest": "12000.5", "timestamp": "1700000000000"}
+                ]
+            }
         }
 
-        with patch.object(client, "_rest_get", new_callable=AsyncMock, return_value=mock_resp):
+        with patch.object(client, '_rest_get', new_callable=AsyncMock, return_value=mock_resp):
             await client._poll_open_interest()
 
         btc_events = [e for e in received if e.symbol == "BTCUSDT"]
@@ -210,11 +192,13 @@ class TestBybitREST:
         mock_resp = {
             "retCode": 0,
             "result": {
-                "list": [{"fundingRate": "0.00015", "fundingRateTimestamp": "1700000000000"}]
-            },
+                "list": [
+                    {"fundingRate": "0.00015", "fundingRateTimestamp": "1700000000000"}
+                ]
+            }
         }
 
-        with patch.object(client, "_rest_get", new_callable=AsyncMock, return_value=mock_resp):
+        with patch.object(client, '_rest_get', new_callable=AsyncMock, return_value=mock_resp):
             await client._poll_funding_rate()
 
         btc_events = [e for e in received if e.symbol == "BTCUSDT"]

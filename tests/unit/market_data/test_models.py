@@ -3,24 +3,12 @@ Tests for unified data models.
 """
 
 import time
-
 import pytest
-
 from services.market_data.models import (
-    ConnectionMetrics,
-    ConnectionState,
-    EventType,
-    Exchange,
-    FundingRate,
-    MarketEvent,
-    MarkPrice,
-    OpenInterest,
-    OrderBook,
-    OrderBookLevel,
-    ScanSignal,
-    Side,
-    Ticker,
-    Trade,
+    Exchange, Side, ConnectionState,
+    MarkPrice, OrderBook, OrderBookLevel, Trade,
+    FundingRate, OpenInterest, Ticker,
+    ConnectionMetrics, ScanSignal, EventType, MarketEvent,
 )
 
 

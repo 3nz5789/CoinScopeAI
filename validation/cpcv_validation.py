@@ -29,13 +29,9 @@ import numpy as np
 
 from . import _common
 
+
 DEFAULT_SYMBOLS = (
-    "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "DOGEUSDT",
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT",
 )
 DEFAULT_TIMEFRAME = "4h"
 DEFAULT_LIMIT = 1080
@@ -50,7 +46,6 @@ WORST_VS_MEDIAN_SHARPE_BAR = 0.30
 @dataclass
 class CPCVPathResult:
     """One CPCV path: a specific combination of test groups."""
-
     symbol: str
     path_label: str
     test_group_indices: Tuple[int, ...]
@@ -60,7 +55,6 @@ class CPCVPathResult:
 @dataclass
 class CPCVResult:
     """Container for a full CPCV run across symbols."""
-
     symbols: List[str]
     timeframe: str
     per_path: List[CPCVPathResult]
@@ -69,13 +63,14 @@ class CPCVResult:
 
     def summary_stats(self) -> dict:
         ratios = [
-            v["worst_vs_median_ratio"]
-            for v in self.per_symbol_aggregate.values()
+            v["worst_vs_median_ratio"] for v in self.per_symbol_aggregate.values()
             if v["worst_vs_median_ratio"] is not None
         ]
         return {
             "n_paths": len(self.per_path),
-            "symbols_passing": sum(1 for v in self.per_symbol_aggregate.values() if v["passed"]),
+            "symbols_passing": sum(
+                1 for v in self.per_symbol_aggregate.values() if v["passed"]
+            ),
             "n_symbols": len(self.symbols),
             "max_worst_vs_median_ratio": max(ratios) if ratios else 0.0,
             "bar": WORST_VS_MEDIAN_SHARPE_BAR,
@@ -119,17 +114,15 @@ def run_symbol(
                 continue
             trades = _common.simulate_trades(scores, closes, purged_s, purged_e)
             all_trades.extend(trades)
-            total_test_bars += purged_e - purged_s
+            total_test_bars += (purged_e - purged_s)
 
         # Aggregate fold metric across the K test groups for this path
         # train_start/train_end represent the "context" used: we record
         # the full data range and the aggregated test span.
         metrics = _common.compute_metrics(
-            symbol=symbol,
-            fold_label=path_label,
+            symbol=symbol, fold_label=path_label,
             trades=all_trades,
-            train_start=0,
-            train_end=n_bars,
+            train_start=0, train_end=n_bars,
             test_start=combo[0] * (n_bars // n_groups),
             test_end=(combo[-1] + 1) * (n_bars // n_groups),
         )
@@ -137,10 +130,8 @@ def run_symbol(
         metrics.n_test_bars = total_test_bars
         results.append(
             CPCVPathResult(
-                symbol=symbol,
-                path_label=path_label,
-                test_group_indices=combo,
-                metrics=metrics,
+                symbol=symbol, path_label=path_label,
+                test_group_indices=combo, metrics=metrics,
             )
         )
 
@@ -158,12 +149,8 @@ def _aggregate_symbol(paths: List[CPCVPathResult]) -> dict:
     sharpes = [p.metrics.sharpe for p in paths if p.metrics.n_trades > 0]
     if not sharpes:
         return {
-            "n_paths": len(paths),
-            "median": 0.0,
-            "min": 0.0,
-            "max": 0.0,
-            "worst_vs_median_ratio": None,
-            "passed": False,
+            "n_paths": len(paths), "median": 0.0, "min": 0.0, "max": 0.0,
+            "worst_vs_median_ratio": None, "passed": False,
         }
     median = float(np.median(sharpes))
     worst = float(min(sharpes))
@@ -193,7 +180,6 @@ def run(
 ) -> CPCVResult:
     """Run the full CPCV across `symbols`."""
     if ohlcv_provider is None:
-
         def ohlcv_provider(s):
             return _common.fetch_ohlcv(s, timeframe, limit)
 

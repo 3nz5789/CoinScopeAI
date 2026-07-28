@@ -1,10 +1,12 @@
 # Risk Gate
 
-**Status:** current
-**Audience:** developers reviewing or modifying `coinscope_trading_engine/risk_gate.py`
-**Related:** [`risk-framework.md`](risk-framework.md), [`position-sizing.md`](position-sizing.md), [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md), [`../api/backend-endpoints.md`](../api/backend-endpoints.md)
+**Status:** current — P0 validation phase
+**Audience:** developers reviewing or modifying [`risk_management/risk_gate.py`](../../risk_management/risk_gate.py) or [`services/paper_trading/safety.py`](../../services/paper_trading/safety.py)
+**Related:** [`risk-framework.md`](risk-framework.md) · [`position-sizing.md`](position-sizing.md) · [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md) · [`../api/engine-api-contract.md`](../api/engine-api-contract.md) · [`../runbooks/operator-workflow.md`](../runbooks/operator-workflow.md)
 
 The risk gate is the single entry point for the question "should this trade happen?" Every candidate that leaves the scanner passes through it. Nothing else decides whether to trade — not the scorer, not the executor, not the LLM, not the dashboard.
+
+> **On-main implementation note.** The risk-gate contract below describes the *intended* gate API. The current on-main implementation is split across two layers: the scan-time risk gate at [`risk_management/risk_gate.py`](../../risk_management/risk_gate.py) (invoked from [`engine/core/master_orchestrator.py`](../../engine/core/master_orchestrator.py)) and the submission-time fail-closed safety gate at [`services/paper_trading/safety.py`](../../services/paper_trading/safety.py) (the 4-layer `SafetyGate.validate_order` path). The split is intentional — the orchestrator gate is candidate-shaped; the safety gate is order-shaped. Both call kill-switch first and breaker-state second.
 
 ## Contract
 
@@ -24,11 +26,11 @@ The gate short-circuits on the first failing check. Order matters — cheaper ch
 
 ### 1. Kill switch
 
-If the kill switch is engaged, reject immediately with reason `kill_switch_engaged`. No other checks run.
+If the kill switch is engaged, reject immediately with reason `kill_switch_engaged` (or, in `safety.py`, `KILL_SWITCH_ACTIVE`). No other checks run.
 
 ### 2. Circuit breaker state
 
-If any circuit breaker is tripped and not yet past its reset window, reject with `breaker_tripped`. Details include which breaker and when it resets.
+If any circuit breaker is tripped and not yet past its reset window, reject with `breaker_tripped`. Details include which breaker and when it resets. The on-main `safety.py` path expresses this via the auto-activation of the kill switch when hardcoded daily-loss or drawdown thresholds are breached — see [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md) for the three breaker classes.
 
 ### 3. Freshness
 
@@ -52,11 +54,11 @@ If the candidate's correlation to the current portfolio exceeds `CORRELATION_CAP
 
 ### 8. Heat check (pre-sizing)
 
-Estimate the candidate's heat contribution at the hard-cap size (2%). If total heat after this notional would exceed `POSITION_HEAT_CAP_PCT`, reject with `heat_cap_exceeded`. The check runs at the cap size — if the cap fits, a smaller sized trade will also fit.
+Estimate the candidate's heat contribution at the hard-cap size (2%). If total heat after this notional would exceed `POSITION_HEAT_CAP_PCT` (80%), reject with `heat_cap_exceeded`. The check runs at the cap size — if the cap fits, a smaller sized trade will also fit. The on-main `GET /exposure` endpoint surfaces `is_over_exposed` and `total_exposure_pct` for operator-side verification (see [`../api/engine-api-contract.md`](../api/engine-api-contract.md) §Risk).
 
 ### 9. Leverage check
 
-If the resulting position would require more than `MAX_LEVERAGE` for the exchange's margin calculation, reject with `leverage_exceeded`.
+If the resulting position would require more than `MAX_LEVERAGE` (10×) for the exchange's margin calculation, reject with `leverage_exceeded`.
 
 ### 10. Entitlement check (billing-aware endpoints only)
 
@@ -64,7 +66,7 @@ If the request came via an entitled endpoint and the caller lacks entitlement, r
 
 ### 11. Sizing call
 
-If all above passed, call the Kelly sizer ([`position-sizing.md`](position-sizing.md)). If the sizer returns a size below the minimum tradable quantity for the symbol, reject with `size_below_minimum`.
+If all above passed, call the Kelly sizer ([`position-sizing.md`](position-sizing.md), implementation at [`risk_management/kelly_position_sizer.py`](../../risk_management/kelly_position_sizer.py)). If the sizer returns a size below the minimum tradable quantity for the symbol, reject with `size_below_minimum`.
 
 ### 12. Slippage estimate
 
@@ -100,12 +102,14 @@ Return `accept` with the sized plan: symbol, side, size, stop, take-profit, stop
 
 On `rejected`, `plan` is null. On `accept`, `reason` is null.
 
+The `safety.py::SafetyGate.validate_order` shape is similar but uses a `RejectionReason` enum — see the source for the exact rejection-code mapping.
+
 ## What the gate explicitly does not do
 
 - **It does not originate signals.** Scanner and scorer produce candidates; the gate only judges them.
 - **It does not place orders.** The executor consumes the `accept` decision and handles the exchange calls.
 - **It does not learn.** There are no adaptive thresholds in the gate itself. If a threshold needs to change, that is a PR with tests, not a runtime behavior.
-- **It does not call the LLM.** See [`../decisions/adr-0003-llm-off-hot-path.md`](../decisions/adr-0003-llm-off-hot-path.md).
+- **It does not call the LLM.** The LLM is off the hot path by design (see the [decisions/](../decisions/) directory for the supporting ADR when it lands; the contract is "LLM advises operators between sessions, never gates a trade").
 
 ## Journaling
 
@@ -118,7 +122,7 @@ Every call writes one `gate_decision` event to the journal, with fields:
 - `details` — structured context.
 - `plan` — for accepts.
 
-The `/risk-gate` API reads this back for the dashboard and operator.
+The `GET /circuit-breaker` and `GET /exposure` endpoints surface the current gate-relevant state for the dashboard and operator (see [`../api/engine-api-contract.md`](../api/engine-api-contract.md) §Risk). The `GET /journal` and `GET /decisions` endpoints expose the historical decision stream — `GET /decisions` is the gate audit log specifically (see [`../api/engine-api-contract.md`](../api/engine-api-contract.md) §Decisions).
 
 ## Testing expectations
 
@@ -129,7 +133,7 @@ Every behavior change in the gate ships with tests that cover:
 - Short-circuit ordering (earlier rejections pre-empt later ones).
 - Journal entry shape.
 
-Tests live in `coinscope_trading_engine/tests/test_risk_gate*.py`.
+**Current on-main coverage.** The submission-time safety gate is covered by [`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py) (~360 lines, 7 test classes). What is and isn't yet covered by a dedicated invariant suite for the scan-time risk gate — and what is pending — is catalogued in [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.
 
 ## Common review pitfalls
 

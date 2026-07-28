@@ -1,12 +1,12 @@
 # Risk Framework
 
-**Status:** current
-**Audience:** required reading for anyone touching `risk/`, `execution/`, or position sizing
-**Related:** [`risk-gate.md`](risk-gate.md), [`position-sizing.md`](position-sizing.md), [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md), [`../backend/configuration.md`](../backend/configuration.md)
+**Status:** current — P0 validation phase
+**Audience:** required reading for anyone touching `risk_management/`, `services/paper_trading/`, or position sizing
+**Related:** [`risk-gate.md`](risk-gate.md) · [`position-sizing.md`](position-sizing.md) · [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md) · [`../runbooks/operator-workflow.md`](../runbooks/operator-workflow.md) · [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md)
 
 The risk framework is what turns a machine learning system into a trading engine. If the engine is the car, the risk framework is the brakes, the seat belts, and the governor — not a feature, the floor.
 
-This doc states the philosophy. The neighboring docs cover the mechanics (gate, sizer, failsafes).
+This doc states the philosophy. The neighboring docs cover the mechanics (gate, sizer, failsafes). The companion runbook [`operator-workflow.md`](../runbooks/operator-workflow.md) covers the session-level workflow that operationalizes everything below.
 
 ## The one principle
 
@@ -18,33 +18,37 @@ If a PR makes the engine more profitable on average but widens the worst-case lo
 
 These are properties the engine must never violate. Violations are incidents, not bugs.
 
-1. **No trade bypasses the gate.** Every order placed by the executor was first sized by the Kelly sizer, which was called only after the gate returned accept.
-2. **No size exceeds the hard cap.** The 2% per-trade cap is a hard ceiling, not a default. It cannot be overridden without a code change that goes through `risk/` review.
-3. **A tripped breaker stops new entries.** Existing positions may continue to run, but no new entries until the breaker resets.
+1. **No trade bypasses the gate.** Every order placed by the executor was first sized by the Kelly sizer, which was called only after the gate returned accept. The on-main proof is [`services/paper_trading/safety.py::SafetyGate.validate_order`](../../services/paper_trading/safety.py) — a fail-closed gate; coverage in [`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py).
+2. **No size exceeds the hard cap.** The 2% per-trade cap is a hard ceiling, not a default. It cannot be overridden without a code change that goes through risk review.
+3. **A tripped breaker stops new entries.** Existing positions may continue to run, but no new entries until the breaker resets. See [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md) for the three breaker types.
 4. **The kill switch, when engaged, prevents new entries and cancels working orders.** It does not unwind existing positions automatically — that is always a human call.
 5. **Every gate decision is journaled with a reason.** Rejections are as important as accepts for reconstruction.
 6. **If the engine is in an uncertain state, it halts.** Halting is never wrong; guessing is.
 
 These are not tunables. They are properties.
 
-## Thresholds — the validation-era numbers
+## Thresholds — canonical (PCC v2 §8, locked 2026-05-01)
 
-All values are locked as of 2026-05-01 (PCC v2 §8 Capital Cap). Env-var names and the authoritative defaults live in [`../backend/configuration.md`](../backend/configuration.md).
+All values are locked. Env-var names match the engine's `coinscope.env.example`. The hardcoded ceilings in [`services/paper_trading/config.py`](../../services/paper_trading/config.py) enforce a floor under any operator-configurable override.
 
 | What | Value | Variable |
 | --- | --- | --- |
 | Max drawdown (peak-to-trough) | 10% | `MAX_DRAWDOWN_PCT` |
-| Daily loss budget | 5% | `MAX_DAILY_LOSS_PCT` |
+| Daily loss budget | 5% ¹ | `MAX_DAILY_LOSS_PCT` |
 | Per-trade size cap | 2% of equity | `KELLY_HARD_CAP_PCT` |
 | Fractional Kelly factor | 0.25 | `KELLY_FRACTION` |
 | Portfolio heat cap | 80% | `POSITION_HEAT_CAP_PCT` |
 | Max open positions | 5 | `MAX_OPEN_POSITIONS` |
-| Max leverage per trade | 10x | `MAX_LEVERAGE` |
+| Max leverage per trade | 10× | `MAX_LEVERAGE` |
 | Consecutive losses → breaker | 4 | `CONSECUTIVE_LOSSES_BREAKER` |
 | Breaker reset window | 24 hours | `CIRCUIT_BREAKER_RESET_HOURS` |
 | ATR stop multiplier | 1.5 × ATR | `ATR_STOP_MULTIPLIER` |
 | Risk:reward ratio | 2:1 | `RR_RATIO` |
 | Regime multipliers | bull 1.0, chop 0.5, bear 0.3 | `REGIME_MULT_*` |
+
+> ¹ P0 exception (decision-log 2026-05-18 §8): engine runs `MAX_DAILY_LOSS_PCT=2%` during testnet validation. Restores to 5% at P1 kickoff (COI-97).
+
+The CI smoke suite ([`tests/test_ci_smoke.py`](../../tests/test_ci_smoke.py)) and [`scripts/risk_threshold_guardrail.py`](../../scripts/risk_threshold_guardrail.py) catch any drift from these values.
 
 ## Layered defenses
 
@@ -72,11 +76,11 @@ Automatic halts for daily loss, max drawdown, and consecutive-loss streaks ([`fa
 
 ### Layer 6 — Kill switch
 
-A manual halt operated by the human running the system. Engaging it is not a failure — it is a feature. Daily-ops practice includes exercising it.
+A manual halt operated by the human running the system. Engaging it is not a failure — it is a feature. Daily-ops practice includes exercising it. Both API path (`POST /circuit-breaker/trip`) and CLI path (`python -m services.paper_trading.kill`) are available.
 
 ## Regime awareness
 
-Risk behavior changes with regime. The HMM detector supplies the multiplier table that the Kelly sizer reads; the v3 classifier informs per-regime scoring floors. See [`../ml/regime-detection.md`](../ml/regime-detection.md) for how the two systems coexist.
+Risk behavior changes with regime. The HMM detector supplies the multiplier table that the Kelly sizer reads; the v3 classifier informs per-regime scoring floors. The two systems coexist deliberately — neither has authority over the other's domain.
 
 Briefly:
 
@@ -89,17 +93,18 @@ Briefly:
 ## What this framework is not
 
 - **It is not a profit framework.** Nothing here promises profit. Every threshold is a ceiling or a floor, never a target.
-- **It is not a substitute for monitoring.** A running engine without an attentive operator is a bad idea even with every layer above in place.
+- **It is not a substitute for monitoring.** A running engine without an attentive operator is a bad idea even with every layer above in place. See [`operator-workflow.md`](../runbooks/operator-workflow.md) for the session-level monitoring practice.
 - **It is not an excuse to skip review.** Every layer listed is code. Code rots. The layers hold because the team re-reads them and tests them.
 
 ## Reviewer expectations
 
 When reviewing a PR that touches risk:
 
-- **Two reviewers**, per [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md).
+- **Two reviewers** required for changes to `risk_management/`, `services/paper_trading/`, or threshold env vars — per [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the convention enforced by `CODEOWNERS`.
 - **Tests first.** The diff should include tests that fail on `main` and pass on the branch. If it doesn't, reject the review.
 - **Ask: does this widen any worst case?** If yes and the worst case isn't justified in the PR description, reject.
 - **Ask: does this violate an invariant above?** If yes, reject. Invariants are not soft.
+- **Ask: is the [`p0-evidence-pack.md`](../validation/p0-evidence-pack.md) inventory updated?** Any change that flips an inventory row from Green to Yellow regresses proof; reject unless the PR explicitly addresses the regression.
 
 ## When to open an incident vs. a bug
 
@@ -114,11 +119,12 @@ When reviewing a PR that touches risk:
 | New entry after a tripped breaker, before reset. | **Incident.** Violates invariant 3. |
 | Journal missing a rejection. | **Incident.** Violates invariant 5. |
 
-Incidents follow the runbook in [`../runbooks/troubleshooting.md`](../runbooks/troubleshooting.md). The 2026-04-18 write-up is the current template.
+Incident response procedure is described in the Drive workspace `04 — Development/docs/runbooks/operator-lifecycle.md` Phase 7 until a repo-side `docs/runbooks/incident-response.md` is written.
 
 ## Reading order for deeper dives
 
 1. [`risk-gate.md`](risk-gate.md) — what the gate actually checks.
 2. [`position-sizing.md`](position-sizing.md) — the Kelly pipeline.
 3. [`failsafes-and-kill-switches.md`](failsafes-and-kill-switches.md) — breakers and manual halts.
-4. [`../ml/regime-detection.md`](../ml/regime-detection.md) — how the regime multipliers are chosen.
+4. [`../runbooks/operator-workflow.md`](../runbooks/operator-workflow.md) — the session-level practice that operationalizes the above.
+5. [`../validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0 — what's actually proven on `main` vs. what's design intent.

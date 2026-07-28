@@ -1,419 +1,354 @@
-# Canonical Operator Workflow
+# Operator Workflow — Trading Session Lifecycle
 
-**Status:** current
-**Audience:** the operator running the engine during P0 testnet validation
-**Phase:** P0 — May 2026, Binance Testnet only
-**Related:**
-- [`daily-ops.md`](daily-ops.md) — event-driven response playbook
-- [`daily-market-scan-runbook.md`](daily-market-scan-runbook.md) — detailed scan procedure
-- [`release-checklist.md`](release-checklist.md) — deploy gate
-- [`../risk/failsafes-and-kill-switches.md`](../risk/failsafes-and-kill-switches.md) — kill switch and circuit breaker reference
+**Status:** active — P0 validation phase (Binance USDT-M Testnet only)
+**Audience:** the operator on shift (currently solo founder during P0; expands at P2)
+**Engine API base:** `https://api.coinscope.ai` (prod) · `http://localhost:8001` (local)
+**Companion doc:** the wider operator role — onboarding, weekly review, incident response — lives in the Google Drive workspace at `04 — Development/docs/runbooks/operator-lifecycle.md`. This file is its **session-level** counterpart: what an operator does during one trading day, in order.
 
-This document is the single entry point for running a complete operator session. It defines the lifecycle from session start to session close — every step, in order, with no assumed knowledge of what came before. All other runbooks are referenced from here; do not repeat their content.
-
-**Guiding principle: Capital preservation first. Every step that looks optional is a risk control in disguise. Do not skip.**
+> **Scope.** Nine steps. Steps 1–2 run together at session start. Steps 3–6 cycle as opportunities arise. Step 7 fires automatically per trade — the operator verifies. Step 8 is continuous. Step 9 happens once at session close.
 
 ---
 
-## The lifecycle at a glance
+## Pre-conditions
 
-```
-SESSION START
-     │
-     ▼
-[1] ENVIRONMENT CHECK    — engine, adapters, breakers, kill switch
-     │
-     ▼
-[2] RISK GATE CHECK      — is trading open today?
-     │ gate closed → stop here, log, close session
-     ▼
-[3] MARKET SCAN          — score candidates across tracked symbols
-     │ no signals ≥ 5.5 → log, optionally retry in 30 min
-     ▼
-[4] SIGNAL REVIEW        — regime · MTF · funding · OI delta
-     │ signal fails review → discard, return to [3]
-     ▼
-[5] POSITION SIZING      — Kelly-fractional size query
-     │ size + existing heat > 80% → reduce or skip
-     ▼
-[6] TRADE EXECUTION      — manual entry on Binance Testnet
-     │
-     ▼
-[7] JOURNAL              — log to Notion and engine journal endpoint
-     │
-     ▼
-[8] MONITORING           — watch during session, respond to alerts
-     │
-     ▼
-[9] SESSION CLOSE        — performance review, operator log, sync
-     │
-     ▼
-SESSION END
-```
+Before starting, all of these must be true:
+
+- Engine is running, CI on `main` is green ([latest release](https://github.com/3nz5789/CoinScopeAI/releases))
+- `TESTNET_MODE=true` enforced at the engine — verifiable via Step 1 (see [`docs/api/engine-api-contract.md`](../api/engine-api-contract.md) §Testnet guard)
+- Telegram bot `@ScoopyAI_bot` is reachable
+- Operator log entry is ready for today's date
+
+Any session run with `TESTNET_MODE=false` is **not a session** — it is a Phase 7 incident.
+
+---
+
+## Why every step is non-negotiable
+
+[`docs/BUG_FIXES_COMPREHENSIVE.md`](../BUG_FIXES_COMPREHENSIVE.md) **BUG-10** is the canonical example. From the bug record:
+
+> `master_orchestrator.py` line 104: `self.mtf_filter` and `self.risk_gate` initialized but never used in `scan_pair()` — every trade bypassed risk controls entirely.
+
+The code fix is in place ([`engine/core/master_orchestrator.py`](../../engine/core/master_orchestrator.py)). The **workflow** is what catches it when code regresses — specifically Step 2 (risk gate check) and Step 4 (signal review with MTF). Skipping either step on a live session reopens the BUG-10 blind spot at the operator layer. The pattern is: code defense + workflow defense, neither alone is sufficient.
 
 ---
 
 ## Step 1 — Environment check
 
-Run before any trading activity. If any check fails, resolve it before proceeding.
+**Cadence:** Once at session start. Repeat on any infrastructure event (deploy, network blip, container restart).
+
+### What to run
 
 ```bash
-# Engine health
-curl -s https://api.coinscope.ai/health | python3 -m json.tool
-curl -s https://api.coinscope.ai/ready | python3 -m json.tool
+curl -s https://api.coinscope.ai/health | jq
+curl -s https://api.coinscope.ai/config | jq
 ```
 
-Expected: both return `"status": "ok"`. `/ready` additionally shows adapter and artifact states — every field must be `"ok"` or `"healthy"`.
+Response shapes: see [`docs/api/engine-api-contract.md`](../api/engine-api-contract.md) §System — `GET /health` (returns `status`, `version`, `uptime_seconds`, `testnet_mode`) and `GET /config` (returns the active thresholds and feature flags).
 
-```bash
-# Or use the daily status script (polls all 6 endpoints)
-./scripts/daily_status.sh
-```
+### What to do with the response
 
-**If the engine is down:**
-
-1. SSH to VPS: `ssh <vps-host>`
-2. `cd <engine-dir> && docker compose up -d --force-recreate`
-3. Wait 15 seconds, re-run health check.
-4. If still failing, see [`troubleshooting.md`](troubleshooting.md).
-
-**If the engine is up but adapters are degraded:** Check Binance Testnet status at `https://testnet.binancefuture.com`. If the issue is on Binance's side, wait — do not trade on degraded data.
+| Outcome | Action |
+|---|---|
+| `/health` returns 200, `testnet_mode: true`, `version` matches expected baseline | Proceed to Step 2 |
+| `testnet_mode: false` | **Halt.** Engine is in an unsafe configuration; route to incident (Phase 7 in the Drive operator-lifecycle.md) |
+| `/health` returns non-200 or fails to respond | Restart the engine via `docker compose restart`; if not recoverable, halt |
+| `/config` threshold values don't match PCC v2 §8 (max_leverage=10, max_open_positions=5, max_drawdown_pct=10, max_daily_loss_pct=5, position_heat_cap_pct=80) | Halt. Threshold drift is a [`scripts/risk_threshold_guardrail.py`](../../scripts/risk_threshold_guardrail.py) finding — run it before resuming |
+| Version drifted from expected | Cross-check `git log --tags` on `main` and the deployment record; an unauthorized deploy is an incident |
 
 ---
 
 ## Step 2 — Risk gate check
 
-The gate is the first decision point. If it is closed, the session ends here.
+**Cadence:** Once at session start. Re-run before any discretionary intervention (e.g., manual size override consideration).
+
+### What to run
 
 ```bash
-curl -s https://api.coinscope.ai/risk-gate | python3 -m json.tool
+curl -s https://api.coinscope.ai/circuit-breaker | jq
+curl -s https://api.coinscope.ai/exposure | jq
 ```
 
-Read three fields:
+Shapes: [`engine-api-contract.md`](../api/engine-api-contract.md) §Risk — `GET /circuit-breaker` returns `state` (one of `CLOSED` / `OPEN` / `COOLDOWN`), `trip_count`, `last_trip`, and the active thresholds. `GET /exposure` returns `balance`, `position_count`, `total_exposure_pct`, `daily_pnl`, `daily_loss_pct`, `is_over_exposed`.
 
-| Field | Safe value | Meaning if triggered |
+### What to do with the response
+
+| Field | Bad state | Action |
 |---|---|---|
-| `daily_loss_limit_hit` | `false` | Daily 5% loss reached — no new trades today |
-| `drawdown_limit_hit` | `false` | 10% drawdown from peak — kill switch protocol |
-| `kill_switch.engaged` | `false` | All entries halted — investigate before disarming |
+| `state` | `OPEN` | **Halt.** Read `/journal?event_type=breaker_trip` for cause. **Do not reset until you can explain why it tripped** — see `POST /circuit-breaker/reset` invariant in the contract. If you can't explain, route to incident. |
+| `state` | `COOLDOWN` | Wait. Cooldown auto-expires; do not force-reset. |
+| `daily_loss_pct` | < `-0.035` (3.5% loss, warning band before 5% trip) | Reduce position size aggressively; one more loss likely trips. |
+| `total_exposure_pct` | > `65` (warning band before 80% cap) | No new entries until existing positions close. `is_over_exposed: true` is the hard line. |
+| `is_over_exposed` | `true` | Halt new entries. Address the over-exposure before resuming. |
 
-**If any field is `true`:**
+### Why this is non-negotiable
 
-- `daily_loss_limit_hit` → Stop. Log to Notion operator log. Close session. Resets at 00:00 UTC.
-- `drawdown_limit_hit` → Kill switch protocol. See [`../risk/failsafes-and-kill-switches.md`](../risk/failsafes-and-kill-switches.md). Do not resume without a written review.
-- `kill_switch.engaged` → Determine who engaged it and why before touching anything.
-
-**If the gate is open (`all false`):** Proceed to Step 3.
+BUG-10's exact failure mode was: this check existed in code, but `scan_pair()` didn't call it. **The workflow is the operator-side defense.** Do not skip Step 2 even when everything else looks fine — that's precisely when blind spots compound.
 
 ---
 
 ## Step 3 — Market scan
 
-```bash
-curl -s https://api.coinscope.ai/scan | python3 -m json.tool
-```
+**Cadence:** On demand. The scanner runs autonomously on a fixed cadence; manual scans on top happen when an operator wants a fresh read or is evaluating a specific symbol.
 
-Or via the scanner script for a full formatted table:
+### What to run
 
 ```bash
-python scripts/market_scanner.py --top 5 --min-score 5.5 --tf 4h
+# On-demand scan (no order placement)
+curl -s -X POST https://api.coinscope.ai/scan \
+  -H "Content-Type: application/json" \
+  -d '{"symbols": ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT"], "min_score": 8.0}' | jq
+
+# Read the autonomous scanner's recent signals
+curl -s "https://api.coinscope.ai/signals?limit=20&min_score=8.0" | jq
 ```
 
-**Score filter:** Discard anything below 5.5. Do not lower this threshold to force a trade.
+Shapes: [`engine-api-contract.md`](../api/engine-api-contract.md) §Signals.
 
-**If no signals ≥ 5.5:** Log "no signals" to the Notion Scan History DB and either:
-- Wait 30 minutes and re-scan, or
-- Close the session — no trade is a valid outcome.
+### What to do with the response
 
-Do not force a trade when the scanner sees no opportunity.
+| Outcome | Action |
+|---|---|
+| No signals at the alert threshold (≥ 8.0 score) | Nothing to act on. Wait for the next autonomous scan |
+| Signals present, `mtf_confirmed: true` | Go to Step 4 to review each before sizing |
+| Signal with `mtf_confirmed: false` | Skip — multi-timeframe filter explicitly disqualified |
+| Scan returns 423 (Locked) | Breaker tripped between Step 2 and now. Re-run Step 2 |
+| Scan returns 403 | `TESTNET_MODE=false` — Step 1 condition violated mid-session. Halt |
 
-**Scan History DB:** `e72c5b69-fbbb-4a54-9dac-e6d4de3eb1a4`
+The alert score threshold of **≥ 8.0** is canonical (release notes, [`coinscopeai-ops-secrets`](skill) §1).
 
 ---
 
 ## Step 4 — Signal review
 
-For each candidate above the score threshold, apply this review in order. A single failure discards the signal.
+**Cadence:** For each candidate from Step 3 before any sizing.
 
-### 4a — Regime check
+### Four dimensions to check
 
-```bash
-curl -s https://api.coinscope.ai/regime/BTCUSDT | python3 -m json.tool
-```
-
-(Replace `BTCUSDT` with the candidate symbol — no slash, engine format.)
-
-| Regime | Confidence required | Action |
+| Dimension | Source | Acceptable range |
 |---|---|---|
-| Trending | ≥ 0.65 | Full size eligible |
-| Mean-Reverting | ≥ 0.70 | Eligible — oscillator signals only |
-| Volatile | ≥ 0.75 | Eligible at 0.3× Kelly — only scores ≥ 8.0 |
-| Quiet | ≥ 0.75 | Eligible at 0.3× Kelly — only scores ≥ 8.0 |
+| Regime label | `GET /regime?symbol={SYMBOL}` — see [`engine-api-contract.md`](../api/engine-api-contract.md) §Intelligence | `Trending` or `Mean-Reverting` are clean. `Volatile` and `Quiet` apply a Kelly multiplier (0.3× per release notes) but do not auto-disqualify |
+| Multi-timeframe confirmation | `mtf_confirmed` field in scan output | Must be `true` |
+| Funding rate | Scan payload | If `\|funding_rate_pct\| > 0.05%` per 8h, the position is paying carry that may exceed the signal's edge |
+| Open-interest delta | Scan payload | OI delta > +5% in 1h on a long entry is good confluence. Sharp OI decline indicates the move is dying |
 
-If confidence is below the threshold for the regime, treat the regime as indeterminate — apply Volatile/Quiet rules.
+### What to do
 
-### 4b — Multi-timeframe confirmation
+| Outcome | Action |
+|---|---|
+| All four check out | Proceed to Step 5 |
+| Regime is `Volatile` / `Quiet` | Proceed with reduced size (the position-size endpoint will apply the multiplier; do not override) |
+| `mtf_confirmed: false` | Skip the signal |
+| Funding rate strongly against | Skip, or use shortest expected hold time only |
+| OI dying on a long (or rising on a short) | Use tighter trailing stop and smaller size, or skip |
 
-Look at the `mtf_confirmation` field in the scan output.
+### Why this is non-negotiable
 
-- `✅` → confirmed across 15m / 1h / 4h — proceed
-- `⚠️` → partial — proceed at reduced size (50%)
-- `❌` → conflicting — discard the signal
-
-### 4c — Funding rate
-
-Check the `funding_rate` field in the scan output.
-
-- Long signal + funding rate > +0.08% → mean-reversion risk — skip or wait for funding reset
-- Short signal + funding rate < -0.08% → mean-reversion risk — skip or wait for funding reset
-
-Funding resets every 8 hours on Binance Perpetuals (00:00, 08:00, 16:00 UTC).
-
-### 4d — Open interest delta
-
-Check `oi_change_1h` in the scan output.
-
-- OI declining while price is rising on a long signal → divergence — reduce confidence, consider skipping
-- OI declining while price is falling on a short signal → short-covering likely — skip
-
-If the signal passes all four checks (4a–4d), proceed to Step 5.
+Same BUG-10 reasoning. The MTF filter and risk gate are now applied in code at scan time; Step 4 is the operator-side sanity layer. The four dimensions each cover a real microstructure factor for USDT-perpetuals — funding rate and OI behavior are the futures-specific items vanilla TA misses. See the `futures-market-researcher` skill for the underlying mechanics.
 
 ---
 
 ## Step 5 — Position sizing
 
-```bash
-curl -s "https://api.coinscope.ai/position-size?symbol=BTCUSDT" | python3 -m json.tool
-```
+**Cadence:** Per signal that survived Step 4.
 
-The endpoint returns `recommended_size_usdt` and `leverage` calculated by the fractional Kelly pipeline.
-
-**Before accepting the recommendation, verify the hard limits:**
+### What to run
 
 ```bash
-# Check current heat (total deployed capital)
-curl -s https://api.coinscope.ai/risk-gate | python3 -c "import json,sys; d=json.load(sys.stdin); print('heat:', d.get('position_heat_pct','?'), '%')"
+curl -s "https://api.coinscope.ai/position-size?symbol=BTCUSDT&entry=67234.5&stop_loss=66180.0&score=9.2&regime=Trending" | jq
 ```
 
-| Hard limit | Value | Override |
-|---|---|---|
-| Max leverage | 10× | Never exceed |
-| Max open positions | 5 | Count open positions before entry |
-| Position heat cap | 80% | (heat + new size) must be ≤ 80% |
-| Per-trade size cap | 2% of equity | Kelly hard cap — engine enforces |
-| Daily loss limit | 5% | Gate enforces — still your responsibility to track manually |
+Shape: [`engine-api-contract.md`](../api/engine-api-contract.md) §Risk — `GET /position-size`.
 
-If adding this position would breach any limit: reduce the size to fit, or skip the trade.
+### What to do with the response
+
+| Outcome | Action |
+|---|---|
+| `approved: true`, post-trade `total_exposure_pct < 80` | Proceed to Step 6 with the returned `size_quantity` and `leverage` |
+| `approved: false` | Read `rejection_reason`. **Trust the sizer** — reasons map to PCC v2 §8 thresholds, enforced by [`risk_management/kelly_position_sizer.py`](../../risk_management/kelly_position_sizer.py) and re-checked at the safety gate ([`services/paper_trading/safety.py`](../../services/paper_trading/safety.py)). Do not override. If you believe a rejection is wrong, that's a Phase 7 finding |
+| Post-trade exposure would breach 80% cap | Wait for an existing position to close |
+
+The safety gate ([`services/paper_trading/safety.py`](../../services/paper_trading/safety.py)) is the last-line check: even if the sizer somehow returned an invalid size, the gate rejects it at submission time. Coverage: [`tests/unit/paper_trading/test_safety.py`](../../tests/unit/paper_trading/test_safety.py).
 
 ---
 
 ## Step 6 — Trade execution
 
-**Binance Testnet only during P0. Do not execute on mainnet.**
+**Cadence:** Per approved signal from Step 5.
 
-Testnet: `https://testnet.binancefuture.com`
+### Constraints (P0, non-negotiable)
 
-1. Open the position manually using the recommended size and leverage from Step 5.
-2. Set a stop-loss immediately upon entry. Do not leave a position without a stop.
-3. Set a take-profit target. Record entry, stop, and target before proceeding to Step 7.
+- `TESTNET_MODE=true` enforced at the engine (Step 1 confirmed). Engine returns 403 if `false`
+- Stop-loss and take-profit must be set on entry — use the bracket endpoint, no naked entries
+- No size override beyond what Step 5 returned
 
-**Suggested stop placement:** 1.5× ATR from entry (the scanner reports ATR in the signal output). Tighter stops are acceptable; wider stops reduce the effective R and may require further size reduction to stay within the 2% per-trade cap.
+### What to run
+
+```bash
+curl -s -X POST https://api.coinscope.ai/orders/bracket \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "BTCUSDT",
+    "side": "BUY",
+    "quantity": 0.00265,
+    "leverage": 3,
+    "stop_loss": 66180.0,
+    "take_profit": 69400.0
+  }' | jq
+```
+
+Shape: [`engine-api-contract.md`](../api/engine-api-contract.md) §Orders — `POST /orders/bracket`. The autonomous scan path can also place orders directly when the scan-loop's `place_order` flag is enabled; for operator-initiated entries, use the bracket endpoint explicitly so the SL/TP are visible in the request.
+
+### What to do with the response
+
+| Outcome | Action |
+|---|---|
+| Order accepted, status `NEW` or `FILLED` | Proceed to Step 7 |
+| Order rejected with Binance error code | Read the code — usually a notional/precision issue. Don't retry without diagnosing |
+| 403 | `TESTNET_MODE=false`. Halt and incident |
+| 423 | Breaker tripped between Step 5 and Step 6. Re-run Step 2 |
 
 ---
 
 ## Step 7 — Journal
 
-Log every trade and every scan — whether or not a trade was taken.
+**Cadence:** Automatic per trade. Operator verifies both stores recorded the event.
 
-### Scan log (every session, always)
+### What to verify
 
-Log to Notion Scan History DB (`e72c5b69-fbbb-4a54-9dac-e6d4de3eb1a4`):
-
-| Field | What to record |
-|---|---|
-| Timestamp | UTC |
-| Pairs scanned | Full list |
-| Top signal | Pair, direction, score, regime |
-| Gate status | Open / closed at scan time |
-| Action | Trade taken / skipped / no signals |
-| Mode | Engine / Standalone |
-
-### Trade log (only when a trade is entered)
-
-Log to Notion Trade Journal (`43a542f4-b58d-4b1a-8979-043e72e9a6dd`):
-
-| Field | What to record |
-|---|---|
-| Symbol | e.g. BTCUSDT |
-| Side | LONG / SHORT |
-| Entry price | Exact fill |
-| Stop loss | Price level |
-| Take profit | Price level |
-| Signal score | From scanner |
-| Position size (USDT) | Actual, post-sizing |
-| Leverage | Actual |
-| Regime at entry | Label + confidence |
-
-### Engine journal (every session)
+After each fill (entry or exit):
 
 ```bash
-curl -s "https://api.coinscope.ai/journal?limit=10" | python3 -m json.tool
+curl -s "https://api.coinscope.ai/journal?event_type=trade_open&limit=1" | jq
 ```
 
-Confirm the latest gate decisions and trade events are recorded. If a trade was taken and is missing from the journal, flag it — the journal is append-only and the primary audit trail.
+Shape: [`engine-api-contract.md`](../api/engine-api-contract.md) §Journal. Plus check the **Notion trade journal** at canonical DB `43a542f4-b58d-4b1a-8979-043e72e9a6dd` (per `coinscopeai-ops-secrets` skill §1) — the row should appear within seconds.
+
+### What to do with the response
+
+| Outcome | Action |
+|---|---|
+| Both stores have the event with matching fields | Done |
+| Engine journal has it, Notion doesn't | Notion sync issue (usually rate limit or token). Note in operator log; investigate post-session |
+| Engine journal doesn't have it but the fill is real | **This is a Phase 7 incident.** The engine took an action without journaling — every downstream depends on the journal being authoritative |
 
 ---
 
-## Step 8 — Monitoring during session
+## Step 8 — Monitoring
 
-You do not need to watch continuously. Check once per hour, or when a Telegram alert fires.
+**Cadence:** Continuous. At minimum, an explicit gate check every hour during an active session.
 
-### Routine hourly check (30 seconds)
+### Hourly check
 
 ```bash
-curl -s https://api.coinscope.ai/risk-gate | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-print('daily_loss:', d.get('daily_loss_limit_hit'))
-print('drawdown:  ', d.get('drawdown_limit_hit'))
-print('kill_sw:   ', d.get('kill_switch',{}).get('engaged'))
-print('heat:      ', d.get('position_heat_pct','?'), '%')
-"
+curl -s https://api.coinscope.ai/circuit-breaker | jq '.state, .trip_count'
+curl -s https://api.coinscope.ai/exposure | jq '.daily_loss_pct, .total_exposure_pct, .is_over_exposed'
 ```
 
-All fields should be `False` / `False` / `False`. Heat should be below 80%.
+### Passive monitoring surfaces
 
-### When a Telegram alert fires
+- **Telegram `@ScoopyAI_bot`** — all score ≥ 8.0 signal alerts, all breaker trips, all kill-switch toggles. Telegram silence is not "all clear" — cross-check via the hourly check above
+- **Dashboard at `app.coinscope.ai`** — same data, visual
+- **Engine logs** — for unexpected exception traces
 
-| Severity | Alert type | Action |
+### Alert routing
+
+Per [`docs/monitoring/slo-alerts-dashboard.md`](../monitoring/slo-alerts-dashboard.md):
+
+| Trigger | Severity | Response |
 |---|---|---|
-| 🔴 CRITICAL | Max drawdown breaker | Do not reset immediately — read journal first. See [`daily-ops.md`](daily-ops.md) |
-| 🔴 CRITICAL | Kill switch engaged | Investigate before touching anything |
-| 🔴 CRITICAL | Adapter banned (HTTP 418) | Engine halted — wait for Binance ban to clear |
-| 🟡 WARN | Daily loss breaker | Auto-resets 00:00 UTC — review trades, do not add positions |
-| 🟡 WARN | Consecutive-losses breaker | Auto-resets 24h — review the four losses for pattern |
-| 🟡 WARN | WebSocket reconnect | Isolated = ignore. Repeating = engage kill switch, investigate |
-| ℹ️ INFO | Daily P&L digest (21:00 UTC) | Read and log to weekly validation doc |
-| ℹ️ INFO | Signal alert (score ≥ 8.0) | Review — not an instruction to trade, a candidate to evaluate |
+| Circuit breaker trip | 🔴 CRITICAL | Immediate; incident response, do not auto-resume |
+| Daily loss limit (5%) | 🔴 CRITICAL | Immediate; halt new entries until UTC rollover |
+| Max drawdown (10%) | 🔴 CRITICAL | Immediate; manual reset only after journal review |
+| Daily loss warning (3.5%) | 🟡 WARN | Reduce size; tighten stops |
+| Consecutive losses near trip | 🟡 WARN | Halt new entries |
+| WebSocket reconnect storm | 🟡 WARN | If repeated, restart WS subprocess |
+| Daily P&L digest (21:00 UTC) | ℹ️ INFO | Read; archive into operator log |
 
-Full response procedures: [`daily-ops.md`](daily-ops.md).
+### Manual kill switch
+
+If you need to halt all trading immediately and don't want to wait for a breaker to trip:
+
+```bash
+# API path — halts trading and cancels working orders + brackets
+curl -s -X POST https://api.coinscope.ai/circuit-breaker/trip \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Operator kill switch — <write the reason here>"}' | jq
+
+# CLI path (file-based, even if API is down)
+python -m services.paper_trading.kill --reason "<reason>"
+```
+
+The CLI guards deactivation behind a `CONFIRM`-string prompt; the API equivalent uses `POST /circuit-breaker/reset` and should only be called after journal review. See [issue #47](https://github.com/3nz5789/CoinScopeAI/issues/47) for the in-flight hardening of the deactivate path against programmatic bypass.
 
 ---
 
 ## Step 9 — Session close
 
-Run at the end of every session, regardless of whether any trades were taken.
+**Cadence:** Once at end of session.
 
-### 9a — Performance snapshot
-
-```bash
-curl -s https://api.coinscope.ai/performance | python3 -m json.tool
-```
-
-Note:
-- `win_rate` — target ≥ 55% over rolling 30 days
-- `profit_factor` — target ≥ 1.5
-- `current_drawdown` — flag in the operator log if > 7% (alert zone before 10% hard stop)
-- `open_positions` — confirm count and that each has a stop set
-
-### 9b — Operator log entry
-
-Every session gets one line in `docs/validation/operator-log.md`:
-
-```
-YYYY-MM-DD HH:MM UTC — [SESSION START/CLOSE] <brief note>
-Examples:
-2026-05-12 18:30 UTC — session close. 1 scan, 1 trade (BTC LONG 8.5 score). No alerts. Drawdown 1.2%.
-2026-05-12 09:00 UTC — session close. Gate open. 2 scans, no signals above 5.5. No trades.
-2026-05-12 14:00 UTC — session close. Daily loss breaker tripped at 13:44. No new trades. Gate resets 00:00.
-```
-
-This log is reviewed end-to-end at validation close. Missing entries are worse than terse ones.
-
-### 9c — Drift and guardrail check (if any files were edited this session)
+### What to run
 
 ```bash
-python3 scripts/drift_detector.py
+# Performance summary
+curl -s https://api.coinscope.ai/performance | jq
+
+# Threshold guardrail — confirms no drift from PCC v2 §8 happened during the session
 python3 scripts/risk_threshold_guardrail.py
+
+# Paper-trading health (if running the paper service)
+python3 scripts/health_check_paper_trading.py
 ```
 
-Both must pass clean. If either fails, do not close the session — resolve the discrepancy first.
+Shape: [`engine-api-contract.md`](../api/engine-api-contract.md) §Journal — `GET /performance`.
 
-### 9d — Git sync (if code or docs were changed)
+### What goes in the operator log
 
-```bash
-cd ~/Projects/coinscope-ai
-git add -A
-git status
-```
+For the day:
 
-Review the diff. If the changes are what you expect, commit and push via a branch — never directly to `main`.
+- **Trades opened / closed:** counts, symbols, win/loss outcome
+- **Breaker trips:** zero is normal. Any non-zero is a Phase 7 follow-up regardless of whether it auto-reset
+- **Kill switch toggles:** zero is normal. Any toggle must have a written reason captured at trip time
+- **Performance vs. yesterday:** PnL %, drawdown %, consecutive-losses status
+- **Anomalies:** anything that didn't match expectations across Steps 1–8
 
----
+The operator log is the input to the weekly review (Phase 6 in the Drive operator-lifecycle.md) and to any future RCA.
 
-## Quick reference — canonical values
+### What to do after
 
-| Parameter | Value | Variable |
-|---|---|---|
-| Max leverage | 10× | `MAX_LEVERAGE` |
-| Max open positions | 5 | `MAX_OPEN_POSITIONS` |
-| Max drawdown | 10% from peak | `MAX_DRAWDOWN_PCT` |
-| Daily loss limit | 5% rolling 24h | `MAX_DAILY_LOSS_PCT` |
-| Position heat cap | 80% deployed | `POSITION_HEAT_CAP_PCT` |
-| Per-trade size cap | 2% of equity | `KELLY_HARD_CAP_PCT` |
-| Min signal score | 5.5 | `SIGNAL_MIN_SCORE` |
-| Telegram alert threshold | 8.0 | hardcoded in alert layer |
-| P0 validation window | May 2026 | — |
-
-All values above are locked for P0. Any PR touching them is blocked by CI guardrail.
-
----
-
-## What a clean session looks like (no trade taken)
-
-```
-09:00 UTC  → Step 1: ./scripts/daily_status.sh — all green
-09:01 UTC  → Step 2: /risk-gate — gate open
-09:02 UTC  → Step 3: scan — 2 candidates, scores 5.8 and 4.9
-09:03 UTC  → Step 4: review — 5.8 signal fails MTF (❌ conflicting)
-             → 4.9 below threshold, discarded
-09:04 UTC  → No eligible signals. Logged to Notion Scan History.
-09:05 UTC  → Session close. Operator log: "09:05 UTC — 1 scan, no eligible signals. Gate open."
-```
-
-Total time: 5 minutes. No trade is a valid and often correct outcome.
-
----
-
-## What a clean session looks like (trade taken)
-
-```
-13:00 UTC  → Step 1: health + ready — green
-13:01 UTC  → Step 2: risk-gate — open, heat 22%
-13:02 UTC  → Step 3: scan — ETHUSDT LONG, score 8.2
-13:03 UTC  → Step 4: regime Trending 0.89 ✅ · MTF ✅ · funding -0.002% ✅ · OI +1.8% ✅
-13:04 UTC  → Step 5: /position-size → 480 USDT, 5× leverage. Heat check: 22% + 480/balance < 80% ✅
-13:05 UTC  → Step 6: entered ETHUSDT LONG on testnet. Stop 1.5× ATR below entry. TP set.
-13:06 UTC  → Step 7: logged to Notion Scan History + Trade Journal. Engine /journal confirms.
-13:06 UTC  → Step 8: monitoring active. Check /risk-gate hourly.
-16:30 UTC  → TP hit. Position closed.
-16:31 UTC  → Step 9a: /performance — win rate 61%, drawdown 0.8%
-16:32 UTC  → Step 9b: operator log entry written.
-16:33 UTC  → Session close.
-```
-
----
-
-## Hard stops — conditions that end the session immediately
-
-| Condition | Action |
+| Outcome | Action |
 |---|---|
-| `drawdown_limit_hit: true` | Stop all activity. Kill switch protocol. No exceptions. |
-| Engine returning stale or mock data | Engage kill switch. Investigate data source before resuming. |
-| Binance Testnet unreachable > 15 min | Close open positions manually if accessible. Do not trade blind. |
-| You are unsure about any step | Stop. Review the relevant runbook. If still unclear, do not trade. |
+| Clean session — no breakers, no kill toggles, performance in expected range | Close out. Commit any session-scoped state changes |
+| Breaker tripped during session | Phase 7 incident regardless of whether it auto-reset — RCA within 48h |
+| Performance unusually outside expected range | Note in operator log with an explicit hypothesis. Recurring pattern → file an investigation issue against Milestone #1 |
 
 ---
 
-*Last updated: 2026-05-12 | Applies to: P0 validation phase (Binance Testnet only)*
-*For post-P0 mainnet procedures, see [`release-checklist.md`](release-checklist.md) — Mainnet Cutover section.*
+## Cross-references
+
+| Topic | Where it lives |
+|---|---|
+| First-day operator onboarding | Drive: `04 — Development/docs/runbooks/operator-lifecycle.md` Phase 1 |
+| Incident response & escalation | Drive: same doc, Phase 7 — until a repo-side `docs/runbooks/incident-response.md` is written |
+| Weekly review & release decisions | Drive: same doc, Phase 6 |
+| What proof exists for each safety property | [`docs/validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0 |
+| API contract (every endpoint shape) | [`docs/api/engine-api-contract.md`](../api/engine-api-contract.md) |
+| SLOs and alert rules | [`docs/monitoring/slo-alerts-dashboard.md`](../monitoring/slo-alerts-dashboard.md) |
+| Pre-flight bug record (including BUG-10) | [`docs/BUG_FIXES_COMPREHENSIVE.md`](../BUG_FIXES_COMPREHENSIVE.md) |
+| Risk thresholds locked at PCC v2 §8 | Will live at `docs/risk/risk-framework.md` once [issue #45](https://github.com/3nz5789/CoinScopeAI/issues/45) merges; for now, see the Drive workspace `05 — Risk Management/risk-framework.md` |
+
+---
+
+## Open items affecting this workflow
+
+Tracked in [Milestone #1 — P0 Graduation](https://github.com/3nz5789/CoinScopeAI/milestone/1):
+
+- [#34](https://github.com/3nz5789/CoinScopeAI/issues/34) duplicate-position rejection — affects Step 5 (a same-symbol same-side entry currently passes safety gate)
+- [#39](https://github.com/3nz5789/CoinScopeAI/issues/39) alert-path smoke test — affects Step 8 (the alert routing claims are unproven end-to-end on Telegram + dashboard until the smoke test runs)
+- [#40](https://github.com/3nz5789/CoinScopeAI/issues/40) coverage measurement — affects how strongly Step 2 / Step 6 trust the safety gate's test coverage
+- [#41](https://github.com/3nz5789/CoinScopeAI/issues/41) BUG-1 through BUG-16 regression audit — affects how confident Step 4 can be that historical bugs won't regress
+- [#44](https://github.com/3nz5789/CoinScopeAI/issues/44) invariant suite merge — when merged, Step 2's `/circuit-breaker` interpretation is proven at the dedicated invariant layer
+- [#45](https://github.com/3nz5789/CoinScopeAI/issues/45) docs/risk/ port — when merged, Step 2's "PCC v2 §8 thresholds" link becomes a direct repo reference
+- [#46](https://github.com/3nz5789/CoinScopeAI/issues/46) walk-forward validator — when merged, Step 4's signal-quality basis is reproducible from this repo
+- [#47](https://github.com/3nz5789/CoinScopeAI/issues/47) kill-switch deactivate hardening — when merged, Step 2's interpretation of `kill_switch_active=false` strengthens
+
+Each step works against current on-main reality. For what is and isn't yet proven, cross-check [`docs/validation/p0-evidence-pack.md`](../validation/p0-evidence-pack.md) §0.2.

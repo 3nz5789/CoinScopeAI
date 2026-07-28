@@ -7,11 +7,10 @@ loss tracking, cooldown logic, and reduce-only bypass.
 
 import json
 import os
-from pathlib import Path
 import time
-from unittest.mock import patch
-
 import pytest
+from pathlib import Path
+from unittest.mock import patch
 
 from services.paper_trading.config import (
     HARDCODED_MAX_CONCURRENT_POSITIONS,
@@ -29,8 +28,8 @@ from services.paper_trading.safety import (
     SafetyState,
 )
 
-# ── Fixtures ──────────────────────────────────────────────────
 
+# ── Fixtures ──────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
 def clean_kill_file():
@@ -65,34 +64,20 @@ def safety(config, kill_switch):
 
 
 def make_order(
-    symbol="BTCUSDT",
-    side="BUY",
-    quantity=0.001,
-    price=50000.0,
-    leverage=3,
-    reduce_only=False,
-    stop_loss=0.0,
-    take_profit=0.0,
-    signal_confidence=0.5,
-    signal_edge=0.1,
+    symbol="BTCUSDT", side="BUY", quantity=0.001, price=50000.0,
+    leverage=3, reduce_only=False, stop_loss=0.0, take_profit=0.0,
+    signal_confidence=0.5, signal_edge=0.1,
 ):
     return OrderRequest(
-        symbol=symbol,
-        side=side,
-        order_type="LIMIT",
-        quantity=quantity,
-        price=price,
-        leverage=leverage,
-        reduce_only=reduce_only,
-        stop_loss=stop_loss,
-        take_profit=take_profit,
-        signal_confidence=signal_confidence,
+        symbol=symbol, side=side, order_type="LIMIT",
+        quantity=quantity, price=price, leverage=leverage,
+        reduce_only=reduce_only, stop_loss=stop_loss,
+        take_profit=take_profit, signal_confidence=signal_confidence,
         signal_edge=signal_edge,
     )
 
 
 # ── Kill Switch Tests ─────────────────────────────────────────
-
 
 class TestKillSwitch:
 
@@ -146,7 +131,6 @@ class TestKillSwitch:
     def test_deactivate_logs_reason_at_warn(self, kill_switch, caplog):
         """The reason lands in the WARN log for audit reconstruction."""
         import logging
-
         kill_switch.activate("test")
         with caplog.at_level(logging.WARNING, logger="coinscopeai.paper_trading.safety"):
             kill_switch.deactivate("post-incident review concluded; resuming")
@@ -154,14 +138,10 @@ class TestKillSwitch:
 
     def test_persistent_flag_on_init(self):
         """Kill switch should detect existing flag file on init."""
-        Path(KillSwitch.KILL_FILE).write_text(
-            json.dumps(
-                {
-                    "reason": "previous_crash",
-                    "activated_at": time.time(),
-                }
-            )
-        )
+        Path(KillSwitch.KILL_FILE).write_text(json.dumps({
+            "reason": "previous_crash",
+            "activated_at": time.time(),
+        }))
         ks = KillSwitch()
         assert ks.is_active
 
@@ -179,7 +159,6 @@ class TestKillSwitch:
 
 # ── Safety Gate — Kill Switch Integration ─────────────────────
 
-
 class TestSafetyGateKillSwitch:
 
     def test_rejects_when_kill_switch_active(self, safety, kill_switch):
@@ -194,7 +173,6 @@ class TestSafetyGateKillSwitch:
 
 
 # ── Safety Gate — Reduce Only Bypass ──────────────────────────
-
 
 class TestSafetyGateReduceOnly:
 
@@ -218,7 +196,6 @@ class TestSafetyGateReduceOnly:
 
 
 # ── Safety Gate — Hardcoded Limits ────────────────────────────
-
 
 class TestSafetyGateHardcodedLimits:
 
@@ -278,7 +255,6 @@ class TestSafetyGateHardcodedLimits:
 
 # ── Safety Gate — Configurable Limits ─────────────────────────
 
-
 class TestSafetyGateConfigurableLimits:
 
     def test_rejects_config_daily_loss(self, safety):
@@ -322,7 +298,6 @@ class TestSafetyGateConfigurableLimits:
 
 # ── Safety Gate — State Checks ────────────────────────────────
 
-
 class TestSafetyGateStateChecks:
 
     def test_rejects_consecutive_losses(self, safety):
@@ -365,7 +340,6 @@ class TestSafetyGateStateChecks:
 
 # ── Safety Gate — Counters ────────────────────────────────────
 
-
 class TestSafetyGateCounters:
 
     def test_submitted_counter(self, safety):
@@ -393,7 +367,6 @@ class TestSafetyGateCounters:
 
 # ── Config Enforcement ────────────────────────────────────────
 
-
 class TestConfigEnforcement:
 
     def test_config_clamps_to_hardcoded_max(self):
@@ -414,7 +387,6 @@ class TestConfigEnforcement:
     def test_testnet_only_enforced(self):
         """ExchangeConfig blocks mainnet URLs."""
         from services.paper_trading.config import ExchangeConfig
-
         config = ExchangeConfig()
         assert "testnet" in config.rest_url
         assert "testnet" not in "fapi.binance.com"

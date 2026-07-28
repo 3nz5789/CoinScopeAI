@@ -17,12 +17,12 @@ COI-81: corrupt-file quarantine (SLO: No Silent Data Loss) — read side
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import logging
 import os
-from pathlib import Path
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 _log = logging.getLogger(__name__)
@@ -98,8 +98,6 @@ def quarantine_corrupt_file(path: Path) -> Path | None:
     except OSError as exc:
         _log.error(
             "quarantine_corrupt_file: rename of %s -> %s failed: %s",
-            path,
-            backup,
-            exc,
+            path, backup, exc,
         )
         return None

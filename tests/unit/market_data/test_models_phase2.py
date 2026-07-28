@@ -3,7 +3,6 @@ Tests for CoinScopeAI Phase 2 — Data Models
 """
 
 import time
-
 import pytest
 
 from services.market_data.models import (
@@ -29,10 +28,10 @@ from services.market_data.models import (
     Trade,
 )
 
+
 # ---------------------------------------------------------------------------
 # OrderBookLevel
 # ---------------------------------------------------------------------------
-
 
 class TestOrderBookLevel:
     def test_creation(self):
@@ -50,7 +49,6 @@ class TestOrderBookLevel:
 # ---------------------------------------------------------------------------
 # L2OrderBook
 # ---------------------------------------------------------------------------
-
 
 class TestL2OrderBook:
     def _make_book(self):
@@ -103,7 +101,6 @@ class TestL2OrderBook:
 # FundingSnapshot
 # ---------------------------------------------------------------------------
 
-
 class TestFundingSnapshot:
     def test_mean_rate(self):
         snap = FundingSnapshot(
@@ -138,7 +135,6 @@ class TestFundingSnapshot:
 # ---------------------------------------------------------------------------
 # LiquidationSnapshot
 # ---------------------------------------------------------------------------
-
 
 class TestLiquidationSnapshot:
     def test_total_usd(self):
@@ -176,7 +172,6 @@ class TestLiquidationSnapshot:
 # BasisData
 # ---------------------------------------------------------------------------
 
-
 class TestBasisData:
     def test_basis(self):
         bd = BasisData(
@@ -205,7 +200,6 @@ class TestBasisData:
 # AggregatedOI
 # ---------------------------------------------------------------------------
 
-
 class TestAggregatedOI:
     def test_total_oi(self):
         aoi = AggregatedOI(
@@ -219,7 +213,6 @@ class TestAggregatedOI:
 # ---------------------------------------------------------------------------
 # AlphaSignal
 # ---------------------------------------------------------------------------
-
 
 class TestAlphaSignal:
     def test_confidence_clamped(self):
@@ -248,7 +241,6 @@ class TestAlphaSignal:
 # RegimeState
 # ---------------------------------------------------------------------------
 
-
 class TestRegimeState:
     def test_high_confidence(self):
         rs = RegimeState(
@@ -272,7 +264,6 @@ class TestRegimeState:
 # ---------------------------------------------------------------------------
 # AlphaGeneratorConfig
 # ---------------------------------------------------------------------------
-
 
 class TestAlphaGeneratorConfig:
     def test_defaults(self):

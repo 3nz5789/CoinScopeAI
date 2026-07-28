@@ -5,23 +5,22 @@ state persistence, daily reset, and heartbeat.
 """
 
 import json
-from pathlib import Path
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+from pathlib import Path
+from unittest.mock import MagicMock, patch, AsyncMock
 
 from services.paper_trading.config import (
-    HARDCODED_TESTNET_ONLY,
-    ExchangeConfig,
     PaperTradingConfig,
-    TelegramConfig,
     TradingConfig,
+    ExchangeConfig,
+    TelegramConfig,
+    HARDCODED_TESTNET_ONLY,
 )
-from services.paper_trading.safety import KillSwitch, OrderRequest, SafetyGate
+from services.paper_trading.safety import KillSwitch, SafetyGate, OrderRequest
+
 
 # ── Fixtures ──────────────────────────────────────────────────
-
 
 @pytest.fixture(autouse=True)
 def clean_files():
@@ -41,7 +40,6 @@ def clean_files():
 
 # ── Kill Switch Integration Tests ─────────────────────────────
 
-
 class TestKillSwitchIntegration:
 
     def test_kill_switch_blocks_all_orders(self):
@@ -55,12 +53,8 @@ class TestKillSwitchIntegration:
 
         # Normal order passes
         order = OrderRequest(
-            symbol="BTCUSDT",
-            side="BUY",
-            order_type="MARKET",
-            quantity=0.001,
-            price=50000,
-            leverage=3,
+            symbol="BTCUSDT", side="BUY", order_type="MARKET",
+            quantity=0.001, price=50000, leverage=3,
         )
         approved, _, _ = gate.validate_order(order)
         assert approved
@@ -71,12 +65,8 @@ class TestKillSwitchIntegration:
         # All orders blocked
         for symbol in ["BTCUSDT", "ETHUSDT", "SOLUSDT"]:
             order = OrderRequest(
-                symbol=symbol,
-                side="BUY",
-                order_type="MARKET",
-                quantity=0.001,
-                price=50000,
-                leverage=3,
+                symbol=symbol, side="BUY", order_type="MARKET",
+                quantity=0.001, price=50000, leverage=3,
             )
             approved, reason, _ = gate.validate_order(order)
             assert not approved
@@ -115,12 +105,8 @@ class TestKillSwitchIntegration:
         gate._state.initial_equity = 10000
 
         order = OrderRequest(
-            symbol="BTCUSDT",
-            side="BUY",
-            order_type="MARKET",
-            quantity=0.001,
-            price=50000,
-            leverage=3,
+            symbol="BTCUSDT", side="BUY", order_type="MARKET",
+            quantity=0.001, price=50000, leverage=3,
         )
         approved, reason, _ = gate.validate_order(order)
         assert not approved
@@ -137,12 +123,8 @@ class TestKillSwitchIntegration:
         gate._state.daily_pnl = -600  # 6% > hardcoded 5%
 
         order = OrderRequest(
-            symbol="BTCUSDT",
-            side="BUY",
-            order_type="MARKET",
-            quantity=0.001,
-            price=50000,
-            leverage=3,
+            symbol="BTCUSDT", side="BUY", order_type="MARKET",
+            quantity=0.001, price=50000, leverage=3,
         )
         approved, _, _ = gate.validate_order(order)
         assert not approved
@@ -150,7 +132,6 @@ class TestKillSwitchIntegration:
 
 
 # ── State Persistence Tests ───────────────────────────────────
-
 
 class TestStatePersistence:
 
@@ -179,7 +160,6 @@ class TestStatePersistence:
 
 
 # ── Config Safety Tests ───────────────────────────────────────
-
 
 class TestConfigSafety:
 
@@ -217,7 +197,6 @@ class TestConfigSafety:
 
 # ── Safety Gate Layered Check Order ───────────────────────────
 
-
 class TestSafetyCheckOrder:
     """Verify that safety checks are applied in the correct order:
     1. Kill switch (highest priority)
@@ -242,12 +221,8 @@ class TestSafetyCheckOrder:
         ks.activate("test")
 
         order = OrderRequest(
-            symbol="BTCUSDT",
-            side="BUY",
-            order_type="MARKET",
-            quantity=0.001,
-            price=50000,
-            leverage=3,
+            symbol="BTCUSDT", side="BUY", order_type="MARKET",
+            quantity=0.001, price=50000, leverage=3,
         )
         approved, reason, _ = gate.validate_order(order)
         assert not approved
@@ -267,12 +242,8 @@ class TestSafetyCheckOrder:
             gate._state.open_positions[f"SYM{i}"] = {}
 
         order = OrderRequest(
-            symbol="BTCUSDT",
-            side="SELL",
-            order_type="MARKET",
-            quantity=0.001,
-            price=50000,
-            leverage=3,
+            symbol="BTCUSDT", side="SELL", order_type="MARKET",
+            quantity=0.001, price=50000, leverage=3,
             reduce_only=True,
         )
         approved, _, _ = gate.validate_order(order)
@@ -292,12 +263,8 @@ class TestSafetyCheckOrder:
 
         # Leverage exceeds hardcoded max (5)
         order = OrderRequest(
-            symbol="BTCUSDT",
-            side="BUY",
-            order_type="MARKET",
-            quantity=0.001,
-            price=50000,
-            leverage=10,
+            symbol="BTCUSDT", side="BUY", order_type="MARKET",
+            quantity=0.001, price=50000, leverage=10,
         )
         approved, reason, _ = gate.validate_order(order)
         assert not approved
@@ -305,7 +272,6 @@ class TestSafetyCheckOrder:
 
 
 # ── Concurrent Safety Tests ───────────────────────────────────
-
 
 class TestConcurrentSafety:
 
@@ -315,7 +281,6 @@ class TestConcurrentSafety:
         gate = SafetyGate(config)
 
         import threading
-
         errors = []
 
         def update_equity(val):
@@ -325,7 +290,10 @@ class TestConcurrentSafety:
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=update_equity, args=(10000 + i,)) for i in range(10)]
+        threads = [
+            threading.Thread(target=update_equity, args=(10000 + i,))
+            for i in range(10)
+        ]
         for t in threads:
             t.start()
         for t in threads:
@@ -343,17 +311,12 @@ class TestConcurrentSafety:
         gate._state.peak_equity = 10000
 
         import threading
-
         results = []
 
         def validate():
             order = OrderRequest(
-                symbol="BTCUSDT",
-                side="BUY",
-                order_type="MARKET",
-                quantity=0.001,
-                price=50000,
-                leverage=3,
+                symbol="BTCUSDT", side="BUY", order_type="MARKET",
+                quantity=0.001, price=50000, leverage=3,
             )
             approved, _, _ = gate.validate_order(order)
             results.append(approved)

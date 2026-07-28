@@ -35,7 +35,6 @@ logger = logging.getLogger("coinscopeai.ai.features.v3")
 @dataclass
 class V3FeatureConfig(LongTFFeatureConfig):
     """Feature config with Phase 2 alpha proxy parameters."""
-
     # Funding proxy parameters
     funding_lookbacks: List[int] = field(default_factory=lambda: [8, 24, 48])
     funding_extreme_zscore: float = 2.0
@@ -134,10 +133,7 @@ class V3FeatureEngine:
         n_alpha = len(self._feature_names) - n_v2
         logger.info(
             "V3: Extracted %d features from %d bars (v2: %d + alpha: %d)",
-            len(self._feature_names),
-            len(df),
-            n_v2,
-            n_alpha,
+            len(self._feature_names), len(df), n_v2, n_alpha,
         )
         return features
 
@@ -206,7 +202,9 @@ class V3FeatureEngine:
         # Funding divergence: gap direction vs price direction
         price_dir = np.sign(log_ret)
         gap_dir = np.sign(gap)
-        feats["funding_price_div"] = self._rolling_mean(price_dir * gap_dir, 10)
+        feats["funding_price_div"] = self._rolling_mean(
+            price_dir * gap_dir, 10
+        )
 
         return feats
 
@@ -330,7 +328,9 @@ class V3FeatureEngine:
             vol_ma_short = self._rolling_mean(volume, p)
             vol_ma_long = self._rolling_mean(volume, p * 2)
             with np.errstate(divide="ignore", invalid="ignore"):
-                vol_change = np.where(vol_ma_long > 0, vol_ma_short / vol_ma_long - 1.0, 0.0)
+                vol_change = np.where(
+                    vol_ma_long > 0, vol_ma_short / vol_ma_long - 1.0, 0.0
+                )
 
             # Divergence: price trending up but volume declining = bearish divergence
             feats[f"oi_price_div_{p}"] = price_trend * vol_change
@@ -341,8 +341,8 @@ class V3FeatureEngine:
         for p in [10, 20]:
             vol_autocorr = np.full(n, np.nan)
             for i in range(p, n):
-                v1 = volume[i - p : i - 1]
-                v2 = volume[i - p + 1 : i]
+                v1 = volume[i - p:i - 1]
+                v2 = volume[i - p + 1:i]
                 if len(v1) > 1 and np.std(v1) > 0 and np.std(v2) > 0:
                     vol_autocorr[i] = np.corrcoef(v1, v2)[0, 1]
             feats[f"oi_vol_autocorr_{p}"] = vol_autocorr
@@ -446,7 +446,7 @@ class V3FeatureEngine:
         for p in [10, 20]:
             pos_frac = np.full(n, np.nan)
             for i in range(p - 1, n):
-                window = imbalance[i - p + 1 : i + 1]
+                window = imbalance[i - p + 1:i + 1]
                 valid = window[~np.isnan(window)]
                 if len(valid) > 0:
                     pos_frac[i] = np.mean(valid > 0)
@@ -504,14 +504,16 @@ class V3FeatureEngine:
         n = len(data)
         result = np.full(n, np.nan, dtype=np.float64)
         for i in range(period - 1, n):
-            window = data[i - period + 1 : i + 1]
+            window = data[i - period + 1:i + 1]
             valid = window[~np.isnan(window)]
             if len(valid) > 0:
                 result[i] = np.sum(valid)
         return result
 
     @staticmethod
-    def _calc_atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int) -> np.ndarray:
+    def _calc_atr(
+        high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int
+    ) -> np.ndarray:
         n = len(close)
         tr = np.full(n, np.nan)
         tr[0] = high[0] - low[0]

@@ -31,10 +31,10 @@ from services.market_data.models import (
     SignalDirection,
 )
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def make_funding_history(rates, symbol="BTC"):
     """Create a list of FundingRate objects from a list of rate values."""
@@ -120,7 +120,6 @@ def make_basis_snapshots(basis_pcts, symbol="BTC"):
 # Tests: BaseAlphaGenerator utilities
 # ---------------------------------------------------------------------------
 
-
 class TestBaseAlphaGeneratorUtils:
     def test_mean(self):
         assert BaseAlphaGenerator.mean([1, 2, 3, 4, 5]) == 3.0
@@ -164,11 +163,12 @@ class TestBaseAlphaGeneratorUtils:
 # Tests: FundingAlphaGenerator
 # ---------------------------------------------------------------------------
 
-
 class TestFundingAlphaGenerator:
     @pytest.fixture
     def gen(self):
-        return FundingAlphaGenerator(AlphaGeneratorConfig(min_data_points=3, z_score_threshold=1.5))
+        return FundingAlphaGenerator(
+            AlphaGeneratorConfig(min_data_points=3, z_score_threshold=1.5)
+        )
 
     def test_divergence_signals(self, gen):
         snapshot = FundingSnapshot(
@@ -235,7 +235,6 @@ class TestFundingAlphaGenerator:
 # Tests: LiquidationAlphaGenerator
 # ---------------------------------------------------------------------------
 
-
 class TestLiquidationAlphaGenerator:
     @pytest.fixture
     def gen(self):
@@ -293,11 +292,12 @@ class TestLiquidationAlphaGenerator:
 # Tests: OIAlphaGenerator
 # ---------------------------------------------------------------------------
 
-
 class TestOIAlphaGenerator:
     @pytest.fixture
     def gen(self):
-        return OIAlphaGenerator(AlphaGeneratorConfig(min_data_points=3))
+        return OIAlphaGenerator(
+            AlphaGeneratorConfig(min_data_points=3)
+        )
 
     def test_expansion_signal(self, gen):
         totals = [100000, 105000, 110000, 115000, 130000]  # expanding
@@ -339,11 +339,12 @@ class TestOIAlphaGenerator:
 # Tests: BasisAlphaGenerator
 # ---------------------------------------------------------------------------
 
-
 class TestBasisAlphaGenerator:
     @pytest.fixture
     def gen(self):
-        return BasisAlphaGenerator(AlphaGeneratorConfig(min_data_points=3, z_score_threshold=1.5))
+        return BasisAlphaGenerator(
+            AlphaGeneratorConfig(min_data_points=3, z_score_threshold=1.5)
+        )
 
     def test_premium_extreme(self, gen):
         # Normal basis then a spike
@@ -387,7 +388,6 @@ class TestBasisAlphaGenerator:
 # ---------------------------------------------------------------------------
 # Tests: OrderBookAlphaGenerator
 # ---------------------------------------------------------------------------
-
 
 class TestOrderBookAlphaGenerator:
     @pytest.fixture
@@ -446,12 +446,10 @@ class TestOrderBookAlphaGenerator:
         for i in range(10):
             spread = 1.0 + (i * 0.1)  # widening spread
             mid = 100.0
-            books.append(
-                make_book(
-                    bids=[(mid - spread / 2, 10)],
-                    asks=[(mid + spread / 2, 10)],
-                )
-            )
+            books.append(make_book(
+                bids=[(mid - spread / 2, 10)],
+                asks=[(mid + spread / 2, 10)],
+            ))
         signals = gen.generate("BTC", book_history=books)
         spread_sigs = [s for s in signals if s.signal_name == "orderbook_spread_z"]
         assert len(spread_sigs) == 1

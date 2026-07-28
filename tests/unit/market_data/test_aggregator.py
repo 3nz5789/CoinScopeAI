@@ -3,20 +3,14 @@ Tests for the multi-exchange aggregator.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from services.market_data.aggregator import Aggregator
 from services.market_data.base import EventBus
 from services.market_data.models import (
-    ConnectionMetrics,
-    ConnectionState,
-    EventType,
-    Exchange,
-    MarketEvent,
-    MarkPrice,
-    ScanSignal,
+    ConnectionMetrics, ConnectionState, EventType, Exchange,
+    MarkPrice, MarketEvent, ScanSignal,
 )
 from services.market_data.scanner.base_scanner import ScannerConfig
 from services.market_data.scanner.breakout_oi import BreakoutOIScanner
@@ -24,7 +18,6 @@ from services.market_data.scanner.breakout_oi import BreakoutOIScanner
 
 class FakeClient:
     """Minimal fake exchange client for testing aggregator wiring."""
-
     EXCHANGE = Exchange.BINANCE
 
     def __init__(self):

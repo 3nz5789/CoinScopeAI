@@ -27,13 +27,9 @@ import numpy as np
 
 from . import _common
 
+
 DEFAULT_SYMBOLS = (
-    "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "DOGEUSDT",
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT",
 )
 DEFAULT_TIMEFRAME = "4h"
 DEFAULT_LIMIT = 1080  # ~6 months of 4h bars
@@ -44,7 +40,6 @@ TRAIN_PCT = 0.70
 @dataclass
 class WFVResult:
     """Container for a full walk-forward run across symbols."""
-
     symbols: List[str]
     timeframe: str
     fold_metrics: List[_common.FoldMetrics]
@@ -87,13 +82,10 @@ def run_symbol(symbol: str, ohlcv: np.ndarray) -> List[_common.FoldMetrics]:
     for label, train_s, train_e, test_s, test_e in fold_indices(len(ohlcv)):
         trades = _common.simulate_trades(scores, closes, test_s, test_e)
         metrics = _common.compute_metrics(
-            symbol=symbol,
-            fold_label=label,
+            symbol=symbol, fold_label=label,
             trades=trades,
-            train_start=train_s,
-            train_end=train_e,
-            test_start=test_s,
-            test_end=test_e,
+            train_start=train_s, train_end=train_e,
+            test_start=test_s, test_end=test_e,
         )
         results.append(metrics)
     return results
@@ -112,7 +104,6 @@ def run(
     can inject synthetic data without making network calls.
     """
     if ohlcv_provider is None:
-
         def ohlcv_provider(s):
             return _common.fetch_ohlcv(s, timeframe, limit)
 

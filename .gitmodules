@@ -1,0 +1,20 @@
+[submodule "vendor/freqtrade"]
+	path = vendor/freqtrade
+	url = https://github.com/freqtrade/freqtrade.git
+	branch = develop
+[submodule "vendor/nautilus_trader"]
+	path = vendor/nautilus_trader
+	url = https://github.com/nautechsystems/nautilus_trader.git
+	branch = master
+[submodule "vendor/jesse"]
+	path = vendor/jesse
+	url = https://github.com/jesse-ai/jesse.git
+	branch = master
+[submodule "vendor/hummingbot"]
+	path = vendor/hummingbot
+	url = https://github.com/hummingbot/hummingbot.git
+	branch = master
+[submodule "vendor/ccxt"]
+	path = vendor/ccxt
+	url = https://github.com/ccxt/ccxt.git
+	branch = master

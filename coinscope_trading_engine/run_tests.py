@@ -89,14 +89,50 @@ def test_regime():
 
 
 def test_kelly():
-    """Test Kelly position sizer"""
+    """Test Kelly position sizer risk caps"""
+    from datetime import datetime
     from .intelligence.kelly_position_sizer import KellyRiskController
 
+    # 1) Base sizing across regimes
     kelly = KellyRiskController(fraction=0.25)
+    sizes = {}
     for regime in ["bull", "chop", "bear"]:
-        size = kelly.calculate_position_size(0.44, 0.018, 0.012, regime, 10000)
-        print(f"  {regime:4s}: ${size:.2f}")
-    assert size > 0
+        sizes[regime] = kelly.calculate_position_size(0.44, 0.018, 0.012, regime, 10000)
+        print(f"  {regime:4s}: ${sizes[regime]:.2f}")
+    assert sizes["bull"] > sizes["chop"] > sizes["bear"]
+    assert sizes["bull"] > 0
+
+    # 2) Hard per-trade cap
+    kelly_cap = KellyRiskController(fraction=1.0, hard_cap_pct=0.01)
+    size = kelly_cap.calculate_position_size(0.60, 0.05, 0.01, "bull", 10000)
+    print(f"  hard cap: ${size:.2f} (expected <= $100)")
+    assert size <= 100.01  # 1% of 10k
+
+    # 3) Consecutive-loss streak penalty
+    kelly_streak = KellyRiskController(fraction=0.25, max_consecutive_losses=2, streak_penalty_step=0.5)
+    base = kelly_streak.calculate_position_size(0.44, 0.018, 0.012, "bull", 10000)
+    kelly_streak.record_trade_result(-0.01)
+    kelly_streak.record_trade_result(-0.01)
+    kelly_streak.record_trade_result(-0.01)  # 3rd loss -> 1 step penalty
+    penalized = kelly_streak.calculate_position_size(0.44, 0.018, 0.012, "bull", 10000)
+    print(f"  streak base: ${base:.2f}, after 3 losses: ${penalized:.2f}")
+    assert penalized < base
+
+    # 4) Daily loss cap
+    kelly_daily = KellyRiskController(fraction=0.25, daily_loss_cap_pct=0.03)
+    now = datetime.utcnow()
+    kelly_daily.record_trade_result(-0.02, now)
+    kelly_daily.record_trade_result(-0.02, now)  # total -4% > cap -3%
+    blocked = kelly_daily.calculate_position_size(0.44, 0.018, 0.012, "bull", 10000)
+    print(f"  daily cap blocked: ${blocked:.2f} (expected $0)")
+    assert blocked == 0.0
+
+    # 5) Volatility scaling
+    kelly_vol = KellyRiskController(fraction=0.25, max_volatility_annualized=0.50)
+    low_vol_size = kelly_vol.calculate_position_size(0.44, 0.018, 0.012, "bull", 10000, recent_returns=[0.001] * 20)
+    high_vol_size = kelly_vol.calculate_position_size(0.44, 0.018, 0.012, "bull", 10000, recent_returns=[0.05, -0.05] * 10)
+    print(f"  low vol: ${low_vol_size:.2f}, high vol: ${high_vol_size:.2f}")
+    assert high_vol_size <= low_vol_size
 
 
 def test_journal():

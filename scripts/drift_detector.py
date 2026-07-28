@@ -75,14 +75,14 @@ SCAN_TARGETS = [
 # or a paste/redirect went the wrong way. The minimum is intentionally generous so that
 # a normal edit pass (adding/removing a section) doesn't trip it.
 MINIMUM_SIZES_BYTES = {
-    "CLAUDE.md": 4000,                                # canonical 5,531 (v2 from 3d6362d)
-    "CONTEXT_PRIMER.md": 4000,                        # canonical 5,549
-    "architecture/architecture.md": 7000,             # canonical 10,346
-    "docs/architecture/design-system-manifest.md": 4500,   # canonical 6,464
-    "business-plan/00-framework.md": 20000,           # canonical 32,036
-    "business-plan/_decisions/decision-log.md": 80000, # canonical 105,275
-    "scripts/drift_detector.py": 7000,                # canonical 10,523
-    "scripts/risk_threshold_guardrail.py": 3000,      # canonical 4,790
+    "CLAUDE.md": 4000,  # canonical 5,531 (v2 from 3d6362d)
+    "CONTEXT_PRIMER.md": 4000,  # canonical 5,549
+    "architecture/architecture.md": 7000,  # canonical 10,346
+    "docs/architecture/design-system-manifest.md": 4500,  # canonical 6,464
+    "business-plan/00-framework.md": 20000,  # canonical 32,036
+    "business-plan/_decisions/decision-log.md": 80000,  # canonical 105,275
+    "scripts/drift_detector.py": 7000,  # canonical 10,523
+    "scripts/risk_threshold_guardrail.py": 3000,  # canonical 4,790
 }
 
 # Forbidden tokens — values that have been superseded but might still lurk.
@@ -115,12 +115,35 @@ class Finding:
 
 
 HISTORICAL_MARKERS = (
-    "supersede", "supersedes", "earlier", "previously", "v1 (pre-",
-    "changelog", "old:", "deprecated", "→", "->", "fixed",
-    "pcc v2", "10x", "anti-overclaim", "never say", "never quote", "never describe",
-    "avoid \"production", "label is gated", "no claim", "rule:",
-    "no \"production", "disclaimer:", "do not use", "do not",
-    "anything referencing", "until §8", "until pcc", "anything mentioning",
+    "supersede",
+    "supersedes",
+    "earlier",
+    "previously",
+    "v1 (pre-",
+    "changelog",
+    "old:",
+    "deprecated",
+    "→",
+    "->",
+    "fixed",
+    "pcc v2",
+    "10x",
+    "anti-overclaim",
+    "never say",
+    "never quote",
+    "never describe",
+    'avoid "production',
+    "label is gated",
+    "no claim",
+    "rule:",
+    'no "production',
+    "disclaimer:",
+    "do not use",
+    "do not",
+    "anything referencing",
+    "until §8",
+    "until pcc",
+    "anything mentioning",
 )
 
 
@@ -175,7 +198,11 @@ def scan_file(path: Path) -> list[Finding]:
     # Leverage assertion check: any line that ASSERTS a leverage value should say 10x.
     for i, line in enumerate(lines, start=1):
         # Patterns that look like the file is stating a current leverage cap value.
-        if re.search(r"(?:max[\s_-]*leverage|leverage\s*cap|leverage\s*=)\s*[:\s]*[\d.]+\s*x", line, re.IGNORECASE):
+        if re.search(
+            r"(?:max[\s_-]*leverage|leverage\s*cap|leverage\s*=)\s*[:\s]*[\d.]+\s*x",
+            line,
+            re.IGNORECASE,
+        ):
             if not re.search(r"10\s*x", line, re.IGNORECASE):
                 if is_meta_or_historical(line):
                     continue

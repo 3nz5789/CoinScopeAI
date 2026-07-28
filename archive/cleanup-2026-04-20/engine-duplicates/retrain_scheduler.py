@@ -91,14 +91,11 @@ class WeeklyRetrainer:
                 try:
                     # Fetch 4-hour candles
                     ohlcv = self.exchange.fetch_ohlcv(
-                        pair,
-                        "4h",
-                        limit=self.LOOKBACK_DAYS * 6  # ~6 candles per day
+                        pair, "4h", limit=self.LOOKBACK_DAYS * 6  # ~6 candles per day
                     )
 
                     df = pd.DataFrame(
-                        ohlcv,
-                        columns=["ts", "open", "high", "low", "close", "volume"]
+                        ohlcv, columns=["ts", "open", "high", "low", "close", "volume"]
                     )
 
                     # Calculate returns and volatility
@@ -129,6 +126,7 @@ class WeeklyRetrainer:
 
             # Train new model
             from hmm_regime_detector import EnsembleRegimeDetector
+
             new_model = EnsembleRegimeDetector()
             new_model.fit(returns, vols)
 
@@ -138,8 +136,7 @@ class WeeklyRetrainer:
 
             if accuracy < self.MIN_ACCURACY:
                 logger.error(
-                    f"❌ New model accuracy {accuracy:.1%} < "
-                    f"minimum {self.MIN_ACCURACY:.1%}"
+                    f"❌ New model accuracy {accuracy:.1%} < " f"minimum {self.MIN_ACCURACY:.1%}"
                 )
                 # BUG-7 FIX: use send_critical
                 self.alerts.send_critical(
@@ -191,14 +188,16 @@ class WeeklyRetrainer:
                 )
 
             # Record in history
-            self.model_history.append({
-                'timestamp': datetime.utcnow().isoformat(),
-                'version': version,
-                'accuracy': accuracy,
-                'current_accuracy': current_accuracy,
-                'improvement': improvement,
-                'promoted': accuracy > current_accuracy,
-            })
+            self.model_history.append(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "version": version,
+                    "accuracy": accuracy,
+                    "current_accuracy": current_accuracy,
+                    "improvement": improvement,
+                    "promoted": accuracy > current_accuracy,
+                }
+            )
 
             logger.info("✅ Weekly HMM retraining completed")
             return True
@@ -227,9 +226,9 @@ class WeeklyRetrainer:
         """Get current model version info"""
         if not self.model_history:
             return {
-                'version': 'initial',
-                'accuracy': 0.0,
-                'promoted_at': None,
+                "version": "initial",
+                "accuracy": 0.0,
+                "promoted_at": None,
             }
 
         return self.model_history[-1]

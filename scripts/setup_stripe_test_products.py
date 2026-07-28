@@ -39,8 +39,8 @@ TIERS = [
     {
         "name": "CoinScopeAI Free",
         "env_prefix": "FREE",
-        "monthly_cents": 0,       # $0.00/mo
-        "annual_cents": 0,        # $0.00/yr
+        "monthly_cents": 0,  # $0.00/mo
+        "annual_cents": 0,  # $0.00/yr
         "description": (
             "Entry-level access. 3 pairs monitored, 4h scan interval, "
             "Telegram alerts, 7-day trade journal, basic risk gate."
@@ -49,8 +49,8 @@ TIERS = [
     {
         "name": "CoinScopeAI Trader",
         "env_prefix": "TRADER",
-        "monthly_cents": 7900,    # $79.00/mo
-        "annual_cents": 75840,    # $758.40/yr  (≈20% off)
+        "monthly_cents": 7900,  # $79.00/mo
+        "annual_cents": 75840,  # $758.40/yr  (≈20% off)
         "description": (
             "25 pairs monitored, 1h scan interval, ML regime detection v3, "
             "Telegram + email alerts, unlimited trade journal, backtesting, "
@@ -60,8 +60,8 @@ TIERS = [
     {
         "name": "CoinScopeAI Desk Preview",
         "env_prefix": "DESK_PREVIEW",
-        "monthly_cents": 39900,   # $399.00/mo
-        "annual_cents": 383040,   # $3,830.40/yr (≈20% off)
+        "monthly_cents": 39900,  # $399.00/mo
+        "annual_cents": 383040,  # $3,830.40/yr (≈20% off)
         "description": (
             "Unlimited pairs, 15min scan interval, multi-exchange "
             "(Binance/Bybit/OKX/Hyperliquid), CVD + whale flow signals, "
@@ -83,6 +83,7 @@ TIERS = [
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def find_or_create_product(name: str, description: str) -> str:
     """Return existing active test-mode product ID, or create new."""
@@ -135,6 +136,7 @@ def find_or_create_price(
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     sep = "=" * 62
     print(sep)
@@ -155,9 +157,7 @@ def main() -> None:
         monthly_id = find_or_create_price(
             prod_id, tier["monthly_cents"], "month", tier["env_prefix"]
         )
-        annual_id = find_or_create_price(
-            prod_id, tier["annual_cents"], "year", tier["env_prefix"]
-        )
+        annual_id = find_or_create_price(prod_id, tier["annual_cents"], "year", tier["env_prefix"])
         env_out[f"STRIPE_PRICE_{tier['env_prefix']}_MONTHLY"] = monthly_id
         env_out[f"STRIPE_PRICE_{tier['env_prefix']}_ANNUAL"] = annual_id
         print()

@@ -22,9 +22,9 @@ load_dotenv()
 
 @dataclass
 class BinanceConfig:
-    rest_url:   str
-    ws_url:     str
-    api_key:    str
+    rest_url: str
+    ws_url: str
+    api_key: str
     api_secret: str
     is_testnet: bool
 
@@ -48,12 +48,12 @@ def load_config() -> BinanceConfig:
 
     if is_testnet:
         rest_url = "https://testnet.binancefuture.com"
-        ws_url   = "wss://stream.binancefuture.com"
+        ws_url = "wss://stream.binancefuture.com"
     else:
         rest_url = "https://fapi.binance.com"
-        ws_url   = "wss://fstream.binance.com"
+        ws_url = "wss://fstream.binance.com"
 
-    api_key    = os.getenv("BINANCE_API_KEY",    "")
+    api_key = os.getenv("BINANCE_API_KEY", "")
     api_secret = os.getenv("BINANCE_API_SECRET", "")
 
     if not api_key or not api_secret:
@@ -103,11 +103,12 @@ def startup_check(cfg: BinanceConfig) -> None:
 
 # ── Trade parameters (loaded from env so you can override without changing code) ─
 
+
 def trade_params() -> dict:
     """Risk/sizing parameters — all overridable via .env."""
     return {
-        "risk_pct":  float(os.getenv("RISK_PCT",  "1.0")),   # % of balance per trade
-        "leverage":  int(os.getenv("LEVERAGE",    "10")),     # futures leverage
-        "sl_pct":    float(os.getenv("SL_PCT",    "1.5")),    # stop-loss % from entry
-        "rr_ratio":  float(os.getenv("RR_RATIO",  "2.0")),    # reward:risk (TP = SL * rr)
+        "risk_pct": float(os.getenv("RISK_PCT", "1.0")),  # % of balance per trade
+        "leverage": int(os.getenv("LEVERAGE", "10")),  # futures leverage
+        "sl_pct": float(os.getenv("SL_PCT", "1.5")),  # stop-loss % from entry
+        "rr_ratio": float(os.getenv("RR_RATIO", "2.0")),  # reward:risk (TP = SL * rr)
     }

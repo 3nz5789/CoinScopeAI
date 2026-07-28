@@ -27,13 +27,13 @@ TEST_PRICE_TRADER_MONTHLY = "price_trader_monthly_test"
 TEST_PRICE_FREE_MONTHLY = "price_free_monthly_test"
 TEST_PRICE_DESK_PREVIEW_ANNUAL = "price_desk_preview_annual_test"
 
-os.environ["STRIPE_SECRET_KEY"]          = "sk_test_fake"
-os.environ["STRIPE_WEBHOOK_SECRET"]      = TEST_WEBHOOK_SECRET
-os.environ["STRIPE_PRICE_TRADER_MONTHLY"]   = TEST_PRICE_TRADER_MONTHLY
+os.environ["STRIPE_SECRET_KEY"] = "sk_test_fake"
+os.environ["STRIPE_WEBHOOK_SECRET"] = TEST_WEBHOOK_SECRET
+os.environ["STRIPE_PRICE_TRADER_MONTHLY"] = TEST_PRICE_TRADER_MONTHLY
 os.environ["STRIPE_PRICE_FREE_MONTHLY"] = TEST_PRICE_FREE_MONTHLY
-os.environ["STRIPE_PRICE_DESK_PREVIEW_ANNUAL"]  = TEST_PRICE_DESK_PREVIEW_ANNUAL
-os.environ["TELEGRAM_BOT_TOKEN"]         = ""   # Disable telegram in tests
-os.environ["TELEGRAM_CHAT_ID"]           = ""
+os.environ["STRIPE_PRICE_DESK_PREVIEW_ANNUAL"] = TEST_PRICE_DESK_PREVIEW_ANNUAL
+os.environ["TELEGRAM_BOT_TOKEN"] = ""  # Disable telegram in tests
+os.environ["TELEGRAM_CHAT_ID"] = ""
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
@@ -41,6 +41,7 @@ from billing.models import BillingInterval, SubscriptionStatus, SubscriptionTier
 from billing.subscription_store import SubscriptionRecord, SubscriptionStore  # noqa: E402
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _make_stripe_sig(payload: bytes, secret: str, timestamp: int = None) -> str:
     """Construct a Stripe webhook signature header (same algorithm Stripe uses)."""
@@ -54,13 +55,14 @@ def _make_stripe_sig(payload: bytes, secret: str, timestamp: int = None) -> str:
 # Counter for deterministic unique event IDs (avoid same-second collisions)
 _event_counter = 0
 
+
 def _event(event_type: str, data: dict) -> dict:
     """Build a minimal Stripe v1 event envelope (stripe SDK v15 compatible)."""
     global _event_counter
     _event_counter += 1
     return {
         "id": f"evt_test_{_event_counter:04d}_{event_type.replace('.', '_')}",
-        "object": "event",          # Required by stripe SDK v15 construct_event
+        "object": "event",  # Required by stripe SDK v15 construct_event
         "api_version": "2023-10-16",
         "type": event_type,
         "data": {"object": data},
@@ -70,7 +72,7 @@ def _event(event_type: str, data: dict) -> dict:
 def _post_event(client, event_type: str, data: dict, secret: str = TEST_WEBHOOK_SECRET):
     """Post a signed Stripe event to the webhook endpoint."""
     body = json.dumps(_event(event_type, data)).encode()
-    sig  = _make_stripe_sig(body, secret)
+    sig = _make_stripe_sig(body, secret)
     return client.post(
         "/billing/webhook",
         content=body,
@@ -79,6 +81,7 @@ def _post_event(client, event_type: str, data: dict, secret: str = TEST_WEBHOOK_
 
 
 # ── SubscriptionStore unit tests ──────────────────────────────────────────────
+
 
 class TestSubscriptionStore:
     """Tests for SQLite subscription persistence."""
@@ -89,7 +92,9 @@ class TestSubscriptionStore:
         db_path = str(tmp_path / "test_billing.db")
         self.store = SubscriptionStore(db_path=db_path)
 
-    def _make_record(self, customer_id="cus_test001", sub_id="sub_test001", tier=SubscriptionTier.TRADER):
+    def _make_record(
+        self, customer_id="cus_test001", sub_id="sub_test001", tier=SubscriptionTier.TRADER
+    ):
         return SubscriptionRecord(
             customer_id=customer_id,
             email="test@example.com",
@@ -161,28 +166,33 @@ class TestSubscriptionStore:
 
 # ── Price resolution tests ────────────────────────────────────────────────────
 
+
 class TestPriceResolution:
     """Tests for price_id → tier/interval mapping."""
 
     def test_known_price_resolves_correctly(self):
         from billing.webhook_handler import resolve_price
+
         tier, interval = resolve_price(TEST_PRICE_TRADER_MONTHLY)
         assert tier == SubscriptionTier.TRADER
         assert interval == BillingInterval.MONTHLY
 
     def test_unknown_price_returns_unknown_tier(self):
         from billing.webhook_handler import resolve_price
+
         tier, interval = resolve_price("price_nonexistent")
         assert tier == SubscriptionTier.UNKNOWN
 
     def test_desk_preview_annual_resolves(self):
         from billing.webhook_handler import resolve_price
+
         tier, interval = resolve_price(TEST_PRICE_DESK_PREVIEW_ANNUAL)
         assert tier == SubscriptionTier.DESK_PREVIEW
         assert interval == BillingInterval.ANNUAL
 
 
 # ── Webhook endpoint integration tests ───────────────────────────────────────
+
 
 class TestWebhookEndpoint:
     """Integration tests for the FastAPI webhook endpoint."""
@@ -195,6 +205,7 @@ class TestWebhookEndpoint:
         mock_notifier = MagicMock()
 
         import billing.webhook_handler as wh
+
         # Inject test dependencies via the lazy-singleton globals
         wh._store_instance = test_store
         wh._notifier_instance = mock_notifier
@@ -257,26 +268,29 @@ class TestWebhookEndpoint:
 
         def _post_fixed(evt: dict):
             body = json.dumps(evt).encode()
-            sig  = _make_stripe_sig(body, TEST_WEBHOOK_SECRET)
+            sig = _make_stripe_sig(body, TEST_WEBHOOK_SECRET)
             return self.client.post(
                 "/billing/webhook",
                 content=body,
                 headers={"stripe-signature": sig, "content-type": "application/json"},
             )
 
-        with patch.object(self.wh, "_resolve_tier_from_subscription_id",
-                          return_value=(SubscriptionTier.TRADER, BillingInterval.MONTHLY)):
+        with patch.object(
+            self.wh,
+            "_resolve_tier_from_subscription_id",
+            return_value=(SubscriptionTier.TRADER, BillingInterval.MONTHLY),
+        ):
             r1 = _post_fixed(fixed_event)
             r2 = _post_fixed(fixed_event)
 
         assert r1.status_code == 200
-        assert r1.json().get("duplicate") is not True   # first is NOT duplicate
+        assert r1.json().get("duplicate") is not True  # first is NOT duplicate
         assert r2.status_code == 200
-        assert r2.json().get("duplicate") is True        # second IS duplicate
+        assert r2.json().get("duplicate") is True  # second IS duplicate
 
     def test_checkout_session_completed_creates_subscription(self):
         customer_id = "cus_newco001"
-        sub_id      = "sub_newco001"
+        sub_id = "sub_newco001"
         checkout_data = {
             "id": "cs_test_001",
             "mode": "subscription",
@@ -285,8 +299,11 @@ class TestWebhookEndpoint:
             "customer_email": "new@customer.com",
         }
 
-        with patch.object(self.wh, "_resolve_tier_from_subscription_id",
-                          return_value=(SubscriptionTier.TRADER, BillingInterval.MONTHLY)):
+        with patch.object(
+            self.wh,
+            "_resolve_tier_from_subscription_id",
+            return_value=(SubscriptionTier.TRADER, BillingInterval.MONTHLY),
+        ):
             resp = _post_event(self.client, "checkout.session.completed", checkout_data)
 
         assert resp.status_code == 200
@@ -297,12 +314,16 @@ class TestWebhookEndpoint:
 
     def test_checkout_non_subscription_mode_is_ignored(self):
         """Checkout sessions in 'payment' mode should be skipped."""
-        resp = _post_event(self.client, "checkout.session.completed", {
-            "id": "cs_pay_001",
-            "mode": "payment",
-            "customer": "cus_pay",
-            "subscription": None,
-        })
+        resp = _post_event(
+            self.client,
+            "checkout.session.completed",
+            {
+                "id": "cs_pay_001",
+                "mode": "payment",
+                "customer": "cus_pay",
+                "subscription": None,
+            },
+        )
         assert resp.status_code == 200
 
     def test_subscription_deleted_cancels_record(self):
@@ -311,7 +332,8 @@ class TestWebhookEndpoint:
 
         # First create a subscription
         record = SubscriptionRecord(
-            customer_id=cid, email="del@example.com",
+            customer_id=cid,
+            email="del@example.com",
             stripe_subscription_id=sid,
             tier=SubscriptionTier.DESK_PREVIEW,
             status=SubscriptionStatus.ACTIVE,
@@ -322,11 +344,15 @@ class TestWebhookEndpoint:
         )
         self.wh._store_instance.upsert_subscription(record)
 
-        resp = _post_event(self.client, "customer.subscription.deleted", {
-            "id": sid,
-            "customer": cid,
-            "cancel_at_period_end": True,
-        })
+        resp = _post_event(
+            self.client,
+            "customer.subscription.deleted",
+            {
+                "id": sid,
+                "customer": cid,
+                "cancel_at_period_end": True,
+            },
+        )
         assert resp.status_code == 200
         sub = self.wh._store_instance.get_subscription_by_customer(cid)
         assert sub.status == SubscriptionStatus.CANCELED
@@ -336,7 +362,8 @@ class TestWebhookEndpoint:
         sid = "sub_pay001"
 
         record = SubscriptionRecord(
-            customer_id=cid, email="pay@example.com",
+            customer_id=cid,
+            email="pay@example.com",
             stripe_subscription_id=sid,
             tier=SubscriptionTier.TRADER,
             status=SubscriptionStatus.ACTIVE,
@@ -347,14 +374,18 @@ class TestWebhookEndpoint:
         )
         self.wh._store_instance.upsert_subscription(record)
 
-        resp = _post_event(self.client, "invoice.payment_succeeded", {
-            "id": "in_test_001",
-            "customer": cid,
-            "subscription": sid,
-            "amount_paid": 7900,     # $79.00
-            "currency": "usd",
-            "status": "paid",
-        })
+        resp = _post_event(
+            self.client,
+            "invoice.payment_succeeded",
+            {
+                "id": "in_test_001",
+                "customer": cid,
+                "subscription": sid,
+                "amount_paid": 7900,  # $79.00
+                "currency": "usd",
+                "status": "paid",
+            },
+        )
         assert resp.status_code == 200
         self.wh._notifier_instance.payment_succeeded.assert_called_once()
 
@@ -363,7 +394,8 @@ class TestWebhookEndpoint:
         sid = "sub_fail001"
 
         record = SubscriptionRecord(
-            customer_id=cid, email="fail@example.com",
+            customer_id=cid,
+            email="fail@example.com",
             stripe_subscription_id=sid,
             tier=SubscriptionTier.FREE,
             status=SubscriptionStatus.ACTIVE,
@@ -374,13 +406,17 @@ class TestWebhookEndpoint:
         )
         self.wh._store_instance.upsert_subscription(record)
 
-        resp = _post_event(self.client, "invoice.payment_failed", {
-            "id": "in_fail_001",
-            "customer": cid,
-            "subscription": sid,
-            "amount_due": 0,
-            "next_payment_attempt": int(time.time()) + 86400,
-        })
+        resp = _post_event(
+            self.client,
+            "invoice.payment_failed",
+            {
+                "id": "in_fail_001",
+                "customer": cid,
+                "subscription": sid,
+                "amount_due": 0,
+                "next_payment_attempt": int(time.time()) + 86400,
+            },
+        )
         assert resp.status_code == 200
         self.wh._notifier_instance.payment_failed.assert_called_once()
 
@@ -388,7 +424,8 @@ class TestWebhookEndpoint:
         """Free-trial invoices should not trigger payment_succeeded notification."""
         cid = "cus_free001"
         record = SubscriptionRecord(
-            customer_id=cid, email="free@example.com",
+            customer_id=cid,
+            email="free@example.com",
             stripe_subscription_id="sub_free001",
             tier=SubscriptionTier.TRADER,
             status=SubscriptionStatus.TRIALING,
@@ -399,14 +436,18 @@ class TestWebhookEndpoint:
         )
         self.wh._store_instance.upsert_subscription(record)
 
-        resp = _post_event(self.client, "invoice.payment_succeeded", {
-            "id": "in_zero_001",
-            "customer": cid,
-            "subscription": "sub_free001",
-            "amount_paid": 0,
-            "currency": "usd",
-            "status": "paid",
-        })
+        resp = _post_event(
+            self.client,
+            "invoice.payment_succeeded",
+            {
+                "id": "in_zero_001",
+                "customer": cid,
+                "subscription": "sub_free001",
+                "amount_paid": 0,
+                "currency": "usd",
+                "status": "paid",
+            },
+        )
         assert resp.status_code == 200
         self.wh._notifier_instance.payment_succeeded.assert_not_called()
 
@@ -417,7 +458,8 @@ class TestWebhookEndpoint:
 
     def test_list_subscriptions_endpoint(self):
         record = SubscriptionRecord(
-            customer_id="cus_list001", email="list@example.com",
+            customer_id="cus_list001",
+            email="list@example.com",
             stripe_subscription_id="sub_list001",
             tier=SubscriptionTier.DESK_FULL,
             status=SubscriptionStatus.ACTIVE,
@@ -433,7 +475,8 @@ class TestWebhookEndpoint:
 
     def test_customer_lookup_endpoint(self):
         record = SubscriptionRecord(
-            customer_id="cus_look001", email="look@example.com",
+            customer_id="cus_look001",
+            email="look@example.com",
             stripe_subscription_id="sub_look001",
             tier=SubscriptionTier.DESK_PREVIEW,
             status=SubscriptionStatus.ACTIVE,

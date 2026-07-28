@@ -52,8 +52,10 @@ logger = logging.getLogger(__name__)
 # Config (read once at import time so the module is self-contained)
 # ---------------------------------------------------------------------------
 
+
 def _env_bool(key: str, default: bool = False) -> bool:
     return os.getenv(key, str(default)).strip().lower() in ("1", "true", "yes")
+
 
 def _env_float(key: str, default: float) -> float:
     try:
@@ -77,16 +79,13 @@ class IngestionConfig:
         WRITER_BATCH_SIZE            50
         WRITER_FLUSH_INTERVAL_S      5
     """
+
     def __init__(self) -> None:
         self.is_testnet: bool = _env_bool("TESTNET_MODE", True)
 
         # WebSocket base URLs
-        _ws_testnet = os.getenv(
-            "BINANCE_WS_TESTNET_URL", "wss://stream.binancefuture.com"
-        )
-        _ws_mainnet = os.getenv(
-            "BINANCE_WS_MAINNET_URL", "wss://fstream.binance.com"
-        )
+        _ws_testnet = os.getenv("BINANCE_WS_TESTNET_URL", "wss://stream.binancefuture.com")
+        _ws_mainnet = os.getenv("BINANCE_WS_MAINNET_URL", "wss://fstream.binance.com")
         # Stream path — change to /market on/after 2026-04-23
         _stream_path = os.getenv("WS_STREAM_PATH", "/ws")
 
@@ -94,24 +93,14 @@ class IngestionConfig:
         self.ws_url: str = f"{ws_base.rstrip('/')}{_stream_path}/!markPrice@arr"
 
         # REST base URLs
-        _rest_testnet = os.getenv(
-            "REST_TESTNET_URL", "https://testnet.binancefuture.com"
-        )
-        _rest_mainnet = os.getenv(
-            "REST_MAINNET_URL", "https://fapi.binance.com"
-        )
+        _rest_testnet = os.getenv("REST_TESTNET_URL", "https://testnet.binancefuture.com")
+        _rest_mainnet = os.getenv("REST_MAINNET_URL", "https://fapi.binance.com")
         self.rest_base: str = _rest_testnet if self.is_testnet else _rest_mainnet
 
         # Tuning
-        self.rest_poll_interval: int = int(
-            _env_float("REST_POLL_INTERVAL_S", 60)
-        )
-        self.writer_batch_size: int = int(
-            _env_float("WRITER_BATCH_SIZE", 50)
-        )
-        self.writer_flush_interval: float = _env_float(
-            "WRITER_FLUSH_INTERVAL_S", 5.0
-        )
+        self.rest_poll_interval: int = int(_env_float("REST_POLL_INTERVAL_S", 60))
+        self.writer_batch_size: int = int(_env_float("WRITER_BATCH_SIZE", 50))
+        self.writer_flush_interval: float = _env_float("WRITER_FLUSH_INTERVAL_S", 5.0)
 
     def describe(self) -> str:
         env_label = "TESTNET ⚠️" if self.is_testnet else "MAINNET 🔴"
@@ -127,6 +116,7 @@ class IngestionConfig:
 # ---------------------------------------------------------------------------
 # WebSocket consumer
 # ---------------------------------------------------------------------------
+
 
 class FundingRateWSConsumer:
     """
@@ -167,9 +157,7 @@ class FundingRateWSConsumer:
                 logger.info("[WSConsumer] Cancelled — shutting down.")
                 break
             except Exception as exc:
-                logger.error(
-                    f"[WSConsumer] Error: {exc!r} — reconnecting in {backoff}s"
-                )
+                logger.error(f"[WSConsumer] Error: {exc!r} — reconnecting in {backoff}s")
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 60)
 
@@ -182,8 +170,9 @@ class FundingRateWSConsumer:
     def stats(self) -> dict:
         return {
             "ticks_received": self._ticks_received,
-            "last_tick_age_s": round(time.time() - self._last_tick_ts, 1)
-            if self._last_tick_ts else None,
+            "last_tick_age_s": (
+                round(time.time() - self._last_tick_ts, 1) if self._last_tick_ts else None
+            ),
         }
 
     # ------------------------------------------------------------------
@@ -194,10 +183,10 @@ class FundingRateWSConsumer:
         logger.info(f"[WSConsumer] Connecting → {self.cfg.ws_url}")
         async with websockets.connect(
             self.cfg.ws_url,
-            ping_interval=20,    # send WS-level pings every 20s
-            ping_timeout=10,     # close if no pong within 10s
+            ping_interval=20,  # send WS-level pings every 20s
+            ping_timeout=10,  # close if no pong within 10s
             close_timeout=5,
-            max_size=2**22,      # 4 MB — the all-symbols frame can be large
+            max_size=2**22,  # 4 MB — the all-symbols frame can be large
         ) as ws:
             logger.info("[WSConsumer] ✅ Connected")
             async for raw in ws:
@@ -237,9 +226,7 @@ class FundingRateWSConsumer:
             try:
                 self.queue.put_nowait(records)
             except asyncio.QueueFull:
-                logger.warning(
-                    f"[WSConsumer] Queue full — dropped {len(records)} records"
-                )
+                logger.warning(f"[WSConsumer] Queue full — dropped {len(records)} records")
             self._ticks_received += len(records)
             self._last_tick_ts = time.time()
 
@@ -273,6 +260,7 @@ class FundingRateWSConsumer:
 # REST poller (supplement / fallback)
 # ---------------------------------------------------------------------------
 
+
 class FundingRateRESTPoller:
     """
     Polls GET /fapi/v1/premiumIndex?symbol= (all-symbols variant) at a
@@ -295,15 +283,11 @@ class FundingRateRESTPoller:
 
     async def run(self) -> None:
         """Poll at `REST_POLL_INTERVAL_S` intervals until cancelled."""
-        logger.info(
-            f"[RESTPoller] Starting — polling every {self.cfg.rest_poll_interval}s"
-        )
+        logger.info(f"[RESTPoller] Starting — polling every {self.cfg.rest_poll_interval}s")
         while True:
             try:
                 await asyncio.sleep(self.cfg.rest_poll_interval)
-                records = await asyncio.get_event_loop().run_in_executor(
-                    None, self._fetch_all
-                )
+                records = await asyncio.get_event_loop().run_in_executor(None, self._fetch_all)
                 if records:
                     try:
                         self.queue.put_nowait(records)
@@ -314,8 +298,7 @@ class FundingRateRESTPoller:
                         )
                     self._poll_count += 1
                     logger.debug(
-                        f"[RESTPoller] Poll #{self._poll_count}: "
-                        f"{len(records)} symbols"
+                        f"[RESTPoller] Poll #{self._poll_count}: " f"{len(records)} symbols"
                     )
             except asyncio.CancelledError:
                 logger.info("[RESTPoller] Cancelled.")
@@ -345,15 +328,17 @@ class FundingRateRESTPoller:
                 sym = str(item.get("symbol", "")).upper()
                 if not sym.endswith("USDT"):
                     continue  # only USDT-M perps
-                records.append(FundingRateRecord(
-                    symbol=sym,
-                    funding_rate=float(item.get("lastFundingRate", 0) or 0),
-                    mark_price=float(item.get("markPrice", 0) or 0),
-                    index_price=float(item.get("indexPrice", 0) or 0) or None,
-                    next_funding_time=int(item.get("nextFundingTime", 0) or 0),
-                    ingested_at=now_ms,
-                    source="rest",
-                ))
+                records.append(
+                    FundingRateRecord(
+                        symbol=sym,
+                        funding_rate=float(item.get("lastFundingRate", 0) or 0),
+                        mark_price=float(item.get("markPrice", 0) or 0),
+                        index_price=float(item.get("indexPrice", 0) or 0) or None,
+                        next_funding_time=int(item.get("nextFundingTime", 0) or 0),
+                        ingested_at=now_ms,
+                        source="rest",
+                    )
+                )
             except (ValueError, TypeError, KeyError) as exc:
                 logger.debug(f"[RESTPoller] Skip item {item}: {exc!r}")
         return records
@@ -362,6 +347,7 @@ class FundingRateRESTPoller:
 # ---------------------------------------------------------------------------
 # Writer task (queue → DB)
 # ---------------------------------------------------------------------------
+
 
 class FundingRateWriter:
     """
@@ -468,6 +454,7 @@ class FundingRateWriter:
 # Top-level pipeline assembler
 # ---------------------------------------------------------------------------
 
+
 class FundingRatePipeline:
     """
     Assembles and starts all three pipeline tasks:
@@ -497,7 +484,9 @@ class FundingRatePipeline:
         self._ws = FundingRateWSConsumer(self._queue, self.cfg)
         self._rest = FundingRateRESTPoller(self._queue, self.cfg)
         self._writer = FundingRateWriter(
-            self._queue, self.store, self.cfg,
+            self._queue,
+            self.store,
+            self.cfg,
             on_new_record=self.on_new_record,
         )
 
@@ -510,9 +499,7 @@ class FundingRatePipeline:
         ]
         try:
             # Wait for any task to finish (normally they run forever)
-            done, pending = await asyncio.wait(
-                tasks, return_when=asyncio.FIRST_EXCEPTION
-            )
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
             for t in done:
                 if t.exception():
                     logger.error(f"[Pipeline] Task {t.get_name()} raised: {t.exception()!r}")

@@ -14,6 +14,7 @@ Tests cover:
 - Record -> Replay round-trip
 - Edge cases and error handling
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -68,6 +69,7 @@ from services.market_data.streams.trades import TradeStream
 # ===========================================================================
 # Helpers: capture on_msg closure and run one REST poll iteration
 # ===========================================================================
+
 
 async def _capture_ws_on_msg(stream, method_name: str, symbol: str):
     """
@@ -125,13 +127,19 @@ async def _run_rest_poll_once(stream, method_name: str, symbol: str, mock_respon
 # 1. Data Models
 # ===========================================================================
 
+
 class TestDataModels:
 
     def test_trade_creation(self):
         t = Trade(
-            exchange="binance", symbol="BTCUSDT", trade_id="123",
-            price=50000.0, quantity=1.5, side="buy",
-            timestamp_ms=1_700_000_000_000, received_ms=1_700_000_000_001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            trade_id="123",
+            price=50000.0,
+            quantity=1.5,
+            side="buy",
+            timestamp_ms=1_700_000_000_000,
+            received_ms=1_700_000_000_001,
         )
         assert t.exchange == "binance"
         assert t.price == 50000.0
@@ -139,9 +147,14 @@ class TestDataModels:
 
     def test_trade_to_dict(self):
         t = Trade(
-            exchange="bybit", symbol="ETHUSDT", trade_id="456",
-            price=3000.0, quantity=2.0, side="sell",
-            timestamp_ms=1_700_000_000_000, received_ms=1_700_000_000_001,
+            exchange="bybit",
+            symbol="ETHUSDT",
+            trade_id="456",
+            price=3000.0,
+            quantity=2.0,
+            side="sell",
+            timestamp_ms=1_700_000_000_000,
+            received_ms=1_700_000_000_001,
         )
         d = t.to_dict()
         assert d["exchange"] == "bybit"
@@ -150,9 +163,14 @@ class TestDataModels:
 
     def test_trade_to_json(self):
         t = Trade(
-            exchange="okx", symbol="BTCUSDT", trade_id="xyz",
-            price=45000.0, quantity=2.0, side="buy",
-            timestamp_ms=2_000, received_ms=2_001,
+            exchange="okx",
+            symbol="BTCUSDT",
+            trade_id="xyz",
+            price=45000.0,
+            quantity=2.0,
+            side="buy",
+            timestamp_ms=2_000,
+            received_ms=2_001,
         )
         raw = t.to_json()
         parsed = orjson.loads(raw)
@@ -160,21 +178,29 @@ class TestDataModels:
 
     def test_funding_rate_creation(self):
         fr = FundingRate(
-            exchange="binance", symbol="BTCUSDT",
-            funding_rate=0.0001, predicted_rate=0.00012,
+            exchange="binance",
+            symbol="BTCUSDT",
+            funding_rate=0.0001,
+            predicted_rate=0.00012,
             funding_time_ms=1_700_000_000_000,
-            timestamp_ms=1_700_000_000_000, received_ms=1_700_000_000_001,
-            mark_price=50000.0, index_price=49998.0,
+            timestamp_ms=1_700_000_000_000,
+            received_ms=1_700_000_000_001,
+            mark_price=50000.0,
+            index_price=49998.0,
         )
         assert fr.funding_rate == 0.0001
         assert fr.mark_price == 50000.0
 
     def test_liquidation_creation(self):
         liq = Liquidation(
-            exchange="binance", symbol="BTCUSDT",
-            side="sell", price=48000.0, quantity=1.0,
+            exchange="binance",
+            symbol="BTCUSDT",
+            side="sell",
+            price=48000.0,
+            quantity=1.0,
             usd_value=48000.0,
-            timestamp_ms=1_700_000_000_000, received_ms=1_700_000_000_001,
+            timestamp_ms=1_700_000_000_000,
+            received_ms=1_700_000_000_001,
         )
         assert liq.usd_value == 48000.0
         assert liq.is_derived is False
@@ -183,10 +209,14 @@ class TestDataModels:
         bids = [OrderBookLevel(price=50000.0, quantity=1.0)]
         asks = [OrderBookLevel(price=50001.0, quantity=0.5)]
         ob = OrderBookUpdate(
-            exchange="binance", symbol="BTCUSDT",
-            bids=bids, asks=asks,
-            timestamp_ms=1_700_000_000_000, received_ms=1_700_000_000_001,
-            is_snapshot=True, sequence=12345,
+            exchange="binance",
+            symbol="BTCUSDT",
+            bids=bids,
+            asks=asks,
+            timestamp_ms=1_700_000_000_000,
+            received_ms=1_700_000_000_001,
+            is_snapshot=True,
+            sequence=12345,
         )
         assert ob.is_snapshot is True
         assert ob.bids[0].price == 50000.0
@@ -195,9 +225,12 @@ class TestDataModels:
         bids = [OrderBookLevel(price=100.0, quantity=5.0)]
         asks = [OrderBookLevel(price=101.0, quantity=3.0)]
         ob = OrderBookUpdate(
-            exchange="bybit", symbol="ETHUSDT",
-            bids=bids, asks=asks,
-            timestamp_ms=3_000, received_ms=3_001,
+            exchange="bybit",
+            symbol="ETHUSDT",
+            bids=bids,
+            asks=asks,
+            timestamp_ms=3_000,
+            received_ms=3_001,
         )
         d = ob.to_dict()
         assert d["bids"] == [[100.0, 5.0]]
@@ -206,9 +239,12 @@ class TestDataModels:
 
     def test_stream_status_creation(self):
         ss = StreamStatus(
-            exchange="okx", stream_type="trades",
-            symbol="BTCUSDT", connected=True,
-            message="connected", timestamp_ms=1_000,
+            exchange="okx",
+            stream_type="trades",
+            symbol="BTCUSDT",
+            connected=True,
+            message="connected",
+            timestamp_ms=1_000,
         )
         assert ss.connected is True
         d = ss.to_dict()
@@ -218,6 +254,7 @@ class TestDataModels:
 # ===========================================================================
 # 2. Symbol Normalisation
 # ===========================================================================
+
 
 class TestSymbolNormalisation:
 
@@ -252,6 +289,7 @@ class TestSymbolNormalisation:
 # 3. EventBus
 # ===========================================================================
 
+
 class TestEventBus:
 
     async def test_subscribe_and_receive(self):
@@ -263,9 +301,14 @@ class TestEventBus:
 
         await bus.subscribe(EventType.TRADE, handler)
         trade = Trade(
-            exchange="binance", symbol="BTCUSDT", trade_id="1",
-            price=50000.0, quantity=1.0, side="buy",
-            timestamp_ms=1000, received_ms=1001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            trade_id="1",
+            price=50000.0,
+            quantity=1.0,
+            side="buy",
+            timestamp_ms=1000,
+            received_ms=1001,
         )
         await bus.publish(EventType.TRADE, trade)
         assert len(received) == 1
@@ -282,14 +325,23 @@ class TestEventBus:
         await bus.subscribe_all(handler)
 
         trade = Trade(
-            exchange="binance", symbol="BTCUSDT", trade_id="1",
-            price=50000.0, quantity=1.0, side="buy",
-            timestamp_ms=1000, received_ms=1001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            trade_id="1",
+            price=50000.0,
+            quantity=1.0,
+            side="buy",
+            timestamp_ms=1000,
+            received_ms=1001,
         )
         fr = FundingRate(
-            exchange="binance", symbol="BTCUSDT",
-            funding_rate=0.0001, predicted_rate=None,
-            funding_time_ms=1000, timestamp_ms=1000, received_ms=1001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            funding_rate=0.0001,
+            predicted_rate=None,
+            funding_time_ms=1000,
+            timestamp_ms=1000,
+            received_ms=1001,
         )
         await bus.publish(EventType.TRADE, trade)
         await bus.publish(EventType.FUNDING_RATE, fr)
@@ -310,9 +362,14 @@ class TestEventBus:
         await bus.subscribe(EventType.TRADE, handler_b)
 
         trade = Trade(
-            exchange="binance", symbol="BTCUSDT", trade_id="1",
-            price=50000.0, quantity=1.0, side="buy",
-            timestamp_ms=1000, received_ms=1001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            trade_id="1",
+            price=50000.0,
+            quantity=1.0,
+            side="buy",
+            timestamp_ms=1000,
+            received_ms=1001,
         )
         await bus.publish(EventType.TRADE, trade)
         assert len(results_a) == 1
@@ -333,9 +390,13 @@ class TestEventBus:
         await bus.subscribe(EventType.FUNDING_RATE, funding_handler)
 
         fr = FundingRate(
-            exchange="binance", symbol="BTCUSDT",
-            funding_rate=0.0001, predicted_rate=None,
-            funding_time_ms=1000, timestamp_ms=1000, received_ms=1001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            funding_rate=0.0001,
+            predicted_rate=None,
+            funding_time_ms=1000,
+            timestamp_ms=1000,
+            received_ms=1001,
         )
         await bus.publish(EventType.FUNDING_RATE, fr)
         assert len(trade_received) == 0
@@ -350,6 +411,7 @@ class TestEventBus:
 # ===========================================================================
 # 4. LocalOrderBook
 # ===========================================================================
+
 
 class TestLocalOrderBook:
 
@@ -452,6 +514,7 @@ class TestLocalOrderBook:
 # 5. Trade Stream Parsing
 # ===========================================================================
 
+
 class TestTradeStreamParsing:
 
     async def test_binance_aggtrade_buy_side(self):
@@ -468,8 +531,12 @@ class TestTradeStreamParsing:
         assert on_msg is not None
 
         msg = {
-            "e": "aggTrade", "E": 1700000000001, "s": "BTCUSDT",
-            "a": 999888, "p": "50000.00", "q": "0.500",
+            "e": "aggTrade",
+            "E": 1700000000001,
+            "s": "BTCUSDT",
+            "a": 999888,
+            "p": "50000.00",
+            "q": "0.500",
             "T": 1700000000000,
             "m": False,  # m=False → taker is buyer → side='buy'
         }
@@ -494,8 +561,11 @@ class TestTradeStreamParsing:
 
         on_msg = await _capture_ws_on_msg(stream, "_binance_trades", "BTCUSDT")
         msg = {
-            "e": "aggTrade", "s": "BTCUSDT",
-            "a": 1, "p": "50000.00", "q": "1.0",
+            "e": "aggTrade",
+            "s": "BTCUSDT",
+            "a": 1,
+            "p": "50000.00",
+            "q": "1.0",
             "T": 1700000000000,
             "m": True,  # m=True → taker is seller → side='sell'
         }
@@ -666,6 +736,7 @@ class TestTradeStreamParsing:
 # 6. Order Book Stream Parsing
 # ===========================================================================
 
+
 class TestOrderBookStreamParsing:
 
     async def test_bybit_snapshot_parsing(self):
@@ -717,33 +788,37 @@ class TestOrderBookStreamParsing:
         on_msg = await _capture_ws_on_msg(stream, "_bybit_orderbook", "BTCUSDT")
 
         # First send a snapshot to sync the book
-        await on_msg({
-            "topic": "orderbook.50.BTCUSDT",
-            "type": "snapshot",
-            "ts": 1700000000000,
-            "cts": 1700000000000,
-            "data": {
-                "s": "BTCUSDT",
-                "b": [["50000.00", "1.000"]],
-                "a": [["50001.00", "1.500"]],
-                "u": 100,
-            },
-        })
+        await on_msg(
+            {
+                "topic": "orderbook.50.BTCUSDT",
+                "type": "snapshot",
+                "ts": 1700000000000,
+                "cts": 1700000000000,
+                "data": {
+                    "s": "BTCUSDT",
+                    "b": [["50000.00", "1.000"]],
+                    "a": [["50001.00", "1.500"]],
+                    "u": 100,
+                },
+            }
+        )
         received.clear()
 
         # Now send a delta
-        await on_msg({
-            "topic": "orderbook.50.BTCUSDT",
-            "type": "delta",
-            "ts": 1700000000100,
-            "cts": 1700000000100,
-            "data": {
-                "s": "BTCUSDT",
-                "b": [["49999.00", "3.000"]],
-                "a": [["50001.00", "2.000"]],
-                "u": 101,
-            },
-        })
+        await on_msg(
+            {
+                "topic": "orderbook.50.BTCUSDT",
+                "type": "delta",
+                "ts": 1700000000100,
+                "cts": 1700000000100,
+                "data": {
+                    "s": "BTCUSDT",
+                    "b": [["49999.00", "3.000"]],
+                    "a": [["50001.00", "2.000"]],
+                    "u": 101,
+                },
+            }
+        )
         assert len(received) == 1
         et, ob = received[0]
         assert et == EventType.ORDERBOOK_UPDATE
@@ -787,7 +862,9 @@ class TestOrderBookStreamParsing:
 
         await bus.subscribe(EventType.ORDERBOOK_SNAPSHOT, handler)
 
-        stream = OrderBookStream(symbols=["BTCUSDT"], exchanges=[Exchange.HYPERLIQUID], event_bus=bus)
+        stream = OrderBookStream(
+            symbols=["BTCUSDT"], exchanges=[Exchange.HYPERLIQUID], event_bus=bus
+        )
         on_msg = await _capture_ws_on_msg(stream, "_hyperliquid_orderbook", "BTCUSDT")
         assert on_msg is not None
 
@@ -826,6 +903,7 @@ class TestOrderBookStreamParsing:
 # ===========================================================================
 # 7. Funding Rate Stream Parsing
 # ===========================================================================
+
 
 class TestFundingStreamParsing:
 
@@ -956,6 +1034,7 @@ class TestFundingStreamParsing:
 # ===========================================================================
 # 8. Liquidation Stream Parsing
 # ===========================================================================
+
 
 class TestLiquidationStreamParsing:
 
@@ -1089,6 +1168,7 @@ class TestLiquidationStreamParsing:
 # 9. StreamRecorder
 # ===========================================================================
 
+
 class TestStreamRecorder:
 
     async def test_recorder_writes_events(self):
@@ -1098,9 +1178,14 @@ class TestStreamRecorder:
             await recorder.start()
 
             trade = Trade(
-                exchange="binance", symbol="BTCUSDT", trade_id="1",
-                price=50000.0, quantity=1.0, side="buy",
-                timestamp_ms=1_700_000_000_000, received_ms=1_700_000_000_001,
+                exchange="binance",
+                symbol="BTCUSDT",
+                trade_id="1",
+                price=50000.0,
+                quantity=1.0,
+                side="buy",
+                timestamp_ms=1_700_000_000_000,
+                received_ms=1_700_000_000_001,
             )
             await bus.publish(EventType.TRADE, trade)
             await recorder._flush_all()
@@ -1124,9 +1209,14 @@ class TestStreamRecorder:
 
             for i in range(200):
                 trade = Trade(
-                    exchange="binance", symbol="BTCUSDT", trade_id=str(i),
-                    price=50000.0 + i, quantity=1.0, side="buy",
-                    timestamp_ms=1_000 + i, received_ms=1_001 + i,
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    trade_id=str(i),
+                    price=50000.0 + i,
+                    quantity=1.0,
+                    side="buy",
+                    timestamp_ms=1_000 + i,
+                    received_ms=1_001 + i,
                 )
                 await bus.publish(EventType.TRADE, trade)
 
@@ -1146,14 +1236,23 @@ class TestStreamRecorder:
             await recorder.start()
 
             trade = Trade(
-                exchange="binance", symbol="BTCUSDT", trade_id="1",
-                price=50000.0, quantity=1.0, side="buy",
-                timestamp_ms=1_000, received_ms=1_001,
+                exchange="binance",
+                symbol="BTCUSDT",
+                trade_id="1",
+                price=50000.0,
+                quantity=1.0,
+                side="buy",
+                timestamp_ms=1_000,
+                received_ms=1_001,
             )
             fr = FundingRate(
-                exchange="binance", symbol="BTCUSDT",
-                funding_rate=0.0001, predicted_rate=None,
-                funding_time_ms=1_000, timestamp_ms=1_000, received_ms=1_001,
+                exchange="binance",
+                symbol="BTCUSDT",
+                funding_rate=0.0001,
+                predicted_rate=None,
+                funding_time_ms=1_000,
+                timestamp_ms=1_000,
+                received_ms=1_001,
             )
             await bus.publish(EventType.TRADE, trade)
             await bus.publish(EventType.FUNDING_RATE, fr)
@@ -1171,9 +1270,14 @@ class TestStreamRecorder:
 
             for i in range(5):
                 trade = Trade(
-                    exchange="binance", symbol="BTCUSDT", trade_id=str(i),
-                    price=50000.0 + i, quantity=1.0, side="buy",
-                    timestamp_ms=1_000 + i, received_ms=1_001 + i,
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    trade_id=str(i),
+                    price=50000.0 + i,
+                    quantity=1.0,
+                    side="buy",
+                    timestamp_ms=1_000 + i,
+                    received_ms=1_001 + i,
                 )
                 await bus.publish(EventType.TRADE, trade)
 
@@ -1190,9 +1294,14 @@ class TestStreamRecorder:
             await recorder.start()
 
             trade = Trade(
-                exchange="bybit", symbol="ETHUSDT", trade_id="99",
-                price=3000.0, quantity=2.0, side="sell",
-                timestamp_ms=2_000, received_ms=2_001,
+                exchange="bybit",
+                symbol="ETHUSDT",
+                trade_id="99",
+                price=3000.0,
+                quantity=2.0,
+                side="sell",
+                timestamp_ms=2_000,
+                received_ms=2_001,
             )
             await bus.publish(EventType.TRADE, trade)
             await recorder.stop()
@@ -1205,13 +1314,18 @@ class TestStreamRecorder:
 # 10. ReplayEngine
 # ===========================================================================
 
+
 def _write_test_recordings(tmp_dir: str, n_trades: int = 10, base_ts: int = 1_700_000_000_000):
     out_file = Path(tmp_dir) / "test_trades.jsonl.gz"
     with gzip.open(str(out_file), "wb") as f:
         for i in range(n_trades):
             trade = Trade(
-                exchange="binance", symbol="BTCUSDT", trade_id=str(i),
-                price=50000.0 + i, quantity=1.0, side="buy",
+                exchange="binance",
+                symbol="BTCUSDT",
+                trade_id=str(i),
+                price=50000.0 + i,
+                quantity=1.0,
+                side="buy",
                 timestamp_ms=base_ts + i * 1000,
                 received_ms=base_ts + i * 1000 + 1,
             )
@@ -1263,8 +1377,11 @@ class TestReplayEngine:
             end_ms = base_ts + 6000
 
             engine = ReplayEngine(
-                data_dir=tmp, event_bus=bus, speed=0,
-                start_time_ms=start_ms, end_time_ms=end_ms,
+                data_dir=tmp,
+                event_bus=bus,
+                speed=0,
+                start_time_ms=start_ms,
+                end_time_ms=end_ms,
             )
             await engine.start()
             await engine.wait()
@@ -1315,27 +1432,44 @@ class TestReplayEngine:
             out_file = Path(tmp) / "mixed.jsonl.gz"
             with gzip.open(str(out_file), "wb") as f:
                 trade = Trade(
-                    exchange="binance", symbol="BTCUSDT", trade_id="1",
-                    price=50000.0, quantity=1.0, side="buy",
-                    timestamp_ms=base_ts, received_ms=base_ts + 1,
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    trade_id="1",
+                    price=50000.0,
+                    quantity=1.0,
+                    side="buy",
+                    timestamp_ms=base_ts,
+                    received_ms=base_ts + 1,
                 )
-                f.write(orjson.dumps({
-                    "event_type": EventType.TRADE.value,
-                    "timestamp_ms": base_ts,
-                    "data": trade.to_dict(),
-                }) + b"\n")
+                f.write(
+                    orjson.dumps(
+                        {
+                            "event_type": EventType.TRADE.value,
+                            "timestamp_ms": base_ts,
+                            "data": trade.to_dict(),
+                        }
+                    )
+                    + b"\n"
+                )
                 fr = FundingRate(
-                    exchange="binance", symbol="BTCUSDT",
-                    funding_rate=0.0001, predicted_rate=None,
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    funding_rate=0.0001,
+                    predicted_rate=None,
                     funding_time_ms=base_ts + 1000,
                     timestamp_ms=base_ts + 1000,
                     received_ms=base_ts + 1001,
                 )
-                f.write(orjson.dumps({
-                    "event_type": EventType.FUNDING_RATE.value,
-                    "timestamp_ms": base_ts + 1000,
-                    "data": fr.to_dict(),
-                }) + b"\n")
+                f.write(
+                    orjson.dumps(
+                        {
+                            "event_type": EventType.FUNDING_RATE.value,
+                            "timestamp_ms": base_ts + 1000,
+                            "data": fr.to_dict(),
+                        }
+                    )
+                    + b"\n"
+                )
 
             bus = EventBus()
             trades_received = []
@@ -1395,6 +1529,7 @@ class TestReplayEngine:
 # ===========================================================================
 # 11. Bybit Portal Downloader
 # ===========================================================================
+
 
 class TestBybitPortalDownloader:
 
@@ -1530,6 +1665,7 @@ class TestBybitPortalDownloader:
 # 12. Bybit Public Trades Downloader
 # ===========================================================================
 
+
 class TestBybitPublicTradesDownloader:
 
     def test_cdn_url_construction(self):
@@ -1600,6 +1736,7 @@ class TestBybitPublicTradesDownloader:
 # 13. Date Helper Utilities
 # ===========================================================================
 
+
 class TestDateHelpers:
 
     def test_date_range_single_day(self):
@@ -1639,6 +1776,7 @@ class TestDateHelpers:
 # 14. RateLimiter
 # ===========================================================================
 
+
 class TestRateLimiter:
 
     async def test_rate_limiter_allows_burst(self):
@@ -1668,21 +1806,27 @@ class TestRateLimiter:
 # 15. Record -> Replay Round-Trip
 # ===========================================================================
 
+
 class TestRecordReplayRoundTrip:
 
     async def test_full_round_trip(self):
         with tempfile.TemporaryDirectory() as tmp:
             record_bus = EventBus()
             recorder = StreamRecorder(
-                output_dir=tmp, event_bus=record_bus, flush_interval=3600.0,
+                output_dir=tmp,
+                event_bus=record_bus,
+                flush_interval=3600.0,
             )
             await recorder.start()
 
             original_trades = []
             for i in range(5):
                 trade = Trade(
-                    exchange="binance", symbol="BTCUSDT", trade_id=str(i),
-                    price=50000.0 + i * 100, quantity=float(i + 1),
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    trade_id=str(i),
+                    price=50000.0 + i * 100,
+                    quantity=float(i + 1),
                     side="buy" if i % 2 == 0 else "sell",
                     timestamp_ms=1_700_000_000_000 + i * 1000,
                     received_ms=1_700_000_000_001 + i * 1000,
@@ -1716,6 +1860,7 @@ class TestRecordReplayRoundTrip:
 # 16. Edge Cases
 # ===========================================================================
 
+
 class TestEdgeCases:
 
     async def test_eventbus_handles_subscriber_exception(self):
@@ -1732,9 +1877,14 @@ class TestEdgeCases:
         await bus.subscribe(EventType.TRADE, good_handler)
 
         trade = Trade(
-            exchange="binance", symbol="BTCUSDT", trade_id="1",
-            price=50000.0, quantity=1.0, side="buy",
-            timestamp_ms=1000, received_ms=1001,
+            exchange="binance",
+            symbol="BTCUSDT",
+            trade_id="1",
+            price=50000.0,
+            quantity=1.0,
+            side="buy",
+            timestamp_ms=1000,
+            received_ms=1001,
         )
         await bus.publish(EventType.TRADE, trade)
         assert len(results) == 1
@@ -1764,7 +1914,7 @@ class TestEdgeCases:
             assert n == 0
 
     def test_bybit_portal_convert_invalid_json_lines(self):
-        ndjson_bytes = b"not valid json\n{\"also\": \"not a valid ob message\"}\n"
+        ndjson_bytes = b'not valid json\n{"also": "not a valid ob message"}\n'
         zip_buf = io.BytesIO()
         with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("data.data", ndjson_bytes)
@@ -1783,26 +1933,46 @@ class TestEdgeCases:
             base_ts = 1_700_000_000_000
             with gzip.open(str(out_file), "wb") as f:
                 trade = Trade(
-                    exchange="binance", symbol="BTCUSDT", trade_id="1",
-                    price=50000.0, quantity=1.0, side="buy",
-                    timestamp_ms=base_ts, received_ms=base_ts + 1,
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    trade_id="1",
+                    price=50000.0,
+                    quantity=1.0,
+                    side="buy",
+                    timestamp_ms=base_ts,
+                    received_ms=base_ts + 1,
                 )
-                f.write(orjson.dumps({
-                    "event_type": EventType.TRADE.value,
-                    "timestamp_ms": base_ts,
-                    "data": trade.to_dict(),
-                }) + b"\n")
+                f.write(
+                    orjson.dumps(
+                        {
+                            "event_type": EventType.TRADE.value,
+                            "timestamp_ms": base_ts,
+                            "data": trade.to_dict(),
+                        }
+                    )
+                    + b"\n"
+                )
                 f.write(b"this is not valid json at all\n")
                 trade2 = Trade(
-                    exchange="binance", symbol="BTCUSDT", trade_id="2",
-                    price=50001.0, quantity=1.0, side="sell",
-                    timestamp_ms=base_ts + 1000, received_ms=base_ts + 1001,
+                    exchange="binance",
+                    symbol="BTCUSDT",
+                    trade_id="2",
+                    price=50001.0,
+                    quantity=1.0,
+                    side="sell",
+                    timestamp_ms=base_ts + 1000,
+                    received_ms=base_ts + 1001,
                 )
-                f.write(orjson.dumps({
-                    "event_type": EventType.TRADE.value,
-                    "timestamp_ms": base_ts + 1000,
-                    "data": trade2.to_dict(),
-                }) + b"\n")
+                f.write(
+                    orjson.dumps(
+                        {
+                            "event_type": EventType.TRADE.value,
+                            "timestamp_ms": base_ts + 1000,
+                            "data": trade2.to_dict(),
+                        }
+                    )
+                    + b"\n"
+                )
 
             bus = EventBus()
             received = []
@@ -1837,35 +2007,39 @@ class TestEdgeCases:
         stream = OrderBookStream(symbols=["BTCUSDT"], exchanges=[Exchange.BYBIT], event_bus=bus)
         on_msg = await _capture_ws_on_msg(stream, "_bybit_orderbook", "BTCUSDT")
 
-        await on_msg({
-            "topic": "orderbook.50.BTCUSDT",
-            "type": "snapshot",
-            "ts": 1700000000000,
-            "cts": 1700000000000,
-            "data": {
-                "s": "BTCUSDT",
-                "b": [["50000.00", "1.000"]],
-                "a": [["50001.00", "1.500"]],
-                "u": 100,
-            },
-        })
+        await on_msg(
+            {
+                "topic": "orderbook.50.BTCUSDT",
+                "type": "snapshot",
+                "ts": 1700000000000,
+                "cts": 1700000000000,
+                "data": {
+                    "s": "BTCUSDT",
+                    "b": [["50000.00", "1.000"]],
+                    "a": [["50001.00", "1.500"]],
+                    "u": 100,
+                },
+            }
+        )
 
         book = stream.get_book(Exchange.BYBIT, "BTCUSDT")
         assert book is not None
         assert book.synced is True
 
         # Delta that creates a crossed book (bid > ask) → should desync
-        await on_msg({
-            "topic": "orderbook.50.BTCUSDT",
-            "type": "delta",
-            "ts": 1700000000100,
-            "cts": 1700000000100,
-            "data": {
-                "s": "BTCUSDT",
-                "b": [["50002.00", "5.000"]],  # bid > ask → crossed
-                "a": [],
-                "u": 101,
-            },
-        })
+        await on_msg(
+            {
+                "topic": "orderbook.50.BTCUSDT",
+                "type": "delta",
+                "ts": 1700000000100,
+                "cts": 1700000000100,
+                "data": {
+                    "s": "BTCUSDT",
+                    "b": [["50002.00", "5.000"]],  # bid > ask → crossed
+                    "a": [],
+                    "u": 101,
+                },
+            }
+        )
 
         assert book.synced is False

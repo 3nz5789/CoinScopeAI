@@ -21,17 +21,19 @@ logger = logging.getLogger(__name__)
 
 class WhaleDirection(Enum):
     """Whale signal direction"""
-    BEARISH = "BEARISH"      # Exchange inflows (selling pressure)
-    BULLISH = "BULLISH"      # Exchange outflows (accumulation)
-    NEUTRAL = "NEUTRAL"      # No significant whale activity
+
+    BEARISH = "BEARISH"  # Exchange inflows (selling pressure)
+    BULLISH = "BULLISH"  # Exchange outflows (accumulation)
+    NEUTRAL = "NEUTRAL"  # No significant whale activity
 
 
 @dataclass
 class WhaleSignal:
     """Represents a whale transaction signal"""
+
     symbol: str
     direction: WhaleDirection
-    confidence: float           # 0.0 - 1.0
+    confidence: float  # 0.0 - 1.0
     reason: str
     usd_volume: float
     timestamp: datetime
@@ -50,11 +52,20 @@ class WhaleSignalFilter:
     API: https://whale-alert.io (free tier: 10 calls/min)
     """
 
-    WHALE_THRESHOLD_USD = 10_000_000   # $10M+ transactions only
+    WHALE_THRESHOLD_USD = 10_000_000  # $10M+ transactions only
 
     EXCHANGE_WALLETS = {
-        "binance", "coinbase", "kraken", "okx", "bybit", "huobi",
-        "ftx", "kucoin", "bitfinex", "gemini", "bitstamp"
+        "binance",
+        "coinbase",
+        "kraken",
+        "okx",
+        "bybit",
+        "huobi",
+        "ftx",
+        "kucoin",
+        "bitfinex",
+        "gemini",
+        "bitstamp",
     }
 
     def __init__(self, api_key: Optional[str] = None):
@@ -64,9 +75,7 @@ class WhaleSignalFilter:
         self.cache_ttl = 300  # 5 minute cache
 
     async def get_recent_signals(
-        self,
-        symbol: str = "bitcoin",
-        lookback_mins: int = 60
+        self, symbol: str = "bitcoin", lookback_mins: int = 60
     ) -> List[WhaleSignal]:
         """
         Get recent whale signals for a symbol.
@@ -85,9 +94,9 @@ class WhaleSignalFilter:
 
         cache_key = f"{symbol}_{lookback_mins}"
         cached = self.cache.get(cache_key)
-        if cached and (datetime.utcnow() - cached['ts']).seconds < self.cache_ttl:
+        if cached and (datetime.utcnow() - cached["ts"]).seconds < self.cache_ttl:
             logger.debug(f"📊 Using cached whale signals for {symbol}")
-            return cached['signals']
+            return cached["signals"]
 
         since = int((datetime.utcnow() - timedelta(minutes=lookback_mins)).timestamp())
 
@@ -101,7 +110,7 @@ class WhaleSignalFilter:
                         "since": since,
                         "currency": symbol.lower()[:3],  # btc, eth, sol
                     },
-                    timeout=aiohttp.ClientTimeout(10)
+                    timeout=aiohttp.ClientTimeout(10),
                 ) as resp:
                     if resp.status != 200:
                         logger.error(f"❌ Whale Alert API error: {resp.status}")
@@ -123,38 +132,39 @@ class WhaleSignalFilter:
             # Large transfer TO exchange = selling pressure
             if to_owner == "exchange" and from_owner != "exchange":
                 conf = min(usd_val / 100_000_000, 1.0)  # Scale with size
-                signals.append(WhaleSignal(
-                    symbol=symbol.upper(),
-                    direction=WhaleDirection.BEARISH,
-                    confidence=conf,
-                    reason=f"${usd_val/1e6:.0f}M moved TO {tx.get('to',{}).get('owner','exchange')}",
-                    usd_volume=usd_val,
-                    timestamp=datetime.utcfromtimestamp(tx['timestamp']),
-                    transaction_hash=tx.get('hash', ''),
-                    from_address=tx.get('from', {}).get('address', ''),
-                    to_address=tx.get('to', {}).get('address', '')
-                ))
+                signals.append(
+                    WhaleSignal(
+                        symbol=symbol.upper(),
+                        direction=WhaleDirection.BEARISH,
+                        confidence=conf,
+                        reason=f"${usd_val/1e6:.0f}M moved TO {tx.get('to',{}).get('owner','exchange')}",
+                        usd_volume=usd_val,
+                        timestamp=datetime.utcfromtimestamp(tx["timestamp"]),
+                        transaction_hash=tx.get("hash", ""),
+                        from_address=tx.get("from", {}).get("address", ""),
+                        to_address=tx.get("to", {}).get("address", ""),
+                    )
+                )
 
             # Large transfer FROM exchange = accumulation
             elif from_owner == "exchange" and to_owner != "exchange":
                 conf = min(usd_val / 100_000_000, 1.0)
-                signals.append(WhaleSignal(
-                    symbol=symbol.upper(),
-                    direction=WhaleDirection.BULLISH,
-                    confidence=conf,
-                    reason=f"${usd_val/1e6:.0f}M moved OFF {tx.get('from',{}).get('owner','exchange')}",
-                    usd_volume=usd_val,
-                    timestamp=datetime.utcfromtimestamp(tx['timestamp']),
-                    transaction_hash=tx.get('hash', ''),
-                    from_address=tx.get('from', {}).get('address', ''),
-                    to_address=tx.get('to', {}).get('address', '')
-                ))
+                signals.append(
+                    WhaleSignal(
+                        symbol=symbol.upper(),
+                        direction=WhaleDirection.BULLISH,
+                        confidence=conf,
+                        reason=f"${usd_val/1e6:.0f}M moved OFF {tx.get('from',{}).get('owner','exchange')}",
+                        usd_volume=usd_val,
+                        timestamp=datetime.utcfromtimestamp(tx["timestamp"]),
+                        transaction_hash=tx.get("hash", ""),
+                        from_address=tx.get("from", {}).get("address", ""),
+                        to_address=tx.get("to", {}).get("address", ""),
+                    )
+                )
 
         # Cache results
-        self.cache[cache_key] = {
-            'signals': signals,
-            'ts': datetime.utcnow()
-        }
+        self.cache[cache_key] = {"signals": signals, "ts": datetime.utcnow()}
 
         logger.info(f"📊 Found {len(signals)} whale signals for {symbol}")
         return signals
@@ -183,17 +193,11 @@ class WhaleSignalFilter:
                 "signal_count": 0,
                 "bearish_vol": 0,
                 "bullish_vol": 0,
-                "net_ratio": 0
+                "net_ratio": 0,
             }
 
-        bearish_vol = sum(
-            s.usd_volume for s in signals
-            if s.direction == WhaleDirection.BEARISH
-        )
-        bullish_vol = sum(
-            s.usd_volume for s in signals
-            if s.direction == WhaleDirection.BULLISH
-        )
+        bearish_vol = sum(s.usd_volume for s in signals if s.direction == WhaleDirection.BEARISH)
+        bullish_vol = sum(s.usd_volume for s in signals if s.direction == WhaleDirection.BULLISH)
         total_vol = bearish_vol + bullish_vol
 
         if total_vol == 0:
@@ -203,7 +207,7 @@ class WhaleSignalFilter:
                 "signal_count": 0,
                 "bearish_vol": 0,
                 "bullish_vol": 0,
-                "net_ratio": 0
+                "net_ratio": 0,
             }
 
         net = (bullish_vol - bearish_vol) / total_vol  # -1.0 to +1.0
@@ -221,14 +225,10 @@ class WhaleSignalFilter:
             "signal_count": len(signals),
             "bearish_vol": bearish_vol,
             "bullish_vol": bullish_vol,
-            "net_ratio": net
+            "net_ratio": net,
         }
 
-    async def should_block_trade(
-        self,
-        direction: str,
-        symbol: str
-    ) -> Tuple[bool, str]:
+    async def should_block_trade(self, direction: str, symbol: str) -> Tuple[bool, str]:
         """
         Block trade if whale flow strongly opposes signal direction.
 
@@ -270,13 +270,13 @@ class WhaleSignalFilter:
             -1.0 (strong bearish) to +1.0 (strong bullish)
         """
         bias = await self.get_aggregate_bias(symbol)
-        net = bias['net_ratio']
+        net = bias["net_ratio"]
 
         # Scale confidence into the signal
         if net > 0:
-            return net * bias['confidence']
+            return net * bias["confidence"]
         else:
-            return net * bias['confidence']
+            return net * bias["confidence"]
 
 
 # Example usage
@@ -298,5 +298,6 @@ async def example():
 
 if __name__ == "__main__":
     import asyncio
+
     logging.basicConfig(level=logging.INFO)
     asyncio.run(example())

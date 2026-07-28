@@ -4,6 +4,7 @@ Adds the GitHub MCP server to ~/.claude.json.
 Run: python3 add_github_mcp.py
 It will prompt you to paste the token — no shell quoting issues.
 """
+
 import json
 import pathlib
 import sys
@@ -26,9 +27,7 @@ if "mcpServers" not in config:
 config["mcpServers"]["github"] = {
     "type": "http",
     "url": "https://api.githubcopilot.com/mcp",
-    "headers": {
-        "Authorization": f"Bearer {pat}"
-    }
+    "headers": {"Authorization": f"Bearer {pat}"},
 }
 
 with open(config_path, "w") as f:

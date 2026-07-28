@@ -32,6 +32,7 @@ EXIT CODES:
 
 Stdlib only — no pip installs needed.
 """
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -46,9 +47,9 @@ import urllib.request
 
 ENGINE = os.environ.get("COINSCOPE_ENGINE", "http://localhost:8001").rstrip("/")
 SINCE = os.environ.get("VALIDATION_SINCE", "2026-04-10")
-SYMBOLS = [s.strip() for s in os.environ.get(
-    "SYMBOLS", "BTCUSDT,ETHUSDT,SOLUSDT"
-).split(",") if s.strip()]
+SYMBOLS = [
+    s.strip() for s in os.environ.get("SYMBOLS", "BTCUSDT,ETHUSDT,SOLUSDT").split(",") if s.strip()
+]
 
 OUT_BASE = Path(__file__).resolve().parent / "validation_pulls"
 NOW = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%MZ")
@@ -136,13 +137,15 @@ if schema_sample is None:
 sample_records = items(schema_sample)
 detected_fields: list[str] = []
 if sample_records:
-    detected_fields = sorted(sample_records[0].keys()) if isinstance(
-        sample_records[0], dict
-    ) else []
+    detected_fields = (
+        sorted(sample_records[0].keys()) if isinstance(sample_records[0], dict) else []
+    )
     log(f"  Detected /journal fields: {detected_fields}")
 else:
-    log("  WARNING: empty /journal sample. Validation may have produced no trades, "
-        "or the schema differs. Continuing.")
+    log(
+        "  WARNING: empty /journal sample. Validation may have produced no trades, "
+        "or the schema differs. Continuing."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -184,10 +187,10 @@ log("\n[3/3] D-category P0 checks (CRITICAL — D-breach = RESTART trigger)…")
 
 # ---- D1: Max drawdown ----
 equity_curve_raw = (
-    performance.get("equity_curve")
-    or performance.get("equity")
-    or []
-) if isinstance(performance, dict) else []
+    (performance.get("equity_curve") or performance.get("equity") or [])
+    if isinstance(performance, dict)
+    else []
+)
 
 equity_points: list[float] = []
 if isinstance(equity_curve_raw, list):
@@ -268,15 +271,16 @@ for r in position_records:
 
 # ---- D7: Kill-switch trips ----
 kill_switch_trips = [
-    r for r in risk_gate_records
-    if get_field(r, "kill_switch", "kill", "tripped", default=False)
+    r for r in risk_gate_records if get_field(r, "kill_switch", "kill", "tripped", default=False)
 ]
 
 # Print summary
 log("\n  -------- D-CATEGORY SUMMARY --------")
 
+
 def status(condition: bool) -> str:
     return "PASS" if condition else "FAIL"
+
 
 d1_pass = max_dd <= 0.10
 d3_pass = len(lev_violations) == 0
@@ -301,14 +305,16 @@ if d_breach:
 # ---- S1 baseline: signal precision rolling 30d ----
 log("\n=== S1 BASELINE (signal precision) ===")
 closed_trades = [
-    r for r in journal_records
+    r
+    for r in journal_records
     if get_field(r, "status", default="") in ("closed", "filled", "completed")
     and get_field(r, "pnl") is not None
 ]
 s1_results: dict[int, dict] = {}
 for conf_min in (7, 8, 9):
     band = [
-        r for r in closed_trades
+        r
+        for r in closed_trades
         if (get_field(r, "confluence", "confluence_score", default=0) or 0) >= conf_min
     ]
     if band:
@@ -338,7 +344,9 @@ if slips:
     log(f"  Slippage n={len(slips)}: p50={x1_p50:.4%}, p95={x1_p95:.4%}, p99={x1_p99:.4%}{note}")
 else:
     log("  No fillable trades found.")
-    log("  Field aliases tried: fill_price/executed_price + intended_price/signal_price/entry_price")
+    log(
+        "  Field aliases tried: fill_price/executed_price + intended_price/signal_price/entry_price"
+    )
     log("  If schema differs, edit the fetch in this script.")
 
 # ---- X3: SL attachment ----
@@ -352,8 +360,10 @@ for r in journal_records:
 sl_rate = (sl_attached / sl_total) if sl_total else None
 if sl_rate is not None:
     log("\n=== X3 SL ATTACHMENT RATE ===")
-    log(f"  {sl_attached} of {sl_total} = {sl_rate:.1%}  (must be 100%)  "
-        f"[{status(sl_rate == 1.0)}]")
+    log(
+        f"  {sl_attached} of {sl_total} = {sl_rate:.1%}  (must be 100%)  "
+        f"[{status(sl_rate == 1.0)}]"
+    )
 
 # ---------------------------------------------------------------------------
 # Save partial data pack
@@ -382,18 +392,23 @@ with open(pack, "w") as f:
         if r["precision"] is None:
             f.write(f"- Confluence ≥{conf_min}: no data\n")
         else:
-            f.write(f"- Confluence ≥{conf_min}: precision **{r['precision']:.1%}** "
-                    f"(n={r['n']})\n")
+            f.write(
+                f"- Confluence ≥{conf_min}: precision **{r['precision']:.1%}** " f"(n={r['n']})\n"
+            )
 
     f.write("\n### Execution integrity (X)\n")
     if slips:
-        f.write(f"- X1 slippage p50/p95/p99: **{x1_p50:.4%} / {x1_p95:.4%} / "
-                f"{x1_p99:.4%}** (n={len(slips)})\n")
+        f.write(
+            f"- X1 slippage p50/p95/p99: **{x1_p50:.4%} / {x1_p95:.4%} / "
+            f"{x1_p99:.4%}** (n={len(slips)})\n"
+        )
     else:
         f.write("- X1 slippage: no fillable trades found — schema check needed\n")
     if sl_rate is not None:
-        f.write(f"- X3 SL attachment rate: **{sl_rate:.1%}** ({sl_attached} of "
-                f"{sl_total}) — {status(sl_rate == 1.0)}\n")
+        f.write(
+            f"- X3 SL attachment rate: **{sl_rate:.1%}** ({sl_attached} of "
+            f"{sl_total}) — {status(sl_rate == 1.0)}\n"
+        )
 
     f.write(f"""
 ## B. Open Items Resolved or Pending

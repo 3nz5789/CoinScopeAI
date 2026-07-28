@@ -39,6 +39,7 @@ import pytest
 try:
     import os
     import sys
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "coinscope_trading_engine"))
 
@@ -47,6 +48,7 @@ try:
         CircuitBreaker,
         TripEvent,
     )
+
     CB_AVAILABLE = True
 except ImportError:
     CB_AVAILABLE = False
@@ -55,6 +57,7 @@ try:
     from coinscope_trading_engine.risk.position_sizer import PositionSize, PositionSizer
     from coinscope_trading_engine.scanner.base_scanner import SignalDirection
     from coinscope_trading_engine.signals.entry_exit_calculator import TradeSetup
+
     SIZER_AVAILABLE = True
 except ImportError:
     SIZER_AVAILABLE = False
@@ -63,6 +66,7 @@ except ImportError:
 # ===========================================================================
 # SECTION 1 — CircuitBreaker State Machine Invariants
 # ===========================================================================
+
 
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestCircuitBreakerStateMachine:
@@ -105,14 +109,14 @@ class TestCircuitBreakerStateMachine:
     def test_reset_on_closed_breaker_is_idempotent(self):
         cb = CircuitBreaker()
         assert cb.is_closed
-        cb.reset()   # should not raise or change state
+        cb.reset()  # should not raise or change state
         assert cb.is_closed
 
     def test_trip_on_open_breaker_is_idempotent(self):
         """Double-tripping must not duplicate history."""
         cb = CircuitBreaker()
         cb.trip("first")
-        cb.trip("second")   # breaker already open
+        cb.trip("second")  # breaker already open
         assert cb.trip_count == 1, "Second trip on open breaker must not add history entry"
 
     def test_state_never_undefined_after_check(self):
@@ -134,6 +138,7 @@ class TestCircuitBreakerStateMachine:
 # ===========================================================================
 # SECTION 2 — Halt Persistence (State Survives Re-Instantiation)
 # ===========================================================================
+
 
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestHaltPersistence:
@@ -176,6 +181,7 @@ class TestHaltPersistence:
 
     def test_trip_event_has_valid_timestamp(self):
         from datetime import datetime, timezone
+
         cb = CircuitBreaker()
         before = datetime.now(timezone.utc)
         cb.trip("timing test")
@@ -197,6 +203,7 @@ class TestHaltPersistence:
 # SECTION 3 — Re-entrant Trip Protection
 # ===========================================================================
 
+
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestReentrantTripProtection:
     """
@@ -207,10 +214,10 @@ class TestReentrantTripProtection:
     def test_trip_from_check_does_not_double_log(self):
         """check() internally calls _trip(); manual trip() on open CB must not add second event."""
         cb = CircuitBreaker(max_daily_loss=5.0)
-        cb.check(daily_loss_pct=-6.0)   # trips internally
+        cb.check(daily_loss_pct=-6.0)  # trips internally
         assert cb.is_open
         initial_count = cb.trip_count
-        cb.trip("external manual")      # breaker already open
+        cb.trip("external manual")  # breaker already open
         assert cb.trip_count == initial_count, "Re-trip on open breaker added phantom event"
 
     def test_multiple_threshold_breaches_in_one_check_trip_once(self):
@@ -229,6 +236,7 @@ class TestReentrantTripProtection:
 # ===========================================================================
 # SECTION 4 — Exact Threshold Boundary Conditions
 # ===========================================================================
+
 
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestExactThresholdBoundaries:
@@ -283,7 +291,7 @@ class TestExactThresholdBoundaries:
 
     def test_positive_pnl_never_trips_daily_limit(self):
         cb = CircuitBreaker(max_daily_loss=5.0)
-        result = cb.check(daily_loss_pct=3.0)   # profit
+        result = cb.check(daily_loss_pct=3.0)  # profit
         assert result is True
         assert cb.is_closed
 
@@ -291,6 +299,7 @@ class TestExactThresholdBoundaries:
 # ===========================================================================
 # SECTION 5 — Rapid-Loss Window Failure Modes
 # ===========================================================================
+
 
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestRapidLossWindow:
@@ -303,7 +312,7 @@ class TestRapidLossWindow:
     def test_rapid_loss_trips_within_window(self):
         cb = CircuitBreaker(rapid_loss_pct=1.5, rapid_window_s=60.0)
         cb.record_trade_result(-0.8)
-        cb.record_trade_result(-0.8)   # total = -1.6% — exceeds 1.5%
+        cb.record_trade_result(-0.8)  # total = -1.6% — exceeds 1.5%
         assert cb.is_open, "Rapid loss should trip the breaker"
 
     def test_rapid_loss_single_below_threshold_no_trip(self):
@@ -313,15 +322,15 @@ class TestRapidLossWindow:
 
     def test_profit_trades_do_not_accumulate_toward_rapid_trip(self):
         cb = CircuitBreaker(rapid_loss_pct=1.5, rapid_window_s=60.0)
-        cb.record_trade_result(2.0)    # profit
-        cb.record_trade_result(-1.0)   # loss — total loss in window is still -1%
+        cb.record_trade_result(2.0)  # profit
+        cb.record_trade_result(-1.0)  # loss — total loss in window is still -1%
         assert cb.is_closed, "Profit trade should not count toward rapid-loss trigger"
 
     def test_rapid_log_purges_expired_entries(self):
         """Entries older than rapid_window_s must be pruned on next record_trade_result."""
         cb = CircuitBreaker(rapid_loss_pct=1.5, rapid_window_s=0.1)  # 100ms window
         cb.record_trade_result(-1.0)
-        time.sleep(0.15)   # let the window expire
+        time.sleep(0.15)  # let the window expire
         # A fresh small loss should not trip because the old entry is stale
         cb.record_trade_result(-0.1)
         assert cb.is_closed, "Expired rapid-loss entries should be pruned"
@@ -338,13 +347,14 @@ class TestRapidLossWindow:
         cb = CircuitBreaker(rapid_loss_pct=1.5, rapid_window_s=300.0)
         cb.record_trade_result(-1.0)
         cb.reset_daily()
-        cb.record_trade_result(-1.0)   # same amount — window is fresh, should not trip
+        cb.record_trade_result(-1.0)  # same amount — window is fresh, should not trip
         assert cb.is_closed, "rapid log should be cleared by reset_daily"
 
 
 # ===========================================================================
 # SECTION 6 — PositionSizer Invalid-Input Invariants
 # ===========================================================================
+
 
 @pytest.mark.skipif(not SIZER_AVAILABLE, reason="PositionSizer not importable")
 class TestPositionSizerInvalidInputs:
@@ -405,13 +415,13 @@ class TestPositionSizerInvalidInputs:
     def test_notional_never_exceeds_max_position_pct(self):
         max_pos_pct = 5.0
         sizer = PositionSizer(max_position_pct=max_pos_pct)
-        setup = self._make_valid_setup(entry=50000.0, sl=49900.0)   # tiny SL → huge qty
+        setup = self._make_valid_setup(entry=50000.0, sl=49900.0)  # tiny SL → huge qty
         result = sizer.calculate(setup, balance=10000.0)
         if result.valid:
             max_allowed = 10000.0 * (max_pos_pct / 100)
-            assert result.notional <= max_allowed + 0.01, (
-                f"Notional {result.notional:.2f} exceeds {max_allowed:.2f} cap"
-            )
+            assert (
+                result.notional <= max_allowed + 0.01
+            ), f"Notional {result.notional:.2f} exceeds {max_allowed:.2f} cap"
 
     def test_leverage_never_exceeds_max_leverage(self):
         max_lev = 10
@@ -430,16 +440,18 @@ class TestPositionSizerInvalidInputs:
                 # Must return a PositionSize, not raise
                 assert isinstance(result, PositionSize)
             except Exception as exc:
-                pytest.fail(f"PositionSizer raised {type(exc).__name__} for balance={bad_balance}: {exc}")
+                pytest.fail(
+                    f"PositionSizer raised {type(exc).__name__} for balance={bad_balance}: {exc}"
+                )
 
     def test_kelly_fraction_always_between_0_and_max(self):
         """_kelly_fraction must always return a value in [0, MAX_KELLY_FRACTION]."""
         for win_rate in [0.0, 0.1, 0.44, 0.55, 0.9, 1.0]:
             for avg_rr in [0.01, 0.5, 1.0, 2.0, 10.0]:
                 f = PositionSizer._kelly_fraction(win_rate, avg_rr)
-                assert 0.0 <= f <= 0.25, (
-                    f"kelly_fraction={f:.4f} out of [0, 0.25] for win={win_rate}, rr={avg_rr}"
-                )
+                assert (
+                    0.0 <= f <= 0.25
+                ), f"kelly_fraction={f:.4f} out of [0, 0.25] for win={win_rate}, rr={avg_rr}"
 
     def test_kelly_fraction_negative_edge_returns_zero(self):
         """win_rate=0.1, avg_rr=0.1 → full Kelly deeply negative → must clamp to 0."""
@@ -450,6 +462,7 @@ class TestPositionSizerInvalidInputs:
 # ===========================================================================
 # SECTION 7 — Manual Kill-Switch / Halt Propagation
 # ===========================================================================
+
 
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestManualHaltPropagation:
@@ -492,6 +505,7 @@ class TestManualHaltPropagation:
 
     def test_on_trip_callback_exception_does_not_propagate(self):
         """If the callback raises, the trip must still complete."""
+
         def bad_callback(reason, pct):
             raise RuntimeError("callback blew up")
 
@@ -508,6 +522,7 @@ class TestManualHaltPropagation:
 # SECTION 8 — Auto-Reset Timing Invariants
 # ===========================================================================
 
+
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestAutoResetTimingInvariants:
     """
@@ -516,12 +531,12 @@ class TestAutoResetTimingInvariants:
     """
 
     def test_auto_reset_does_not_fire_before_cooldown(self):
-        cb = CircuitBreaker(reset_after_s=10.0)   # 10s — won't elapse in test
+        cb = CircuitBreaker(reset_after_s=10.0)  # 10s — won't elapse in test
         cb.trip("timeout test")
         assert cb.is_open, "Breaker should still be open before cooldown"
 
     def test_auto_reset_fires_after_cooldown(self):
-        cb = CircuitBreaker(reset_after_s=0.05)   # 50ms
+        cb = CircuitBreaker(reset_after_s=0.05)  # 50ms
         cb.trip("fast cooldown")
         time.sleep(0.1)
         # Accessing .state triggers _maybe_auto_reset
@@ -531,7 +546,7 @@ class TestAutoResetTimingInvariants:
         cb = CircuitBreaker(reset_after_s=0.05)
         cb.trip("timing")
         time.sleep(0.1)
-        _ = cb.state   # trigger auto-reset
+        _ = cb.state  # trigger auto-reset
         assert cb.last_trip.reset_at is not None
 
     def test_no_auto_reset_when_reset_after_s_is_zero(self):
@@ -553,6 +568,7 @@ class TestAutoResetTimingInvariants:
 # ===========================================================================
 # SECTION 9 — Trip History Integrity
 # ===========================================================================
+
 
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestTripHistoryIntegrity:
@@ -614,6 +630,7 @@ class TestTripHistoryIntegrity:
 # SECTION 10 — Orchestrator Scan-Loop Halt Invariants
 # ===========================================================================
 
+
 @pytest.mark.skipif(not CB_AVAILABLE, reason="CircuitBreaker not importable")
 class TestOrchestratorHaltInvariants:
     """
@@ -651,8 +668,13 @@ class TestOrchestratorHaltInvariants:
         gate = RiskGate(initial_capital=10_000)
         gate.consecutive_losses = 10
         pos = gate.open_position(
-            symbol="BTCUSDT", direction=1, entry_price=50_000,
-            entry_time=0, atr=500, regime="bull", signal_score=0.80
+            symbol="BTCUSDT",
+            direction=1,
+            entry_price=50_000,
+            entry_time=0,
+            atr=500,
+            regime="bull",
+            signal_score=0.80,
         )
         assert pos is None, "Position must be blocked when circuit breaker is active"
 
@@ -664,7 +686,7 @@ class TestOrchestratorHaltInvariants:
 
         gate = RiskGate(initial_capital=10_000, max_drawdown_pct=0.10)
         gate.peak_equity = 10_000
-        gate.current_equity = 8_000   # 20% drawdown — exceeds 10%
+        gate.current_equity = 8_000  # 20% drawdown — exceeds 10%
         cb_active, reason = gate.check_circuit_breakers()
         assert cb_active is True
 
@@ -672,8 +694,12 @@ class TestOrchestratorHaltInvariants:
         cb = CircuitBreaker()
         status = cb.status()
         required = {
-            "state", "trip_count", "last_trip",
-            "max_daily_loss_pct", "max_drawdown_pct", "max_consec_losses"
+            "state",
+            "trip_count",
+            "last_trip",
+            "max_daily_loss_pct",
+            "max_drawdown_pct",
+            "max_consec_losses",
         }
         missing = required - set(status.keys())
         assert not missing, f"status() missing fields: {missing}"
@@ -699,4 +725,5 @@ class TestOrchestratorHaltInvariants:
 
 if __name__ == "__main__":
     import pytest as _pytest
+
     _pytest.main([__file__, "-v", "--tb=short"])

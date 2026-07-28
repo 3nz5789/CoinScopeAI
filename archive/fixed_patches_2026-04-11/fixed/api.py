@@ -47,9 +47,7 @@ async def health():
 
 # ── Market Scan ───────────────────────────────────────────────────
 @app.get("/scan")
-async def scan(
-    pairs: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,TAO/USDT"
-):
+async def scan(pairs: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,TAO/USDT"):
     """Trigger live market scan. Returns signals for all requested pairs."""
     try:
         from live.master_orchestrator import CoinScopeOrchestrator

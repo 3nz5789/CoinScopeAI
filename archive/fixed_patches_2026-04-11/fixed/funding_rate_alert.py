@@ -34,16 +34,17 @@ logger = logging.getLogger(__name__)
 # Thresholds
 # ---------------------------------------------------------------------------
 
-THRESHOLD_EXTREME: float = 0.0005   # 0.05 % per 8 h
-THRESHOLD_HIGH: float    = 0.0002   # 0.02 % per 8 h
+THRESHOLD_EXTREME: float = 0.0005  # 0.05 % per 8 h
+THRESHOLD_HIGH: float = 0.0002  # 0.02 % per 8 h
 
-ALERT_COOLDOWN_S: int = 1800        # 30 min between repeated alerts per symbol
-HEARTBEAT_INTERVAL_S: int = 3600    # 1 h between market-wide heartbeats
+ALERT_COOLDOWN_S: int = 1800  # 30 min between repeated alerts per symbol
+HEARTBEAT_INTERVAL_S: int = 3600  # 1 h between market-wide heartbeats
 
 
 # ---------------------------------------------------------------------------
 # Telegram dispatcher (self-contained, no dep on existing TelegramAlerts class)
 # ---------------------------------------------------------------------------
+
 
 class _Telegram:
     """
@@ -54,10 +55,9 @@ class _Telegram:
     def __init__(self) -> None:
         self.token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
         # Support both project conventions for chat ID
-        self.chat_id: str = (
-            os.getenv("TELEGRAM_CHAT_ID", "")
-            or os.getenv("TELEGRAM_CHAT_ID", "7296767446")  # ScoopyAI default
-        )
+        self.chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "") or os.getenv(
+            "TELEGRAM_CHAT_ID", "7296767446"
+        )  # ScoopyAI default
         self.enabled: bool = bool(self.token and self.chat_id)
         if not self.enabled:
             logger.warning(
@@ -87,12 +87,14 @@ class _Telegram:
 # Per-symbol alert state
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _SymbolState:
     """Tracks the last alert issued for one symbol."""
-    last_alert_ts: float = 0.0          # Unix seconds
-    last_direction: str = ""             # "LONG_BIASED" | "SHORT_BIASED" | ""
-    last_level: str = ""                 # "EXTREME" | "HIGH" | ""
+
+    last_alert_ts: float = 0.0  # Unix seconds
+    last_direction: str = ""  # "LONG_BIASED" | "SHORT_BIASED" | ""
+    last_level: str = ""  # "EXTREME" | "HIGH" | ""
     alert_count: int = 0
 
     def should_alert(self, direction: str, level: str, now: float) -> bool:
@@ -115,6 +117,7 @@ class _SymbolState:
 # ---------------------------------------------------------------------------
 # Alert engine
 # ---------------------------------------------------------------------------
+
 
 class FundingRateAlerter:
     """
@@ -159,15 +162,12 @@ class FundingRateAlerter:
         Must be awaited — never returns under normal operation.
         """
         import asyncio
-        logger.info(
-            f"[Alerter] Heartbeat loop started — every {HEARTBEAT_INTERVAL_S}s"
-        )
+
+        logger.info(f"[Alerter] Heartbeat loop started — every {HEARTBEAT_INTERVAL_S}s")
         while True:
             try:
                 await asyncio.sleep(HEARTBEAT_INTERVAL_S)
-                await asyncio.get_event_loop().run_in_executor(
-                    None, self._send_heartbeat
-                )
+                await asyncio.get_event_loop().run_in_executor(None, self._send_heartbeat)
             except asyncio.CancelledError:
                 logger.info("[Alerter] Heartbeat loop cancelled.")
                 break
@@ -230,9 +230,7 @@ class FundingRateAlerter:
             f"_Next funding: <t:{rec.next_funding_time // 1000}:R>_\n"
             f"_{self._ts_utc()}_"
         )
-        logger.info(
-            f"[Alerter] {level} alert: {rec.symbol} {rec.funding_rate:+.4%}"
-        )
+        logger.info(f"[Alerter] {level} alert: {rec.symbol} {rec.funding_rate:+.4%}")
         self._tg.send(text)
 
     def _send_heartbeat(self) -> None:
@@ -240,7 +238,9 @@ class FundingRateAlerter:
         try:
             snapshot = self.store.get_market_snapshot()
             extremes = [r for r in snapshot if abs(r.funding_rate) > THRESHOLD_EXTREME]
-            highs = [r for r in snapshot if THRESHOLD_HIGH < abs(r.funding_rate) <= THRESHOLD_EXTREME]
+            highs = [
+                r for r in snapshot if THRESHOLD_HIGH < abs(r.funding_rate) <= THRESHOLD_EXTREME
+            ]
             stats = self.store.get_stats()
         except Exception as exc:
             logger.error(f"[Alerter] Heartbeat DB query failed: {exc!r}")
@@ -262,9 +262,7 @@ class FundingRateAlerter:
             for r in sorted(extremes, key=lambda x: abs(x.funding_rate), reverse=True)[:5]:
                 ann = r.funding_rate * 3 * 365
                 bias = "👆 LONG" if r.funding_rate > 0 else "👇 SHORT"
-                lines.append(
-                    f"  `{r.symbol:<12}` {r.funding_rate:+.4%}  ({ann:+.0%}/yr)  {bias}"
-                )
+                lines.append(f"  `{r.symbol:<12}` {r.funding_rate:+.4%}  ({ann:+.0%}/yr)  {bias}")
             lines.append("")
 
         if highs:
@@ -272,22 +270,19 @@ class FundingRateAlerter:
             for r in sorted(highs, key=lambda x: abs(x.funding_rate), reverse=True)[:5]:
                 ann = r.funding_rate * 3 * 365
                 bias = "👆 LONG" if r.funding_rate > 0 else "👇 SHORT"
-                lines.append(
-                    f"  `{r.symbol:<12}` {r.funding_rate:+.4%}  ({ann:+.0%}/yr)  {bias}"
-                )
+                lines.append(f"  `{r.symbol:<12}` {r.funding_rate:+.4%}  ({ann:+.0%}/yr)  {bias}")
             lines.append("")
 
         if not extremes and not highs:
             lines.append("✅ No symbols above HIGH threshold — market funding neutral.")
 
         self._tg.send("\n".join(lines))
-        logger.info(
-            f"[Alerter] Heartbeat sent — {len(extremes)} extreme, {len(highs)} high"
-        )
+        logger.info(f"[Alerter] Heartbeat sent — {len(extremes)} extreme, {len(highs)} high")
 
     @staticmethod
     def _ts_utc() -> str:
         import datetime
+
         return datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
     @property

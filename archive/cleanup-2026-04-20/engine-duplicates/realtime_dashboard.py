@@ -37,7 +37,7 @@ class RealtimeDashboard:
         recent = []
         for trade in all_trades:
             try:
-                trade_time = datetime.fromisoformat(trade.get('timestamp', ''))
+                trade_time = datetime.fromisoformat(trade.get("timestamp", ""))
                 if trade_time > cutoff:
                     recent.append(trade)
             except Exception:
@@ -49,31 +49,32 @@ class RealtimeDashboard:
         """Calculate performance metrics"""
         if not trades:
             return {
-                'total_trades': 0,
-                'wins': 0,
-                'losses': 0,
-                'win_rate': 0.0,
-                'total_pnl': 0.0,
-                'avg_win': 0.0,
-                'avg_loss': 0.0,
-                'sharpe': 0.0,
-                'max_dd': 0.0,
+                "total_trades": 0,
+                "wins": 0,
+                "losses": 0,
+                "win_rate": 0.0,
+                "total_pnl": 0.0,
+                "avg_win": 0.0,
+                "avg_loss": 0.0,
+                "sharpe": 0.0,
+                "max_dd": 0.0,
             }
 
-        wins = sum(1 for t in trades if t.get('pnl', 0) > 0)
-        losses = sum(1 for t in trades if t.get('pnl', 0) < 0)
-        total_pnl = sum(t.get('pnl', 0) for t in trades)
+        wins = sum(1 for t in trades if t.get("pnl", 0) > 0)
+        losses = sum(1 for t in trades if t.get("pnl", 0) < 0)
+        total_pnl = sum(t.get("pnl", 0) for t in trades)
 
-        win_pnls = [t.get('pnl', 0) for t in trades if t.get('pnl', 0) > 0]
-        loss_pnls = [t.get('pnl', 0) for t in trades if t.get('pnl', 0) < 0]
+        win_pnls = [t.get("pnl", 0) for t in trades if t.get("pnl", 0) > 0]
+        loss_pnls = [t.get("pnl", 0) for t in trades if t.get("pnl", 0) < 0]
 
         avg_win = sum(win_pnls) / len(win_pnls) if win_pnls else 0
         avg_loss = abs(sum(loss_pnls) / len(loss_pnls)) if loss_pnls else 0
 
         # Calculate Sharpe ratio
-        pnls = [t.get('pnl', 0) for t in trades]
+        pnls = [t.get("pnl", 0) for t in trades]
         if len(pnls) > 1:
             import numpy as np
+
             returns = np.array(pnls)
             sharpe = np.mean(returns) / (np.std(returns) + 1e-6) * np.sqrt(252)
         else:
@@ -92,15 +93,15 @@ class RealtimeDashboard:
                 max_dd = dd
 
         return {
-            'total_trades': len(trades),
-            'wins': wins,
-            'losses': losses,
-            'win_rate': wins / len(trades) if trades else 0.0,
-            'total_pnl': total_pnl,
-            'avg_win': avg_win,
-            'avg_loss': avg_loss,
-            'sharpe': sharpe,
-            'max_dd': max_dd,
+            "total_trades": len(trades),
+            "wins": wins,
+            "losses": losses,
+            "win_rate": wins / len(trades) if trades else 0.0,
+            "total_pnl": total_pnl,
+            "avg_win": avg_win,
+            "avg_loss": avg_loss,
+            "sharpe": sharpe,
+            "max_dd": max_dd,
         }
 
     def get_pair_stats(self, trades: list) -> dict:
@@ -108,7 +109,7 @@ class RealtimeDashboard:
         pair_trades = {}
 
         for trade in trades:
-            pair = trade.get('symbol', 'UNKNOWN')
+            pair = trade.get("symbol", "UNKNOWN")
             if pair not in pair_trades:
                 pair_trades[pair] = []
             pair_trades[pair].append(trade)
@@ -125,35 +126,43 @@ class RealtimeDashboard:
         alerts = []
 
         # Win rate alert
-        if metrics['win_rate'] < 0.35 and metrics['total_trades'] >= 20:
-            alerts.append({
-                'level': 'WARNING',
-                'message': f"Low win rate: {metrics['win_rate']:.1%} (target: 36%+)"
-            })
+        if metrics["win_rate"] < 0.35 and metrics["total_trades"] >= 20:
+            alerts.append(
+                {
+                    "level": "WARNING",
+                    "message": f"Low win rate: {metrics['win_rate']:.1%} (target: 36%+)",
+                }
+            )
 
         # Winning streak alert
         if len(trades) >= 30:
             recent_30 = trades[-30:]
-            recent_wins = sum(1 for t in recent_30 if t.get('pnl', 0) > 0)
+            recent_wins = sum(1 for t in recent_30 if t.get("pnl", 0) > 0)
             if recent_wins / 30 > 0.60:
-                alerts.append({
-                    'level': 'CRITICAL',
-                    'message': f"Anomaly: {recent_wins}/30 wins (>60% = data leakage?)"
-                })
+                alerts.append(
+                    {
+                        "level": "CRITICAL",
+                        "message": f"Anomaly: {recent_wins}/30 wins (>60% = data leakage?)",
+                    }
+                )
 
         # Drawdown alert
-        if metrics['max_dd'] > 750:  # 15% of 5000 USDT
-            alerts.append({
-                'level': 'CRITICAL',
-                'message': f"Max drawdown: {metrics['max_dd']:.0f} USDT (limit: 750)"
-            })
+        if metrics["max_dd"] > 750:  # 15% of 5000 USDT
+            alerts.append(
+                {
+                    "level": "CRITICAL",
+                    "message": f"Max drawdown: {metrics['max_dd']:.0f} USDT (limit: 750)",
+                }
+            )
 
         # Sharpe alert
-        if metrics['sharpe'] < 0.4 and metrics['total_trades'] >= 20:
-            alerts.append({
-                'level': 'WARNING',
-                'message': f"Low Sharpe ratio: {metrics['sharpe']:.2f} (target: 0.5+)"
-            })
+        if metrics["sharpe"] < 0.4 and metrics["total_trades"] >= 20:
+            alerts.append(
+                {
+                    "level": "WARNING",
+                    "message": f"Low Sharpe ratio: {metrics['sharpe']:.2f} (target: 0.5+)",
+                }
+            )
 
         return alerts
 
@@ -169,7 +178,7 @@ class RealtimeDashboard:
         alerts = self.get_alerts(trades_7d, metrics_7d)
 
         # Clear screen
-        os.system('clear' if os.name == 'posix' else 'cls')
+        os.system("clear" if os.name == "posix" else "cls")
 
         # Header
         print("\n" + "=" * 70)
@@ -183,20 +192,24 @@ class RealtimeDashboard:
         if alerts:
             print("\n🚨 ALERTS:")
             for alert in alerts:
-                icon = "🔴" if alert['level'] == 'CRITICAL' else "🟡"
+                icon = "🔴" if alert["level"] == "CRITICAL" else "🟡"
                 print(f"  {icon} [{alert['level']}] {alert['message']}")
 
         # 24h Performance
         print("\n📊 24-Hour Performance:")
         print(f"  Trades: {metrics_24h['total_trades']}")
-        print(f"  Win Rate: {metrics_24h['win_rate']:.1%} ({metrics_24h['wins']}W/{metrics_24h['losses']}L)")
+        print(
+            f"  Win Rate: {metrics_24h['win_rate']:.1%} ({metrics_24h['wins']}W/{metrics_24h['losses']}L)"
+        )
         print(f"  P&L: {metrics_24h['total_pnl']:+.2f} USDT")
         print(f"  Avg Win: {metrics_24h['avg_win']:.2f} | Avg Loss: {metrics_24h['avg_loss']:.2f}")
 
         # 7d Performance
         print("\n📈 7-Day Performance:")
         print(f"  Trades: {metrics_7d['total_trades']}")
-        print(f"  Win Rate: {metrics_7d['win_rate']:.1%} ({metrics_7d['wins']}W/{metrics_7d['losses']}L)")
+        print(
+            f"  Win Rate: {metrics_7d['win_rate']:.1%} ({metrics_7d['wins']}W/{metrics_7d['losses']}L)"
+        )
         print(f"  P&L: {metrics_7d['total_pnl']:+.2f} USDT")
         print(f"  Sharpe Ratio: {metrics_7d['sharpe']:.2f}")
         print(f"  Max Drawdown: {metrics_7d['max_dd']:.2f} USDT")
@@ -209,9 +222,11 @@ class RealtimeDashboard:
 
         for pair in sorted(pair_stats.keys()):
             stats = pair_stats[pair]
-            print(f"  {pair:<12} {stats['total_trades']:<8} "
-                  f"{stats['win_rate']:<7.1%} {stats['total_pnl']:<11.2f} "
-                  f"{stats['sharpe']:<8.2f}")
+            print(
+                f"  {pair:<12} {stats['total_trades']:<8} "
+                f"{stats['win_rate']:<7.1%} {stats['total_pnl']:<11.2f} "
+                f"{stats['sharpe']:<8.2f}"
+            )
 
         print("  " + "-" * 60)
 
@@ -223,8 +238,14 @@ class RealtimeDashboard:
         print(f"  Drawdown %: {(metrics_7d['max_dd'] / 5000):.1%}")
 
         # Status
-        status_color = "🟢" if not alerts else ("🔴" if any(a['level'] == 'CRITICAL' for a in alerts) else "🟡")
-        print(f"\n{status_color} System Status: {'RUNNING' if metrics_7d['total_trades'] > 0 else 'IDLE'}")
+        status_color = (
+            "🟢"
+            if not alerts
+            else ("🔴" if any(a["level"] == "CRITICAL" for a in alerts) else "🟡")
+        )
+        print(
+            f"\n{status_color} System Status: {'RUNNING' if metrics_7d['total_trades'] > 0 else 'IDLE'}"
+        )
 
         print("\n" + "=" * 70)
         print(" Press Ctrl+C to exit | Refreshing every 5 seconds...")

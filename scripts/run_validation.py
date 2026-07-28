@@ -87,21 +87,23 @@ def write_cpcv_outputs(result: cpcv_validation.CPCVResult, out_dir: Path) -> Non
 
     md_path = out_dir / "cpcv.md"
     stats = result.summary_stats()
-    max_ratio = stats['max_worst_vs_median_ratio']
+    max_ratio = stats["max_worst_vs_median_ratio"]
     max_ratio_display = "> 1000% (median ≈ 0)" if max_ratio > 10.0 else f"{max_ratio:.2%}"
 
     # Per-symbol summary table
-    rows = ["| symbol | n_paths | min Sharpe | median Sharpe | max Sharpe | worst/median drop | pass |",
-            "|---|---|---|---|---|---|---|"]
+    rows = [
+        "| symbol | n_paths | min Sharpe | median Sharpe | max Sharpe | worst/median drop | pass |",
+        "|---|---|---|---|---|---|---|",
+    ]
     for sym, agg in result.per_symbol_aggregate.items():
-        ratio = agg['worst_vs_median_ratio']
+        ratio = agg["worst_vs_median_ratio"]
         if ratio is None:
             ratio_str = "n/a (median ≤ 0)"
         elif ratio > 10.0:  # > 1000% relative drop — median is effectively zero
             ratio_str = f"> 1000% (median ≈ 0)"
         else:
             ratio_str = f"{ratio:.2%}"
-        passed_str = "✅ PASS" if agg['passed'] else "❌ FAIL"
+        passed_str = "✅ PASS" if agg["passed"] else "❌ FAIL"
         rows.append(
             f"| {sym} | {agg['n_paths']} | {agg['min']:+.3f} | {agg['median']:+.3f} | {agg['max']:+.3f} | {ratio_str} | {passed_str} |"
         )
@@ -157,19 +159,27 @@ def main() -> int:
     parser.add_argument("--cpcv", action="store_true", help="Run CPCV validation")
     parser.add_argument("--both", action="store_true", help="Run both harnesses")
     parser.add_argument(
-        "--symbols", type=str, default=None,
+        "--symbols",
+        type=str,
+        default=None,
         help="Comma-separated symbols (default: P0 watchlist)",
     )
     parser.add_argument(
-        "--timeframe", type=str, default="4h",
+        "--timeframe",
+        type=str,
+        default="4h",
         help="OHLCV timeframe (default: 4h)",
     )
     parser.add_argument(
-        "--limit", type=int, default=1080,
+        "--limit",
+        type=int,
+        default=1080,
         help="Bars per symbol (default: 1080 ≈ 6mo of 4h)",
     )
     parser.add_argument(
-        "--date", type=str, default=None,
+        "--date",
+        type=str,
+        default=None,
         help="Override run date (YYYY-MM-DD); default: today",
     )
     args = parser.parse_args()
@@ -178,32 +188,43 @@ def main() -> int:
         parser.error("Specify --wfv, --cpcv, or --both")
 
     symbols = (
-        tuple(args.symbols.split(",")) if args.symbols
-        else walk_forward_validation.DEFAULT_SYMBOLS
+        tuple(args.symbols.split(",")) if args.symbols else walk_forward_validation.DEFAULT_SYMBOLS
     )
     run_date = args.date or dt.date.today().isoformat()
     out_dir = REPO_ROOT / "docs" / "validation" / "runs" / run_date
 
     if args.wfv or args.both:
-        print(f"→ Walk-forward validation: {len(symbols)} symbols, {args.timeframe}, {args.limit} bars each")
+        print(
+            f"→ Walk-forward validation: {len(symbols)} symbols, {args.timeframe}, {args.limit} bars each"
+        )
         wfv = walk_forward_validation.run(
-            symbols=symbols, timeframe=args.timeframe, limit=args.limit,
+            symbols=symbols,
+            timeframe=args.timeframe,
+            limit=args.limit,
         )
         write_wfv_outputs(wfv, out_dir)
         stats = wfv.summary_stats()
-        print(f"  WFV done: {stats['passed_folds']}/{stats['total_folds']} folds passed, median Sharpe {stats['median_sharpe']:+.3f}")
+        print(
+            f"  WFV done: {stats['passed_folds']}/{stats['total_folds']} folds passed, median Sharpe {stats['median_sharpe']:+.3f}"
+        )
         print(f"  → {out_dir}/wfv.md")
 
     if args.cpcv or args.both:
-        print(f"→ CPCV validation: {len(symbols)} symbols, N={cpcv_validation.N_GROUPS} groups, K={cpcv_validation.K_TEST_GROUPS}")
+        print(
+            f"→ CPCV validation: {len(symbols)} symbols, N={cpcv_validation.N_GROUPS} groups, K={cpcv_validation.K_TEST_GROUPS}"
+        )
         cpcv = cpcv_validation.run(
-            symbols=symbols, timeframe=args.timeframe, limit=args.limit,
+            symbols=symbols,
+            timeframe=args.timeframe,
+            limit=args.limit,
         )
         write_cpcv_outputs(cpcv, out_dir)
         stats = cpcv.summary_stats()
-        max_ratio = stats['max_worst_vs_median_ratio']
+        max_ratio = stats["max_worst_vs_median_ratio"]
         ratio_str = f"> 1000% (median ≈ 0)" if max_ratio > 10.0 else f"{max_ratio:.2%}"
-        print(f"  CPCV done: {stats['symbols_passing']}/{stats['n_symbols']} symbols pass §0.4 bar; max ratio {ratio_str}")
+        print(
+            f"  CPCV done: {stats['symbols_passing']}/{stats['n_symbols']} symbols pass §0.4 bar; max ratio {ratio_str}"
+        )
         print(f"  → {out_dir}/cpcv.md")
 
     return 0

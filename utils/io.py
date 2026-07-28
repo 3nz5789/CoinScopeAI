@@ -98,6 +98,8 @@ def quarantine_corrupt_file(path: Path) -> Path | None:
     except OSError as exc:
         _log.error(
             "quarantine_corrupt_file: rename of %s -> %s failed: %s",
-            path, backup, exc,
+            path,
+            backup,
+            exc,
         )
         return None

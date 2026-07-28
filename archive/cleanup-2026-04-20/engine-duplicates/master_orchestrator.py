@@ -154,7 +154,7 @@ class CoinScopeOrchestrator:
             avg_win=0.018,
             avg_loss=0.012,
             regime=regime,
-            account_balance=ACCOUNT_SIZE
+            account_balance=ACCOUNT_SIZE,
         )
 
         result = {
@@ -192,10 +192,12 @@ class CoinScopeOrchestrator:
 
         active = [r for r in results if r.get("signal") in ("LONG", "SHORT")]
         for r in active:
-            print(f" ✅ {r['symbol']:12s} {r['signal']:6s} | "
-                  f"Regime: {r['regime']:4s} | "
-                  f"Kelly: ${r.get('kelly_usd', 0):.2f} | "
-                  f"Price: ${r.get('price', 0):.4f}")
+            print(
+                f" ✅ {r['symbol']:12s} {r['signal']:6s} | "
+                f"Regime: {r['regime']:4s} | "
+                f"Kelly: ${r.get('kelly_usd', 0):.2f} | "
+                f"Price: ${r.get('price', 0):.4f}"
+            )
 
         if not active:
             print(" No active signals — market in consolidation")

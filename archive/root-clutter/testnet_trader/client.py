@@ -24,24 +24,28 @@ from config import BinanceConfig
 
 # ── Custom exceptions ─────────────────────────────────────────────────────────
 
+
 class RateLimitError(Exception):
     def __init__(self, msg: str, retry_after: int = 60):
         super().__init__(msg)
         self.retry_after = retry_after
 
+
 class BinanceAPIError(Exception):
     def __init__(self, code: int, msg: str):
         super().__init__(f"Binance error {code}: {msg}")
         self.code = code
-        self.msg  = msg
+        self.msg = msg
+
 
 # Binance error codes that are safe to retry (transient)
-RETRYABLE_CODES     = {-1001, -1007}
+RETRYABLE_CODES = {-1001, -1007}
 # Binance error codes that should never be retried (logic errors)
 NON_RETRYABLE_CODES = {-1021, -1022, -2018, -2019}
 
 
 # ── Rate limit tracker ────────────────────────────────────────────────────────
+
 
 class RateLimitTracker:
     """
@@ -49,14 +53,14 @@ class RateLimitTracker:
     Proactively warns before hitting the server cap so we never get a 429.
     """
 
-    WEIGHT_LIMIT_1M  = 2400   # request weight per minute per IP
-    ORDER_LIMIT_10S  = 300    # orders per 10 seconds per account
-    ORDER_LIMIT_1M   = 1200   # orders per minute per account
-    SAFETY_BUFFER    = 0.90   # stay under 90% of limit to leave headroom
+    WEIGHT_LIMIT_1M = 2400  # request weight per minute per IP
+    ORDER_LIMIT_10S = 300  # orders per 10 seconds per account
+    ORDER_LIMIT_1M = 1200  # orders per minute per account
+    SAFETY_BUFFER = 0.90  # stay under 90% of limit to leave headroom
 
     def __init__(self):
-        self._weights: deque = deque()   # (monotonic_ts, weight)
-        self._orders:  deque = deque()   # (monotonic_ts, 1)
+        self._weights: deque = deque()  # (monotonic_ts, weight)
+        self._orders: deque = deque()  # (monotonic_ts, 1)
 
     def _prune(self, q: deque, window: float):
         cutoff = time.monotonic() - window
@@ -83,8 +87,8 @@ class RateLimitTracker:
 
     def can_place_order(self) -> bool:
         return (
-            self.order_count_10s() < self.ORDER_LIMIT_10S * self.SAFETY_BUFFER and
-            self.order_count_1m()  < self.ORDER_LIMIT_1M  * self.SAFETY_BUFFER
+            self.order_count_10s() < self.ORDER_LIMIT_10S * self.SAFETY_BUFFER
+            and self.order_count_1m() < self.ORDER_LIMIT_1M * self.SAFETY_BUFFER
         )
 
     def weight_ok(self, needed: int = 1) -> bool:
@@ -99,6 +103,7 @@ class RateLimitTracker:
 
 # ── REST client ───────────────────────────────────────────────────────────────
 
+
 class BinanceFuturesRestClient:
     """
     Full-featured Binance USDT-M Futures REST client.
@@ -106,22 +111,24 @@ class BinanceFuturesRestClient:
     """
 
     def __init__(self, cfg: BinanceConfig):
-        self._base       = cfg.rest_url.rstrip("/")
-        self._api_key    = cfg.api_key
+        self._base = cfg.rest_url.rstrip("/")
+        self._api_key = cfg.api_key
         self._api_secret = cfg.api_secret
-        self._ts_offset  = 0   # millisecond offset corrected at startup
-        self.rate        = RateLimitTracker()
+        self._ts_offset = 0  # millisecond offset corrected at startup
+        self.rate = RateLimitTracker()
 
         # Session with connection pooling; retry only on server-side 5xx errors.
         # We handle 429 / 418 / API errors ourselves.
         self._session = requests.Session()
         self._session.headers.update({"X-MBX-APIKEY": self._api_key})
-        adapter = HTTPAdapter(max_retries=Retry(
-            total=3,
-            backoff_factor=0.5,
-            status_forcelist=[500, 502, 503, 504],
-            allowed_methods=["GET", "POST", "DELETE", "PUT"],
-        ))
+        adapter = HTTPAdapter(
+            max_retries=Retry(
+                total=3,
+                backoff_factor=0.5,
+                status_forcelist=[500, 502, 503, 504],
+                allowed_methods=["GET", "POST", "DELETE", "PUT"],
+            )
+        )
         self._session.mount("https://", adapter)
 
     # ── Clock sync ────────────────────────────────────────────────────────────
@@ -133,8 +140,8 @@ class BinanceFuturesRestClient:
         Returns the offset in milliseconds.
         """
         data = self._session.get(f"{self._base}/fapi/v1/time", timeout=5).json()
-        server_ms   = data["serverTime"]
-        local_ms    = int(time.time() * 1000)
+        server_ms = data["serverTime"]
+        local_ms = int(time.time() * 1000)
         self._ts_offset = server_ms - local_ms
         print(f"[Client] Clock synced. Offset: {self._ts_offset:+d} ms")
         return self._ts_offset
@@ -147,8 +154,8 @@ class BinanceFuturesRestClient:
         Must be called LAST — after all other params are set — because
         parameter order is part of what gets signed.
         """
-        params["timestamp"]  = int(time.time() * 1000) + self._ts_offset
-        params["recvWindow"] = 10000   # 10s window; generous enough for most VPS setups
+        params["timestamp"] = int(time.time() * 1000) + self._ts_offset
+        params["recvWindow"] = 10000  # 10s window; generous enough for most VPS setups
         query = "&".join(f"{k}={v}" for k, v in params.items())
         params["signature"] = hmac.new(
             self._api_secret.encode(),
@@ -165,8 +172,7 @@ class BinanceFuturesRestClient:
             params = self._sign(params)
 
         resp = self._session.request(
-            method, f"{self._base}{path}",
-            params=params, timeout=10, **kwargs
+            method, f"{self._base}{path}", params=params, timeout=10, **kwargs
         )
 
         # Update our rate limit tracker from the response header
@@ -206,9 +212,15 @@ class BinanceFuturesRestClient:
 
     def get_klines(self, symbol: str, interval: str, limit: int = 3) -> list:
         """OHLCV klines. Weight: 1."""
-        return self._req("GET", "/fapi/v1/klines", params={
-            "symbol": symbol.upper(), "interval": interval, "limit": limit,
-        })
+        return self._req(
+            "GET",
+            "/fapi/v1/klines",
+            params={
+                "symbol": symbol.upper(),
+                "interval": interval,
+                "limit": limit,
+            },
+        )
 
     # ── Private endpoints (signed) ─────────────────────────────────────────────
 
@@ -225,16 +237,28 @@ class BinanceFuturesRestClient:
 
     def set_leverage(self, symbol: str, leverage: int) -> dict:
         """Set leverage (1–125x). Weight: 1."""
-        return self._req("POST", "/fapi/v1/leverage", signed=True, params={
-            "symbol": symbol.upper(), "leverage": leverage,
-        })
+        return self._req(
+            "POST",
+            "/fapi/v1/leverage",
+            signed=True,
+            params={
+                "symbol": symbol.upper(),
+                "leverage": leverage,
+            },
+        )
 
     def set_margin_type(self, symbol: str, margin_type: str = "ISOLATED") -> dict:
         """Set ISOLATED or CROSSED margin. Weight: 1."""
         try:
-            return self._req("POST", "/fapi/v1/marginType", signed=True, params={
-                "symbol": symbol.upper(), "marginType": margin_type.upper(),
-            })
+            return self._req(
+                "POST",
+                "/fapi/v1/marginType",
+                signed=True,
+                params={
+                    "symbol": symbol.upper(),
+                    "marginType": margin_type.upper(),
+                },
+            )
         except BinanceAPIError as e:
             # -4046 means margin type is already set — not a real error
             if e.code == -4046:
@@ -244,14 +268,14 @@ class BinanceFuturesRestClient:
 
     def place_order(
         self,
-        symbol:        str,
-        side:          str,          # "BUY" | "SELL"
-        order_type:    str,          # "MARKET" | "LIMIT" | "STOP_MARKET" | "TAKE_PROFIT_MARKET"
-        quantity:      float,
-        price:         float = None,
-        stop_price:    float = None,
-        reduce_only:   bool  = False,
-        time_in_force: str   = "GTC",
+        symbol: str,
+        side: str,  # "BUY" | "SELL"
+        order_type: str,  # "MARKET" | "LIMIT" | "STOP_MARKET" | "TAKE_PROFIT_MARKET"
+        quantity: float,
+        price: float = None,
+        stop_price: float = None,
+        reduce_only: bool = False,
+        time_in_force: str = "GTC",
     ) -> dict:
         """
         Place a Futures order. Weight: 1 (also counts against order-rate limits).
@@ -261,14 +285,14 @@ class BinanceFuturesRestClient:
             raise RateLimitError("Order rate limit approaching — slow down", retry_after=5)
 
         params = {
-            "symbol":       symbol.upper(),
-            "side":         side.upper(),
-            "type":         order_type.upper(),
-            "quantity":     quantity,
-            "positionSide": "BOTH",   # one-way mode; change to LONG/SHORT for hedge mode
+            "symbol": symbol.upper(),
+            "side": side.upper(),
+            "type": order_type.upper(),
+            "quantity": quantity,
+            "positionSide": "BOTH",  # one-way mode; change to LONG/SHORT for hedge mode
         }
         if order_type.upper() == "LIMIT":
-            params["price"]       = price
+            params["price"] = price
             params["timeInForce"] = time_in_force
         if stop_price is not None:
             params["stopPrice"] = stop_price
@@ -281,9 +305,14 @@ class BinanceFuturesRestClient:
 
     def cancel_all_orders(self, symbol: str) -> dict:
         """Cancel all open orders for a symbol. Weight: 1."""
-        return self._req("DELETE", "/fapi/v1/allOpenOrders", signed=True, params={
-            "symbol": symbol.upper(),
-        })
+        return self._req(
+            "DELETE",
+            "/fapi/v1/allOpenOrders",
+            signed=True,
+            params={
+                "symbol": symbol.upper(),
+            },
+        )
 
     # ── Symbol filter helpers ─────────────────────────────────────────────────
 
@@ -297,20 +326,18 @@ class BinanceFuturesRestClient:
             price_precision — decimal places for price
         """
         info = self.get_exchange_info(symbol)
-        sym_info = next(
-            (s for s in info["symbols"] if s["symbol"] == symbol.upper()), None
-        )
+        sym_info = next((s for s in info["symbols"] if s["symbol"] == symbol.upper()), None)
         if not sym_info:
             raise ValueError(f"Symbol {symbol} not found in exchange info")
 
         result = {}
         for f in sym_info["filters"]:
             if f["filterType"] == "LOT_SIZE":
-                result["step_size"]      = float(f["stepSize"])
-                result["qty_precision"]  = _decimal_places(f["stepSize"])
+                result["step_size"] = float(f["stepSize"])
+                result["qty_precision"] = _decimal_places(f["stepSize"])
             elif f["filterType"] == "PRICE_FILTER":
-                result["tick_size"]        = float(f["tickSize"])
-                result["price_precision"]  = _decimal_places(f["tickSize"])
+                result["tick_size"] = float(f["tickSize"])
+                result["price_precision"] = _decimal_places(f["tickSize"])
             elif f["filterType"] == "MIN_NOTIONAL":
                 result["min_notional"] = float(f.get("notional", f.get("minNotional", 5.0)))
         return result

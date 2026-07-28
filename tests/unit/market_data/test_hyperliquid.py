@@ -49,16 +49,18 @@ class TestHLAllMids:
 
         bus.subscribe(EventType.MARK_PRICE, handler)
 
-        raw = json.dumps({
-            "channel": "allMids",
-            "data": {
-                "mids": {
-                    "BTC": "50000.5",
-                    "ETH": "3000.25",
-                    "SOL": "100.0",  # not in our symbol list
-                }
+        raw = json.dumps(
+            {
+                "channel": "allMids",
+                "data": {
+                    "mids": {
+                        "BTC": "50000.5",
+                        "ETH": "3000.25",
+                        "SOL": "100.0",  # not in our symbol list
+                    }
+                },
             }
-        })
+        )
         await client._handle_all_mids(raw)
 
         # Should only get BTC and ETH (SOL not in symbols)
@@ -81,17 +83,25 @@ class TestHLL2Book:
 
         bus.subscribe(EventType.ORDER_BOOK, handler)
 
-        raw = json.dumps({
-            "channel": "l2Book",
-            "data": {
-                "coin": "BTC",
-                "time": 1700000000000,
-                "levels": [
-                    [{"px": "50000", "sz": "1.5", "n": 3}, {"px": "49999", "sz": "2.0", "n": 5}],
-                    [{"px": "50001", "sz": "0.5", "n": 2}, {"px": "50002", "sz": "1.0", "n": 4}],
-                ]
+        raw = json.dumps(
+            {
+                "channel": "l2Book",
+                "data": {
+                    "coin": "BTC",
+                    "time": 1700000000000,
+                    "levels": [
+                        [
+                            {"px": "50000", "sz": "1.5", "n": 3},
+                            {"px": "49999", "sz": "2.0", "n": 5},
+                        ],
+                        [
+                            {"px": "50001", "sz": "0.5", "n": 2},
+                            {"px": "50002", "sz": "1.0", "n": 4},
+                        ],
+                    ],
+                },
             }
-        })
+        )
         await client._handle_l2book(raw)
 
         assert len(received) == 1
@@ -114,13 +124,29 @@ class TestHLTrades:
 
         bus.subscribe(EventType.TRADE, handler)
 
-        raw = json.dumps({
-            "channel": "trades",
-            "data": [
-                {"coin": "BTC", "side": "B", "px": "50000", "sz": "0.1", "time": 1700000000000, "tid": "t1"},
-                {"coin": "BTC", "side": "A", "px": "49999", "sz": "0.2", "time": 1700000000001, "tid": "t2"},
-            ]
-        })
+        raw = json.dumps(
+            {
+                "channel": "trades",
+                "data": [
+                    {
+                        "coin": "BTC",
+                        "side": "B",
+                        "px": "50000",
+                        "sz": "0.1",
+                        "time": 1700000000000,
+                        "tid": "t1",
+                    },
+                    {
+                        "coin": "BTC",
+                        "side": "A",
+                        "px": "49999",
+                        "sz": "0.2",
+                        "time": 1700000000001,
+                        "tid": "t2",
+                    },
+                ],
+            }
+        )
         await client._handle_trades(raw)
 
         assert len(received) == 2
@@ -136,12 +162,21 @@ class TestHLTrades:
 
         bus.subscribe(EventType.TRADE, handler)
 
-        raw = json.dumps({
-            "channel": "trades",
-            "data": [
-                {"coin": "DOGE", "side": "B", "px": "0.1", "sz": "1000", "time": 1700000000000, "tid": "t1"},
-            ]
-        })
+        raw = json.dumps(
+            {
+                "channel": "trades",
+                "data": [
+                    {
+                        "coin": "DOGE",
+                        "side": "B",
+                        "px": "0.1",
+                        "sz": "1000",
+                        "time": 1700000000000,
+                        "tid": "t1",
+                    },
+                ],
+            }
+        )
         await client._handle_trades(raw)
 
         assert len(received) == 0
@@ -174,7 +209,7 @@ class TestHLREST:
                 {"funding": "0.00012", "openInterest": "15000", "markPx": "50000"},
                 {"funding": "-0.00005", "openInterest": "200000", "markPx": "3000"},
                 {"funding": "0.00001", "openInterest": "500000", "markPx": "100"},
-            ]
+            ],
         ]
 
         # Mock the aiohttp session post
@@ -187,7 +222,9 @@ class TestHLREST:
         mock_session = AsyncMock()
         mock_session.post = MagicMock(return_value=mock_resp)
 
-        with patch.object(client, '_get_session', new_callable=AsyncMock, return_value=mock_session):
+        with patch.object(
+            client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+        ):
             await client._poll_meta_and_ctx()
 
         # BTC and ETH should have funding + OI; SOL should not (not in symbols)

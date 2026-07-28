@@ -25,10 +25,7 @@ import uuid
 import websockets
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger("BinanceWSClient")
 
 
@@ -63,9 +60,7 @@ class BinanceWebSocketClient:
         # Sort params alphabetically
         query_string = "&".join([f"{k}={v}" for k, v in sorted(params.items())])
         signature = hmac.new(
-            self.api_secret.encode(),
-            query_string.encode(),
-            hashlib.sha256
+            self.api_secret.encode(), query_string.encode(), hashlib.sha256
         ).hexdigest()
         return signature
 
@@ -76,18 +71,18 @@ class BinanceWebSocketClient:
         Starts the message handler, ping/pong handler, and authenticates.
         Retries indefinitely on failure (backoff: 1s → 2s → 4s … capped at 60s).
         """
-        backoff = 1   # seconds; doubles on each failed attempt, caps at 60
+        backoff = 1  # seconds; doubles on each failed attempt, caps at 60
         while True:
             try:
                 logger.info(f"Connecting to {self.endpoint}...")
                 self.ws = await websockets.connect(
                     self.endpoint,
-                    ping_interval=None,   # we handle pings manually below
+                    ping_interval=None,  # we handle pings manually below
                     ping_timeout=None,
                     close_timeout=5,
                 )
                 self.connected = True
-                backoff = 1   # reset on successful connection
+                backoff = 1  # reset on successful connection
                 logger.info("✅ WebSocket connected")
 
                 # Start message handler and ping/pong handler
@@ -96,7 +91,7 @@ class BinanceWebSocketClient:
 
                 # Authenticate the session
                 await self.authenticate()
-                return   # connection established — exit the retry loop
+                return  # connection established — exit the retry loop
 
             except Exception as e:
                 logger.error(f"❌ Connection failed: {e} — retrying in {backoff}s")
@@ -113,18 +108,16 @@ class BinanceWebSocketClient:
             }
             params["signature"] = self._sign_request(params)
 
-            request = {
-                "id": str(uuid.uuid4()),
-                "method": "session.logon",
-                "params": params
-            }
+            request = {"id": str(uuid.uuid4()), "method": "session.logon", "params": params}
 
             logger.info("Authenticating...")
             response = await self._send_raw_request(request)
 
             if response.get("status") == 200:
                 self.authenticated = True
-                logger.info(f"✅ Authenticated: {response.get('result', {}).get('apiKey', 'Unknown')[:10]}...")
+                logger.info(
+                    f"✅ Authenticated: {response.get('result', {}).get('apiKey', 'Unknown')[:10]}..."
+                )
             else:
                 error = response.get("error", {})
                 raise Exception(f"Auth failed: {error.get('msg', 'Unknown error')}")
@@ -211,7 +204,7 @@ class BinanceWebSocketClient:
         can investigate. The actual pong is sent in _message_handler when the
         ping frame arrives — this task just monitors liveness.
         """
-        STALE_THRESHOLD_S = 9 * 60   # warn if no ping seen within 9 minutes
+        STALE_THRESHOLD_S = 9 * 60  # warn if no ping seen within 9 minutes
         try:
             while self.connected:
                 await asyncio.sleep(60)
@@ -257,11 +250,7 @@ class BinanceWebSocketClient:
         params = params or {}
         request_id = str(uuid.uuid4())
 
-        request = {
-            "id": request_id,
-            "method": method,
-            "params": params
-        }
+        request = {"id": request_id, "method": method, "params": params}
 
         response = await self._send_raw_request(request)
 
@@ -292,7 +281,7 @@ class BinanceWebSocketClient:
         order_type: str = "MARKET",
         quantity: float = None,
         price: float = None,
-        **kwargs
+        **kwargs,
     ) -> Dict:
         """Place an order"""
         params = {
@@ -310,7 +299,9 @@ class BinanceWebSocketClient:
 
         return await self._send_request("order.place", params)
 
-    async def cancel_order(self, symbol: str, order_id: int = None, client_order_id: str = None) -> Dict:
+    async def cancel_order(
+        self, symbol: str, order_id: int = None, client_order_id: str = None
+    ) -> Dict:
         """Cancel an order"""
         params = {"symbol": symbol}
 
@@ -330,7 +321,9 @@ class BinanceWebSocketClient:
         result = await self._send_request("openOrders.status", params)
         return result if isinstance(result, list) else [result]
 
-    async def get_order(self, symbol: str, order_id: int = None, client_order_id: str = None) -> Dict:
+    async def get_order(
+        self, symbol: str, order_id: int = None, client_order_id: str = None
+    ) -> Dict:
         """Get order status"""
         params = {"symbol": symbol}
 

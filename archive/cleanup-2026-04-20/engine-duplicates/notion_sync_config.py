@@ -89,7 +89,7 @@ DRY_RUN: bool = os.environ.get("NOTION_DRY_RUN", "0") == "1"
 # ── Notion API ────────────────────────────────────────────────────────────────
 
 NOTION_API_VERSION = "2022-06-28"
-NOTION_BASE_URL    = "https://api.notion.com/v1"
+NOTION_BASE_URL = "https://api.notion.com/v1"
 
 # ── Field Mapping Reference ───────────────────────────────────────────────────
 # Maps engine field names → Notion property names.
@@ -97,79 +97,79 @@ NOTION_BASE_URL    = "https://api.notion.com/v1"
 
 TRADE_FIELD_MAP = {
     # engine field          : Notion property name (Trade Journal v2 — 2026-04-04)
-    "symbol"                : "Pair",
-    "side"                  : "Direction",
-    "status"                : "Status",
-    "signal_score"          : "Signal Score",
-    "conviction"            : "Conviction",
-    "regime"                : "Regime at Entry",
-    "mtf_confirmed"         : "MTF at Entry",
-    "entry_price"           : "Entry Price",
-    "opened_at"             : "Entry Time",
-    "stop_loss"             : "Stop Loss",
-    "take_profit"           : "Take Profit 1",
-    "take_profit_2"         : "Take Profit 2",
-    "exit_price"            : "Exit Price",
-    "closed_at"             : "Exit Time",
-    "quantity"              : "Size USDT",
-    "leverage"              : "Leverage",
-    "kelly_pct"             : "Kelly Pct Used",
-    "rr_planned"            : "RR Planned",
-    "rr_actual"             : "RR Actual",
-    "pnl_usdt"              : "PnL USDT",
-    "pnl_pct"               : "PnL Pct",
-    "mistakes"              : "Mistakes",
-    "notes"                 : "Lessons",
+    "symbol": "Pair",
+    "side": "Direction",
+    "status": "Status",
+    "signal_score": "Signal Score",
+    "conviction": "Conviction",
+    "regime": "Regime at Entry",
+    "mtf_confirmed": "MTF at Entry",
+    "entry_price": "Entry Price",
+    "opened_at": "Entry Time",
+    "stop_loss": "Stop Loss",
+    "take_profit": "Take Profit 1",
+    "take_profit_2": "Take Profit 2",
+    "exit_price": "Exit Price",
+    "closed_at": "Exit Time",
+    "quantity": "Size USDT",
+    "leverage": "Leverage",
+    "kelly_pct": "Kelly Pct Used",
+    "rr_planned": "RR Planned",
+    "rr_actual": "RR Actual",
+    "pnl_usdt": "PnL USDT",
+    "pnl_pct": "PnL Pct",
+    "mistakes": "Mistakes",
+    "notes": "Lessons",
 }
 
 SIGNAL_FIELD_MAP = {
     # engine field          : Notion property name (Signal Log v2 — 2026-04-04)
-    "symbol"                : "Pair",
-    "signal"                : "Direction",
-    "score"                 : "Score (0-12)",
-    "strength_label"        : "Strength Label",
-    "regime"                : "Regime",
-    "mtf_confirmed"         : "MTF Confirmed",
-    "rsi"                   : "RSI",
-    "timeframe"             : "Timeframe",
-    "price"                 : "Price at Signal",
-    "timestamp"             : "Scan Timestamp",
-    "status"                : "Status",
-    "funding_rate"          : "Funding Rate",
-    "funding_warning"       : "Funding Warning",
-    "oi_change_1h"          : "OI Change 1h",
-    "sub_scores"            : "Sub-scores",
-    "engine_mode"           : "Engine Mode",
-    "notes"                 : "Notes",
+    "symbol": "Pair",
+    "signal": "Direction",
+    "score": "Score (0-12)",
+    "strength_label": "Strength Label",
+    "regime": "Regime",
+    "mtf_confirmed": "MTF Confirmed",
+    "rsi": "RSI",
+    "timeframe": "Timeframe",
+    "price": "Price at Signal",
+    "timestamp": "Scan Timestamp",
+    "status": "Status",
+    "funding_rate": "Funding Rate",
+    "funding_warning": "Funding Warning",
+    "oi_change_1h": "OI Change 1h",
+    "sub_scores": "Sub-scores",
+    "engine_mode": "Engine Mode",
+    "notes": "Notes",
 }
 
 SCAN_HISTORY_FIELD_MAP = {
     # engine field          : Notion property name (Scan History v1 — 2026-04-04)
-    "scan_id"               : "Scan ID",
-    "timestamp"             : "Scan Timestamp",
-    "pairs_scanned"         : "Pairs Scanned",
-    "signals_found"         : "Signals Found",
-    "min_score"             : "Min Score Used",
-    "avg_score"             : "Avg Score",
-    "top_signal"            : "Top Signal",
-    "top_score"             : "Top Score",
-    "btc_regime"            : "BTC Regime",
-    "btc_price"             : "BTC Price",
-    "market_regime"         : "Market Regime",
-    "engine_mode"           : "Engine Mode",
-    "notes"                 : "Notes",
+    "scan_id": "Scan ID",
+    "timestamp": "Scan Timestamp",
+    "pairs_scanned": "Pairs Scanned",
+    "signals_found": "Signals Found",
+    "min_score": "Min Score Used",
+    "avg_score": "Avg Score",
+    "top_signal": "Top Signal",
+    "top_score": "Top Score",
+    "btc_regime": "BTC Regime",
+    "btc_price": "BTC Price",
+    "market_regime": "Market Regime",
+    "engine_mode": "Engine Mode",
+    "notes": "Notes",
 }
 
 # ── Select Option Values (for validation) ─────────────────────────────────────
 
-DIRECTION_OPTIONS   = {"LONG", "SHORT"}
-REGIME_OPTIONS      = {"Bull", "Bear", "Chop"}
-TIMEFRAME_OPTIONS   = {"1m", "5m", "15m", "1h", "4h", "1d"}
-SIGNAL_OPTIONS      = {"LONG", "SHORT", "NEUTRAL"}
+DIRECTION_OPTIONS = {"LONG", "SHORT"}
+REGIME_OPTIONS = {"Bull", "Bear", "Chop"}
+TIMEFRAME_OPTIONS = {"1m", "5m", "15m", "1h", "4h", "1d"}
+SIGNAL_OPTIONS = {"LONG", "SHORT", "NEUTRAL"}
 EXIT_REASON_OPTIONS = {"TP Hit", "SL Hit", "Manual Close", "Time Stop", "Regime Change"}
-ACTED_ON_OPTIONS    = {"Yes — Entered", "No — Skipped", "Watching"}
-SOURCE_OPTIONS      = {"Scanner", "Manual", "Whale Alert", "Funding Rate"}
-SKIP_OPTIONS        = {"Score Too Low", "Chop Regime", "Risk Gate Blocked", "Manual Decision"}
+ACTED_ON_OPTIONS = {"Yes — Entered", "No — Skipped", "Watching"}
+SOURCE_OPTIONS = {"Scanner", "Manual", "Whale Alert", "Funding Rate"}
+SKIP_OPTIONS = {"Score Too Low", "Chop Regime", "Risk Gate Blocked", "Manual Decision"}
 
 
 def validate_config() -> bool:

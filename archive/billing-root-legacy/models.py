@@ -40,6 +40,7 @@ class BillingInterval(str, Enum):
 
 class SubscriptionRecord(BaseModel):
     """Full subscription state stored in DB."""
+
     customer_id: str
     email: Optional[str] = None
     stripe_subscription_id: str
@@ -56,7 +57,8 @@ class SubscriptionRecord(BaseModel):
 
 class WebhookEventRecord(BaseModel):
     """Idempotency record for processed webhook events."""
-    event_id: str            # Stripe event ID (evt_xxx)
+
+    event_id: str  # Stripe event ID (evt_xxx)
     event_type: str
     processed_at: datetime
     customer_id: Optional[str] = None
@@ -65,6 +67,7 @@ class WebhookEventRecord(BaseModel):
 
 class CheckoutSessionData(BaseModel):
     """Extracted data from checkout.session.completed."""
+
     session_id: str
     customer_id: str
     subscription_id: str
@@ -75,6 +78,7 @@ class CheckoutSessionData(BaseModel):
 
 class SubscriptionChangeData(BaseModel):
     """Data extracted from subscription update/delete events."""
+
     subscription_id: str
     customer_id: str
     tier: SubscriptionTier
@@ -86,10 +90,11 @@ class SubscriptionChangeData(BaseModel):
 
 class InvoiceData(BaseModel):
     """Data extracted from invoice events."""
+
     invoice_id: str
     customer_id: str
     subscription_id: Optional[str] = None
-    amount_paid: int       # In cents
+    amount_paid: int  # In cents
     currency: str
-    status: str            # 'paid' | 'open' | 'uncollectible'
+    status: str  # 'paid' | 'open' | 'uncollectible'
     next_payment_attempt: Optional[datetime] = None

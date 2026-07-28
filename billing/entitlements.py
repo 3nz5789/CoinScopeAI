@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 # ─── Entitlement dataclass ────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class Entitlements:
     """
@@ -40,44 +41,45 @@ class Entitlements:
     All fields map 1:1 to billing.entitlements columns.
     -1 in integer fields means "unlimited".
     """
-    tier:                       str
+
+    tier: str
 
     # Pricing
-    monthly_price_usd_cents:    int
-    annual_price_usd_cents:     int
+    monthly_price_usd_cents: int
+    annual_price_usd_cents: int
 
     # Scanner
-    max_symbols:                int     # -1 = unlimited
-    scan_interval_minutes:      int
-    max_alerts_per_day:         int     # -1 = unlimited
+    max_symbols: int  # -1 = unlimited
+    scan_interval_minutes: int
+    max_alerts_per_day: int  # -1 = unlimited
 
     # Journal
-    journal_retention_days:     int     # -1 = unlimited
+    journal_retention_days: int  # -1 = unlimited
 
     # API
-    api_access:                 bool
-    api_rate_limit_rpm:         Optional[int]   # None = no access
+    api_access: bool
+    api_rate_limit_rpm: Optional[int]  # None = no access
 
     # Feature flags
-    ml_signals_v3:              bool
-    regime_detection:           bool
-    multi_exchange:             bool
-    cvd_whale_signals:          bool
-    backtesting_enabled:        bool
-    kelly_position_sizing:      bool
-    walk_forward_validation:    bool
-    telegram_alerts:            bool
-    email_alerts:               bool
-    tradingview_webhooks:       bool
-    alpha_decay_monitoring:     bool
+    ml_signals_v3: bool
+    regime_detection: bool
+    multi_exchange: bool
+    cvd_whale_signals: bool
+    backtesting_enabled: bool
+    kelly_position_sizing: bool
+    walk_forward_validation: bool
+    telegram_alerts: bool
+    email_alerts: bool
+    tradingview_webhooks: bool
+    alpha_decay_monitoring: bool
 
     # Team
-    max_team_seats:             int
-    priority_support:           bool
-    dedicated_onboarding:       bool
-    custom_regime_tuning:       bool
-    sla_support:                bool
-    white_label:                bool
+    max_team_seats: int
+    priority_support: bool
+    dedicated_onboarding: bool
+    custom_regime_tuning: bool
+    sla_support: bool
+    white_label: bool
 
     # ── Convenience properties ─────────────────────────────────────────────
 
@@ -114,6 +116,7 @@ class Entitlements:
     def to_dict(self) -> dict:
         """Serialisable representation for API responses."""
         import dataclasses
+
         return dataclasses.asdict(self)
 
     # ── Factory methods ────────────────────────────────────────────────────
@@ -141,32 +144,32 @@ class Entitlements:
         if not row:
             return TIER_ENTITLEMENTS["unknown"]
         return cls(
-            tier                       = row["tier"],
-            monthly_price_usd_cents    = row["monthly_price_usd_cents"],
-            annual_price_usd_cents     = row["annual_price_usd_cents"],
-            max_symbols                = row["max_symbols"],
-            scan_interval_minutes      = row["scan_interval_minutes"],
-            max_alerts_per_day         = row["max_alerts_per_day"],
-            journal_retention_days     = row["journal_retention_days"],
-            api_access                 = row["api_access"],
-            api_rate_limit_rpm         = row["api_rate_limit_rpm"],
-            ml_signals_v3              = row["ml_signals_v3"],
-            regime_detection           = row["regime_detection"],
-            multi_exchange             = row["multi_exchange"],
-            cvd_whale_signals          = row["cvd_whale_signals"],
-            backtesting_enabled        = row["backtesting_enabled"],
-            kelly_position_sizing      = row["kelly_position_sizing"],
-            walk_forward_validation    = row["walk_forward_validation"],
-            telegram_alerts            = row["telegram_alerts"],
-            email_alerts               = row["email_alerts"],
-            tradingview_webhooks       = row["tradingview_webhooks"],
-            alpha_decay_monitoring     = row["alpha_decay_monitoring"],
-            max_team_seats             = row["max_team_seats"],
-            priority_support           = row["priority_support"],
-            dedicated_onboarding       = row["dedicated_onboarding"],
-            custom_regime_tuning       = row["custom_regime_tuning"],
-            sla_support                = row["sla_support"],
-            white_label                = row["white_label"],
+            tier=row["tier"],
+            monthly_price_usd_cents=row["monthly_price_usd_cents"],
+            annual_price_usd_cents=row["annual_price_usd_cents"],
+            max_symbols=row["max_symbols"],
+            scan_interval_minutes=row["scan_interval_minutes"],
+            max_alerts_per_day=row["max_alerts_per_day"],
+            journal_retention_days=row["journal_retention_days"],
+            api_access=row["api_access"],
+            api_rate_limit_rpm=row["api_rate_limit_rpm"],
+            ml_signals_v3=row["ml_signals_v3"],
+            regime_detection=row["regime_detection"],
+            multi_exchange=row["multi_exchange"],
+            cvd_whale_signals=row["cvd_whale_signals"],
+            backtesting_enabled=row["backtesting_enabled"],
+            kelly_position_sizing=row["kelly_position_sizing"],
+            walk_forward_validation=row["walk_forward_validation"],
+            telegram_alerts=row["telegram_alerts"],
+            email_alerts=row["email_alerts"],
+            tradingview_webhooks=row["tradingview_webhooks"],
+            alpha_decay_monitoring=row["alpha_decay_monitoring"],
+            max_team_seats=row["max_team_seats"],
+            priority_support=row["priority_support"],
+            dedicated_onboarding=row["dedicated_onboarding"],
+            custom_regime_tuning=row["custom_regime_tuning"],
+            sla_support=row["sla_support"],
+            white_label=row["white_label"],
         )
 
 
@@ -174,150 +177,145 @@ class Entitlements:
 # Update BOTH here and in the migration when adding features.
 
 TIER_ENTITLEMENTS: dict[str, Entitlements] = {
-
     "free": Entitlements(
-        tier                    = "free",
-        monthly_price_usd_cents = 0,
-        annual_price_usd_cents  = 0,
-        max_symbols             = 3,
-        scan_interval_minutes   = 240,   # 4h
-        max_alerts_per_day      = 5,
-        journal_retention_days  = 7,
-        api_access              = False,
-        api_rate_limit_rpm      = None,
-        ml_signals_v3           = False,
-        regime_detection        = False,
-        multi_exchange          = False,
-        cvd_whale_signals       = False,
-        backtesting_enabled     = False,
-        kelly_position_sizing   = False,
-        walk_forward_validation = False,
-        telegram_alerts         = True,
-        email_alerts            = False,
-        tradingview_webhooks    = False,
-        alpha_decay_monitoring  = False,
-        max_team_seats          = 1,
-        priority_support        = False,
-        dedicated_onboarding    = False,
-        custom_regime_tuning    = False,
-        sla_support             = False,
-        white_label             = False,
+        tier="free",
+        monthly_price_usd_cents=0,
+        annual_price_usd_cents=0,
+        max_symbols=3,
+        scan_interval_minutes=240,  # 4h
+        max_alerts_per_day=5,
+        journal_retention_days=7,
+        api_access=False,
+        api_rate_limit_rpm=None,
+        ml_signals_v3=False,
+        regime_detection=False,
+        multi_exchange=False,
+        cvd_whale_signals=False,
+        backtesting_enabled=False,
+        kelly_position_sizing=False,
+        walk_forward_validation=False,
+        telegram_alerts=True,
+        email_alerts=False,
+        tradingview_webhooks=False,
+        alpha_decay_monitoring=False,
+        max_team_seats=1,
+        priority_support=False,
+        dedicated_onboarding=False,
+        custom_regime_tuning=False,
+        sla_support=False,
+        white_label=False,
     ),
-
     "trader": Entitlements(
-        tier                    = "trader",
-        monthly_price_usd_cents = 7900,
-        annual_price_usd_cents  = 75840,  # 20% annual discount
-        max_symbols             = 25,
-        scan_interval_minutes   = 60,    # 1h
-        max_alerts_per_day      = 50,
-        journal_retention_days  = -1,    # unlimited
-        api_access              = False,
-        api_rate_limit_rpm      = None,
-        ml_signals_v3           = True,
-        regime_detection        = True,
-        multi_exchange          = False,
-        cvd_whale_signals       = False,
-        backtesting_enabled     = True,
-        kelly_position_sizing   = True,
-        walk_forward_validation = True,
-        telegram_alerts         = True,
-        email_alerts            = True,
-        tradingview_webhooks    = False,
-        alpha_decay_monitoring  = False,
-        max_team_seats          = 1,
-        priority_support        = False,
-        dedicated_onboarding    = False,
-        custom_regime_tuning    = False,
-        sla_support             = False,
-        white_label             = False,
+        tier="trader",
+        monthly_price_usd_cents=7900,
+        annual_price_usd_cents=75840,  # 20% annual discount
+        max_symbols=25,
+        scan_interval_minutes=60,  # 1h
+        max_alerts_per_day=50,
+        journal_retention_days=-1,  # unlimited
+        api_access=False,
+        api_rate_limit_rpm=None,
+        ml_signals_v3=True,
+        regime_detection=True,
+        multi_exchange=False,
+        cvd_whale_signals=False,
+        backtesting_enabled=True,
+        kelly_position_sizing=True,
+        walk_forward_validation=True,
+        telegram_alerts=True,
+        email_alerts=True,
+        tradingview_webhooks=False,
+        alpha_decay_monitoring=False,
+        max_team_seats=1,
+        priority_support=False,
+        dedicated_onboarding=False,
+        custom_regime_tuning=False,
+        sla_support=False,
+        white_label=False,
     ),
-
     "desk_preview": Entitlements(
-        tier                    = "desk_preview",
-        monthly_price_usd_cents = 39900,
-        annual_price_usd_cents  = 383040,  # 20% annual discount
-        max_symbols             = -1,    # unlimited
-        scan_interval_minutes   = 15,
-        max_alerts_per_day      = -1,    # unlimited
-        journal_retention_days  = -1,
-        api_access              = True,
-        api_rate_limit_rpm      = 300,
-        ml_signals_v3           = True,
-        regime_detection        = True,
-        multi_exchange          = True,
-        cvd_whale_signals       = True,
-        backtesting_enabled     = True,
-        kelly_position_sizing   = True,
-        walk_forward_validation = True,
-        telegram_alerts         = True,
-        email_alerts            = True,
-        tradingview_webhooks    = True,
-        alpha_decay_monitoring  = True,
-        max_team_seats          = 5,
-        priority_support        = True,
-        dedicated_onboarding    = False,
-        custom_regime_tuning    = False,
-        sla_support             = False,
-        white_label             = False,
+        tier="desk_preview",
+        monthly_price_usd_cents=39900,
+        annual_price_usd_cents=383040,  # 20% annual discount
+        max_symbols=-1,  # unlimited
+        scan_interval_minutes=15,
+        max_alerts_per_day=-1,  # unlimited
+        journal_retention_days=-1,
+        api_access=True,
+        api_rate_limit_rpm=300,
+        ml_signals_v3=True,
+        regime_detection=True,
+        multi_exchange=True,
+        cvd_whale_signals=True,
+        backtesting_enabled=True,
+        kelly_position_sizing=True,
+        walk_forward_validation=True,
+        telegram_alerts=True,
+        email_alerts=True,
+        tradingview_webhooks=True,
+        alpha_decay_monitoring=True,
+        max_team_seats=5,
+        priority_support=True,
+        dedicated_onboarding=False,
+        custom_regime_tuning=False,
+        sla_support=False,
+        white_label=False,
     ),
-
     "desk_full": Entitlements(
-        tier                    = "desk_full",
-        monthly_price_usd_cents = 119900,
-        annual_price_usd_cents  = 1151040,  # 20% annual discount
-        max_symbols             = -1,
-        scan_interval_minutes   = 5,
-        max_alerts_per_day      = -1,
-        journal_retention_days  = -1,
-        api_access              = True,
-        api_rate_limit_rpm      = 1000,
-        ml_signals_v3           = True,
-        regime_detection        = True,
-        multi_exchange          = True,
-        cvd_whale_signals       = True,
-        backtesting_enabled     = True,
-        kelly_position_sizing   = True,
-        walk_forward_validation = True,
-        telegram_alerts         = True,
-        email_alerts            = True,
-        tradingview_webhooks    = True,
-        alpha_decay_monitoring  = True,
-        max_team_seats          = 25,
-        priority_support        = True,
-        dedicated_onboarding    = True,
-        custom_regime_tuning    = True,
-        sla_support             = True,
-        white_label             = True,
+        tier="desk_full",
+        monthly_price_usd_cents=119900,
+        annual_price_usd_cents=1151040,  # 20% annual discount
+        max_symbols=-1,
+        scan_interval_minutes=5,
+        max_alerts_per_day=-1,
+        journal_retention_days=-1,
+        api_access=True,
+        api_rate_limit_rpm=1000,
+        ml_signals_v3=True,
+        regime_detection=True,
+        multi_exchange=True,
+        cvd_whale_signals=True,
+        backtesting_enabled=True,
+        kelly_position_sizing=True,
+        walk_forward_validation=True,
+        telegram_alerts=True,
+        email_alerts=True,
+        tradingview_webhooks=True,
+        alpha_decay_monitoring=True,
+        max_team_seats=25,
+        priority_support=True,
+        dedicated_onboarding=True,
+        custom_regime_tuning=True,
+        sla_support=True,
+        white_label=True,
     ),
-
     "unknown": Entitlements(
-        tier                    = "unknown",
-        monthly_price_usd_cents = 0,
-        annual_price_usd_cents  = 0,
-        max_symbols             = 0,
-        scan_interval_minutes   = 0,
-        max_alerts_per_day      = 0,
-        journal_retention_days  = 0,
-        api_access              = False,
-        api_rate_limit_rpm      = None,
-        ml_signals_v3           = False,
-        regime_detection        = False,
-        multi_exchange          = False,
-        cvd_whale_signals       = False,
-        backtesting_enabled     = False,
-        kelly_position_sizing   = False,
-        walk_forward_validation = False,
-        telegram_alerts         = False,
-        email_alerts            = False,
-        tradingview_webhooks    = False,
-        alpha_decay_monitoring  = False,
-        max_team_seats          = 0,
-        priority_support        = False,
-        dedicated_onboarding    = False,
-        custom_regime_tuning    = False,
-        sla_support             = False,
-        white_label             = False,
+        tier="unknown",
+        monthly_price_usd_cents=0,
+        annual_price_usd_cents=0,
+        max_symbols=0,
+        scan_interval_minutes=0,
+        max_alerts_per_day=0,
+        journal_retention_days=0,
+        api_access=False,
+        api_rate_limit_rpm=None,
+        ml_signals_v3=False,
+        regime_detection=False,
+        multi_exchange=False,
+        cvd_whale_signals=False,
+        backtesting_enabled=False,
+        kelly_position_sizing=False,
+        walk_forward_validation=False,
+        telegram_alerts=False,
+        email_alerts=False,
+        tradingview_webhooks=False,
+        alpha_decay_monitoring=False,
+        max_team_seats=0,
+        priority_support=False,
+        dedicated_onboarding=False,
+        custom_regime_tuning=False,
+        sla_support=False,
+        white_label=False,
     ),
 }
 

@@ -39,16 +39,18 @@ logger = logging.getLogger(__name__)
 # Data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FundingRateRecord:
     """A single funding-rate tick from the Binance stream."""
-    symbol: str                  # BTCUSDT
-    funding_rate: float          # 0.0001
+
+    symbol: str  # BTCUSDT
+    funding_rate: float  # 0.0001
     mark_price: float
     index_price: Optional[float]
-    next_funding_time: int       # Unix ms
-    ingested_at: int             # Unix ms (time.time_ns() // 1_000_000)
-    source: str = "ws"           # 'ws' | 'rest'
+    next_funding_time: int  # Unix ms
+    ingested_at: int  # Unix ms (time.time_ns() // 1_000_000)
+    source: str = "ws"  # 'ws' | 'rest'
 
     @property
     def funding_rate_pct(self) -> str:
@@ -68,6 +70,7 @@ class FundingRateRecord:
 # ---------------------------------------------------------------------------
 # Store
 # ---------------------------------------------------------------------------
+
 
 class FundingRateStore:
     """
@@ -111,7 +114,7 @@ class FundingRateStore:
         conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA synchronous=NORMAL;")   # safe enough with WAL
+        conn.execute("PRAGMA synchronous=NORMAL;")  # safe enough with WAL
         conn.execute("PRAGMA foreign_keys=ON;")
         return conn
 
@@ -153,15 +156,18 @@ class FundingRateStore:
             VALUES (?, ?, ?, ?, ?, ?, ?);
         """
         with self._cursor() as cur:
-            cur.execute(sql, (
-                rec.symbol,
-                rec.funding_rate,
-                rec.mark_price,
-                rec.index_price,
-                rec.next_funding_time,
-                rec.ingested_at,
-                rec.source,
-            ))
+            cur.execute(
+                sql,
+                (
+                    rec.symbol,
+                    rec.funding_rate,
+                    rec.mark_price,
+                    rec.index_price,
+                    rec.next_funding_time,
+                    rec.ingested_at,
+                    rec.source,
+                ),
+            )
             written = cur.rowcount > 0
         if written:
             logger.debug(
@@ -186,8 +192,15 @@ class FundingRateStore:
             VALUES (?, ?, ?, ?, ?, ?, ?);
         """
         rows = [
-            (r.symbol, r.funding_rate, r.mark_price, r.index_price,
-             r.next_funding_time, r.ingested_at, r.source)
+            (
+                r.symbol,
+                r.funding_rate,
+                r.mark_price,
+                r.index_price,
+                r.next_funding_time,
+                r.ingested_at,
+                r.source,
+            )
             for r in records
         ]
         with self._cursor() as cur:
@@ -300,9 +313,9 @@ class FundingRateStore:
         conn = self._connect()
         try:
             total = conn.execute("SELECT COUNT(*) FROM funding_rates;").fetchone()[0]
-            symbols = conn.execute(
-                "SELECT COUNT(DISTINCT symbol) FROM funding_rates;"
-            ).fetchone()[0]
+            symbols = conn.execute("SELECT COUNT(DISTINCT symbol) FROM funding_rates;").fetchone()[
+                0
+            ]
         finally:
             conn.close()
         size_kb = self.db_path.stat().st_size / 1024 if self.db_path.exists() else 0

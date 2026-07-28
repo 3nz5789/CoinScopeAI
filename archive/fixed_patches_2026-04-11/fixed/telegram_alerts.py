@@ -39,7 +39,13 @@ class TelegramAlerts:
             print(f"Telegram error: {e}")
 
     def send_signal(
-        self, symbol: str, direction: str, regime: str, confidence: float, price: float, kelly_usd: float
+        self,
+        symbol: str,
+        direction: str,
+        regime: str,
+        confidence: float,
+        price: float,
+        kelly_usd: float,
     ):
         """Send trading signal alert"""
         emoji = "🟢" if direction == "LONG" else "🔴"

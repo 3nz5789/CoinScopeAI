@@ -76,11 +76,23 @@ class CoinScopeOrchestrator:
             resp.raise_for_status()
             raw = resp.json()
             # Kline format: [open_time, open, high, low, close, volume, ...]
-            df = pd.DataFrame(raw, columns=[
-                "ts", "open", "high", "low", "close", "vol",
-                "close_time", "quote_vol", "trades",
-                "taker_buy_base", "taker_buy_quote", "ignore",
-            ])
+            df = pd.DataFrame(
+                raw,
+                columns=[
+                    "ts",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "vol",
+                    "close_time",
+                    "quote_vol",
+                    "trades",
+                    "taker_buy_base",
+                    "taker_buy_quote",
+                    "ignore",
+                ],
+            )
             df = df[["ts", "open", "high", "low", "close", "vol"]].copy()
             df[["open", "high", "low", "close", "vol"]] = df[
                 ["open", "high", "low", "close", "vol"]
@@ -178,7 +190,7 @@ class CoinScopeOrchestrator:
             avg_win=0.018,
             avg_loss=0.012,
             regime=regime,
-            account_balance=ACCOUNT_SIZE
+            account_balance=ACCOUNT_SIZE,
         )
 
         result = {
@@ -216,10 +228,12 @@ class CoinScopeOrchestrator:
 
         active = [r for r in results if r.get("signal") in ("LONG", "SHORT")]
         for r in active:
-            print(f" ✅ {r['symbol']:12s} {r['signal']:6s} | "
-                  f"Regime: {r['regime']:4s} | "
-                  f"Kelly: ${r.get('kelly_usd', 0):.2f} | "
-                  f"Price: ${r.get('price', 0):.4f}")
+            print(
+                f" ✅ {r['symbol']:12s} {r['signal']:6s} | "
+                f"Regime: {r['regime']:4s} | "
+                f"Kelly: ${r.get('kelly_usd', 0):.2f} | "
+                f"Price: ${r.get('price', 0):.4f}"
+            )
 
         if not active:
             print(" No active signals — market in consolidation")

@@ -77,8 +77,12 @@ async def _summary_loop(db: FundingRateDB, collector: FundingRateCollector) -> N
                 )
 
                 # Print a clean table to stdout (stripped of HTML tags for terminal)
-                clean = table.replace("<b>", "").replace("</b>", "") \
-                             .replace("<code>", "").replace("</code>", "")
+                clean = (
+                    table.replace("<b>", "")
+                    .replace("</b>", "")
+                    .replace("<code>", "")
+                    .replace("</code>", "")
+                )
                 print(f"\n{clean}\n")
 
         except Exception as e:
@@ -88,6 +92,7 @@ async def _summary_loop(db: FundingRateDB, collector: FundingRateCollector) -> N
 
 
 # ── Startup Guard ─────────────────────────────────────────────────────────────
+
 
 def _startup_check(is_testnet: bool) -> None:
     """
@@ -111,6 +116,7 @@ def _startup_check(is_testnet: bool) -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 async def main() -> None:
     # 1. Load config (reads .env, prints banner)
     cfg = load_config()
@@ -132,10 +138,10 @@ async def main() -> None:
 
     # 5. Init collector
     collector = FundingRateCollector(
-        config           = cfg,
-        db               = db,
-        on_extreme       = on_extreme,
-        extreme_threshold = 0.001,  # 0.1% — triggers alert manager check
+        config=cfg,
+        db=db,
+        on_extreme=on_extreme,
+        extreme_threshold=0.001,  # 0.1% — triggers alert manager check
     )
 
     # 6. Graceful shutdown on Ctrl+C

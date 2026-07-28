@@ -18,6 +18,7 @@ from typing import Dict
 @dataclass
 class PairStats:
     """Per-pair statistics"""
+
     symbol: str
     trades: int = 0
     wins: int = 0
@@ -29,7 +30,7 @@ class PairStats:
     max_loss: float = 0.0
     win_rate: float = 0.0
     avg_slippage: float = 0.0
-    regime_accuracy: float = 0.0   # % of directional trades where regime matched signal
+    regime_accuracy: float = 0.0  # % of directional trades where regime matched signal
     regime_directional_trades: int = 0  # count of bull/bear trades (chop excluded)
     last_updated: str = ""
 
@@ -41,42 +42,42 @@ PAIR_CHARACTERISTICS = {
         "liquidity": "very_high",
         "hmm_trained": True,
         "slippage_risk": "minimal",
-        "notes": "Baseline pair - HMM trained on BTC data"
+        "notes": "Baseline pair - HMM trained on BTC data",
     },
     "ETH/USDT": {
         "volatility": "low",
         "liquidity": "very_high",
         "hmm_trained": True,
         "slippage_risk": "minimal",
-        "notes": "Baseline pair - HMM trained on ETH data"
+        "notes": "Baseline pair - HMM trained on ETH data",
     },
     "SOL/USDT": {
         "volatility": "medium",
         "liquidity": "high",
         "hmm_trained": True,
         "slippage_risk": "minimal",
-        "notes": "Baseline pair - HMM trained on SOL data"
+        "notes": "Baseline pair - HMM trained on SOL data",
     },
     "BNB/USDT": {
         "volatility": "low",
         "liquidity": "high",
         "hmm_trained": False,
         "slippage_risk": "low",
-        "notes": "Good liquidity, regime transfer may need validation"
+        "notes": "Good liquidity, regime transfer may need validation",
     },
     "XRP/USDT": {
         "volatility": "medium",
         "liquidity": "high",
         "hmm_trained": False,
         "slippage_risk": "low",
-        "notes": "Good liquidity, regime transfer may need validation"
+        "notes": "Good liquidity, regime transfer may need validation",
     },
     "TAO/USDT": {
         "volatility": "high",
         "liquidity": "medium",
         "hmm_trained": False,
         "slippage_risk": "medium",
-        "notes": "Higher volatility - monitor slippage closely"
+        "notes": "Higher volatility - monitor slippage closely",
     },
     # Alternative pairs (if swapped in)
     "ADA/USDT": {
@@ -84,14 +85,14 @@ PAIR_CHARACTERISTICS = {
         "liquidity": "medium",
         "hmm_trained": False,
         "slippage_risk": "medium",
-        "notes": "Higher volatility than BNB - slippage modeling required"
+        "notes": "Higher volatility than BNB - slippage modeling required",
     },
     "DOGE/USDT": {
         "volatility": "very_high",
         "liquidity": "medium",
         "hmm_trained": False,
         "slippage_risk": "high",
-        "notes": "Very high volatility - slippage modeling critical"
+        "notes": "Very high volatility - slippage modeling critical",
     },
 }
 
@@ -118,11 +119,7 @@ class PairMonitor:
     def _save(self):
         """Save pair stats to file"""
         with open(self.path, "w") as f:
-            json.dump(
-                {symbol: asdict(stats) for symbol, stats in self.stats.items()},
-                f,
-                indent=2
-            )
+            json.dump({symbol: asdict(stats) for symbol, stats in self.stats.items()}, f, indent=2)
 
     def record_trade(self, symbol: str, pnl_pct: float, regime: str, signal_direction: str):
         """Record a trade for per-pair tracking"""
@@ -153,8 +150,9 @@ class PairMonitor:
         # often in choppy conditions.
         if regime in ("bull", "bear"):
             stats.regime_directional_trades += 1
-            is_hit = (regime == "bull" and signal_direction == "LONG") or \
-                     (regime == "bear" and signal_direction == "SHORT")
+            is_hit = (regime == "bull" and signal_direction == "LONG") or (
+                regime == "bear" and signal_direction == "SHORT"
+            )
             n = stats.regime_directional_trades
             stats.regime_accuracy = (stats.regime_accuracy * (n - 1) + (1 if is_hit else 0)) / n
 
@@ -185,7 +183,7 @@ class PairMonitor:
                     report += f"  ⚠️  LOW WIN RATE: {stats.win_rate:.1%} (target: 40%+)\n"
                 if stats.regime_accuracy < 0.60 and stats.trades >= 5:
                     report += f"  ⚠️  LOW REGIME ACCURACY: {stats.regime_accuracy:.1%} - regime transfer may need adjustment\n"
-                if chars.get('slippage_risk') in ['medium', 'high'] and stats.avg_loss < -0.03:
+                if chars.get("slippage_risk") in ["medium", "high"] and stats.avg_loss < -0.03:
                     report += f"  ⚠️  HIGH SLIPPAGE: Avg loss {stats.avg_loss:.2%} - consider modeling slippage\n"
 
         report += "\n" + "=" * 70 + "\n"

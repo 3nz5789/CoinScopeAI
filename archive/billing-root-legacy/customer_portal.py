@@ -59,6 +59,7 @@ router = APIRouter()
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
+
 class PortalSessionRequest(BaseModel):
     """
     Identify the customer for portal session creation.
@@ -70,6 +71,7 @@ class PortalSessionRequest(BaseModel):
     customer_id takes precedence if both are provided.
     return_url overrides BILLING_PORTAL_RETURN_URL for this session only.
     """
+
     customer_id: Optional[str] = None
     email: Optional[str] = None
     return_url: Optional[str] = None
@@ -78,9 +80,7 @@ class PortalSessionRequest(BaseModel):
     @classmethod
     def validate_customer_id(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.startswith("cus_"):
-            raise ValueError(
-                "customer_id must be a Stripe customer ID (starts with 'cus_')"
-            )
+            raise ValueError("customer_id must be a Stripe customer ID (starts with 'cus_')")
         return v
 
     def model_post_init(self, __context) -> None:  # noqa: N802
@@ -103,6 +103,7 @@ class PortalConfigResponse(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
 
 @router.get("/billing/portal/config", response_model=PortalConfigResponse)
 async def portal_config():

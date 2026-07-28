@@ -16,27 +16,52 @@ import subprocess
 import argparse
 from datetime import datetime, timezone
 
-REPO_DIR   = os.path.expanduser("~/Projects/CoinScopeAI")
+REPO_DIR = os.path.expanduser("~/Projects/CoinScopeAI")
 COWORK_DIR = "/Users/mac/Documents/Claude/Projects/CoinScopeAI"
-SCRIPTS    = os.path.join(COWORK_DIR, "scripts")
-DATE       = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-G="\033[92m"; R="\033[91m"; Y="\033[93m"; E="\033[0m"; B="\033[1m"
+SCRIPTS = os.path.join(COWORK_DIR, "scripts")
+DATE = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+G = "\033[92m"
+R = "\033[91m"
+Y = "\033[93m"
+E = "\033[0m"
+B = "\033[1m"
 
 results = []
-def ok(m):      print(f"  {G}✅{E} {m}"); results.append((m, True, ""))
-def err(m, d=""): print(f"  {R}❌{E} {m}" + (f" — {d}" if d else "")); results.append((m, False, d))
-def warn(m, d=""): print(f"  {Y}⚠️ {E} {m}" + (f" — {d}" if d else "")); results.append((m, None, d))
-def section(t): print(f"\n{B}{'─'*52}{E}\n{B}  {t}{E}\n{B}{'─'*52}{E}")
-def run(cmd, cwd=None): return subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
+
+
+def ok(m):
+    print(f"  {G}✅{E} {m}")
+    results.append((m, True, ""))
+
+
+def err(m, d=""):
+    print(f"  {R}❌{E} {m}" + (f" — {d}" if d else ""))
+    results.append((m, False, d))
+
+
+def warn(m, d=""):
+    print(f"  {Y}⚠️ {E} {m}" + (f" — {d}" if d else ""))
+    results.append((m, None, d))
+
+
+def section(t):
+    print(f"\n{B}{'─'*52}{E}\n{B}  {t}{E}\n{B}{'─'*52}{E}")
+
+
+def run(cmd, cwd=None):
+    return subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--check",    action="store_true")
+parser.add_argument("--check", action="store_true")
 parser.add_argument("--git-only", action="store_true")
-parser.add_argument("--verify",   action="store_true")
+parser.add_argument("--verify", action="store_true")
 args = parser.parse_args()
 DRY = args.check
 
-print(f"\n{B}{'═'*52}\n  CoinScopeAI Auto-Sync — {DATE}\n  {'DRY RUN' if DRY else 'LIVE'}\n{'═'*52}{E}")
+print(
+    f"\n{B}{'═'*52}\n  CoinScopeAI Auto-Sync — {DATE}\n  {'DRY RUN' if DRY else 'LIVE'}\n{'═'*52}{E}"
+)
 
 # 1. Git
 section("1. Git Repository")
@@ -68,14 +93,17 @@ else:
         ok("Remote up to date")
 
 if args.git_only:
-    print(f"\n{B}  Done.{E}\n"); sys.exit(0)
+    print(f"\n{B}  Done.{E}\n")
+    sys.exit(0)
 
 # 2. Drift
 section("2. Drift Detection")
 drift = os.path.join(SCRIPTS, "drift_detector.py")
 if os.path.isfile(drift):
     r = run(f"python3 {drift}", cwd=COWORK_DIR)
-    (ok if r.returncode == 0 else err)("Drift detector", "run manually for details" if r.returncode else "")
+    (ok if r.returncode == 0 else err)(
+        "Drift detector", "run manually for details" if r.returncode else ""
+    )
 else:
     warn("drift_detector.py not found")
 
@@ -90,12 +118,34 @@ else:
 
 # 4. Mac Structure
 section("4. Mac Structure")
-dirs  = ["01-project-overview","03-roadmap","08-sessions","09-research","11-legal","14-admin","99-archive","docs","scripts","skills"]
-files = ["CLAUDE.md","CONTEXT_PRIMER.md","README.md","canonical-structure-spec.md"]
-bad   = ["Business_Plan_v1.md","billing_server.py","admin","architecture","legal","incidents","ml","research","strategy","skills_src"]
-miss_d = [d for d in dirs  if not os.path.isdir(os.path.join(COWORK_DIR, d))]
+dirs = [
+    "01-project-overview",
+    "03-roadmap",
+    "08-sessions",
+    "09-research",
+    "11-legal",
+    "14-admin",
+    "99-archive",
+    "docs",
+    "scripts",
+    "skills",
+]
+files = ["CLAUDE.md", "CONTEXT_PRIMER.md", "README.md", "canonical-structure-spec.md"]
+bad = [
+    "Business_Plan_v1.md",
+    "billing_server.py",
+    "admin",
+    "architecture",
+    "legal",
+    "incidents",
+    "ml",
+    "research",
+    "strategy",
+    "skills_src",
+]
+miss_d = [d for d in dirs if not os.path.isdir(os.path.join(COWORK_DIR, d))]
 miss_f = [f for f in files if not os.path.isfile(os.path.join(COWORK_DIR, f))]
-stale  = [i for i in bad   if os.path.exists(os.path.join(COWORK_DIR, i))]
+stale = [i for i in bad if os.path.exists(os.path.join(COWORK_DIR, i))]
 if not miss_d and not miss_f and not stale:
     ok("Mac root canonical — all checks pass")
 else:
@@ -119,8 +169,8 @@ else:
 
 # 6. Summary
 section("6. Summary")
-passed = sum(1 for _,p,_ in results if p is True)
-failed = sum(1 for _,p,_ in results if p is False)
+passed = sum(1 for _, p, _ in results if p is True)
+failed = sum(1 for _, p, _ in results if p is False)
 print(f"\n{B}  {G if not failed else R}Result: {passed}/{len(results)} passed, {failed} failed{E}")
 print(f"""
   Notion session report template:

@@ -30,6 +30,7 @@ from services.market_data.regime.enricher import RegimeConfig, RegimeEnricher
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_oi_expanding(n=10, start=100000, growth=0.05):
     """Create OI snapshots with expanding OI."""
     now = time.time()
@@ -105,6 +106,7 @@ def make_normal_book():
 # ---------------------------------------------------------------------------
 # Tests: Regime Classification
 # ---------------------------------------------------------------------------
+
 
 class TestRegimeEnricher:
     @pytest.fixture
@@ -330,7 +332,10 @@ class TestRegimeEnricher:
         )
         result = enricher.classify("BTC", funding_snapshot=funding)
         # Should classify as trending (normal funding)
-        assert result.scores[MarketRegime.TRENDING.value] >= result.scores[MarketRegime.MEAN_REVERTING.value]
+        assert (
+            result.scores[MarketRegime.TRENDING.value]
+            >= result.scores[MarketRegime.MEAN_REVERTING.value]
+        )
 
     # -- Confidence properties -----------------------------------------------
 
@@ -338,7 +343,8 @@ class TestRegimeEnricher:
         # All signals point to trending
         oi = make_oi_expanding(10, growth=0.08)
         funding = FundingSnapshot(
-            symbol="BTC", timestamp=time.time(),
+            symbol="BTC",
+            timestamp=time.time(),
             rates={"Binance": 0.0001},
         )
         prices = [50000 + i * 500 for i in range(10)]
@@ -354,7 +360,8 @@ class TestRegimeEnricher:
         # OI expanding (trending) but extreme funding (mean-reverting)
         oi = make_oi_expanding(10, growth=0.06)
         funding = FundingSnapshot(
-            symbol="BTC", timestamp=time.time(),
+            symbol="BTC",
+            timestamp=time.time(),
             rates={"Binance": 0.001},
         )
         result = enricher.classify(

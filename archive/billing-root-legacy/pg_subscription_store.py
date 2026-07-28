@@ -60,6 +60,7 @@ def _resolve_dsn() -> str:
 
 # ─── Codec helpers ────────────────────────────────────────────────────────────
 
+
 def _to_utc(dt: Optional[datetime]) -> Optional[datetime]:
     """Ensure datetime is timezone-aware (UTC)."""
     if dt is None:
@@ -86,6 +87,7 @@ def _row_to_record(row: asyncpg.Record) -> SubscriptionRecord:
 
 # ─── Store ────────────────────────────────────────────────────────────────────
 
+
 class PgSubscriptionStore:
     """
     Async PostgreSQL-backed store for CoinScopeAI billing state.
@@ -109,8 +111,7 @@ class PgSubscriptionStore:
             command_timeout=30,
         )
         logger.info(
-            f"[BillingDB] Postgres pool created "
-            f"(min={_MIN_POOL_SIZE}, max={_MAX_POOL_SIZE})"
+            f"[BillingDB] Postgres pool created " f"(min={_MIN_POOL_SIZE}, max={_MAX_POOL_SIZE})"
         )
 
     async def close(self) -> None:
@@ -155,7 +156,10 @@ class PgSubscriptionStore:
                 VALUES ($1, $2, NOW(), $3, $4)
                 ON CONFLICT (event_id) DO NOTHING
                 """,
-                event_id, event_type, customer_id, subscription_id,
+                event_id,
+                event_type,
+                customer_id,
+                subscription_id,
             )
         logger.debug(f"[BillingDB] Marked {event_id} ({event_type}) processed")
 
@@ -167,9 +171,9 @@ class PgSubscriptionStore:
         Uses customer_id as the primary key — one row per customer.
         The `updated_at` column is automatically bumped by the DB trigger.
         """
-        tier_val  = getattr(record.tier,     "value", record.tier)
-        stat_val  = getattr(record.status,   "value", record.status)
-        intv_val  = getattr(record.interval, "value", record.interval)
+        tier_val = getattr(record.tier, "value", record.tier)
+        stat_val = getattr(record.status, "value", record.status)
+        intv_val = getattr(record.interval, "value", record.interval)
         period_end = _to_utc(record.current_period_end)
 
         async with self.pool.acquire() as conn:
@@ -205,9 +209,7 @@ class PgSubscriptionStore:
             f"customer={record.customer_id} tier={tier_val} status={stat_val}"
         )
 
-    async def get_subscription_by_customer(
-        self, customer_id: str
-    ) -> Optional[SubscriptionRecord]:
+    async def get_subscription_by_customer(self, customer_id: str) -> Optional[SubscriptionRecord]:
         """Fetch subscription by Stripe customer ID."""
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
@@ -265,16 +267,14 @@ class PgSubscriptionStore:
     async def list_active_subscriptions(self) -> list[SubscriptionRecord]:
         """Return all active and trialing subscriptions."""
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
+            rows = await conn.fetch("""
                 SELECT * FROM billing.subscriptions
                 WHERE status IN (
                     'active'::billing.subscription_status,
                     'trialing'::billing.subscription_status
                 )
                 ORDER BY updated_at DESC
-                """
-            )
+                """)
         return [_row_to_record(r) for r in rows]
 
     # ── Invoice history ────────────────────────────────────────────────────
@@ -344,11 +344,12 @@ class PgSubscriptionStore:
         Window boundaries are aligned to wall-clock minutes for simplicity.
         """
         import math
+
         now = datetime.now(tz=timezone.utc)
         # Align window to `window_minutes`-sized buckets
         bucket = math.floor(now.timestamp() / (window_minutes * 60)) * (window_minutes * 60)
         window_start = datetime.fromtimestamp(bucket, tz=timezone.utc)
-        window_end   = datetime.fromtimestamp(bucket + window_minutes * 60, tz=timezone.utc)
+        window_end = datetime.fromtimestamp(bucket + window_minutes * 60, tz=timezone.utc)
 
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
@@ -360,7 +361,10 @@ class PgSubscriptionStore:
                     SET requests_count = billing.api_usage.requests_count + 1
                 RETURNING requests_count
                 """,
-                customer_id, endpoint, window_start, window_end,
+                customer_id,
+                endpoint,
+                window_start,
+                window_end,
             )
         count = row["requests_count"]
         logger.debug(
@@ -394,9 +398,7 @@ class PgSubscriptionStore:
             )
         return dict(row) if row else None
 
-    async def get_active_subscription_with_entitlements(
-        self, customer_id: str
-    ) -> Optional[dict]:
+    async def get_active_subscription_with_entitlements(self, customer_id: str) -> Optional[dict]:
         """
         Single-query fetch: subscription state + entitlements from the view.
         Returns None if no active/trialing subscription found.

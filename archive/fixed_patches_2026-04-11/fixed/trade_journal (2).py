@@ -14,6 +14,7 @@ import os
 @dataclass
 class JournalEntry:
     """Single trade journal entry"""
+
     id: str
     symbol: str
     side: str
@@ -57,15 +58,7 @@ class TradeJournal:
             json.dump([asdict(e) for e in self.entries], f, indent=2)
 
     def log_open(
-        self,
-        symbol,
-        side,
-        regime,
-        confidence,
-        entry_price,
-        quantity,
-        kelly_usd,
-        signal_score=0.0
+        self, symbol, side, regime, confidence, entry_price, quantity, kelly_usd, signal_score=0.0
     ):
         """Log trade open"""
         entry = JournalEntry(
@@ -82,7 +75,7 @@ class TradeJournal:
             pnl_usd=0.0,
             status="OPEN",
             opened_at=datetime.utcnow().isoformat(),
-            signal_score=signal_score
+            signal_score=signal_score,
         )
         self.entries.append(entry)
         self._save()
@@ -114,9 +107,7 @@ class TradeJournal:
         """Get today's summary"""
         today = datetime.utcnow().date().isoformat()
         today_trades = [
-            e
-            for e in self.entries
-            if e.status == "CLOSED" and e.closed_at.startswith(today)
+            e for e in self.entries if e.status == "CLOSED" and e.closed_at.startswith(today)
         ]
         if not today_trades:
             return {"date": today, "trades": 0}
@@ -141,14 +132,11 @@ class TradeJournal:
         losses = [p for p in pnls if p < 0]
 
         import numpy as np
+
         equity = np.cumsum(pnls) + 10000
         peak = np.maximum.accumulate(equity)
         dd = ((equity - peak) / peak).min()
-        sharpe = (
-            (np.mean(pnls) / np.std(pnls) * np.sqrt(2190 / 24))
-            if np.std(pnls) > 0
-            else 0
-        )
+        sharpe = (np.mean(pnls) / np.std(pnls) * np.sqrt(2190 / 24)) if np.std(pnls) > 0 else 0
 
         return {
             "total_trades": len(closed),

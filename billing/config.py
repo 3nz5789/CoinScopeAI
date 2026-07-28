@@ -22,10 +22,10 @@ import os
 class PriceConfig:
     tier: str
     display_name: str
-    monthly_usd: int          # in cents
-    annual_usd: int           # in cents
-    monthly_price_id: str     # Stripe Price ID (from env)
-    annual_price_id: str      # Stripe Price ID (from env)
+    monthly_usd: int  # in cents
+    annual_usd: int  # in cents
+    monthly_price_id: str  # Stripe Price ID (from env)
+    annual_price_id: str  # Stripe Price ID (from env)
     most_popular: bool = False
     features: list = field(default_factory=list)
 
@@ -140,19 +140,21 @@ def list_plans() -> list[dict]:
     """Serialisable plan list for the /billing/plans endpoint."""
     result = []
     for plan in PLANS.values():
-        result.append({
-            "tier": plan.tier,
-            "display_name": plan.display_name,
-            "most_popular": plan.most_popular,
-            "monthly_usd_cents": plan.monthly_usd,
-            "annual_usd_cents": plan.annual_usd,
-            "monthly_usd": plan.monthly_usd / 100,
-            "annual_usd": plan.annual_usd / 100,
-            "annual_savings_pct": 20,
-            "features": plan.features,
-            "price_ids_configured": {
-                "monthly": bool(plan.monthly_price_id),
-                "annual": bool(plan.annual_price_id),
-            },
-        })
+        result.append(
+            {
+                "tier": plan.tier,
+                "display_name": plan.display_name,
+                "most_popular": plan.most_popular,
+                "monthly_usd_cents": plan.monthly_usd,
+                "annual_usd_cents": plan.annual_usd,
+                "monthly_usd": plan.monthly_usd / 100,
+                "annual_usd": plan.annual_usd / 100,
+                "annual_savings_pct": 20,
+                "features": plan.features,
+                "price_ids_configured": {
+                    "monthly": bool(plan.monthly_price_id),
+                    "annual": bool(plan.annual_price_id),
+                },
+            }
+        )
     return result

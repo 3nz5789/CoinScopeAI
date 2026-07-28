@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 # Stripe SDK initialisation
 # ---------------------------------------------------------------------------
 
+
 def _init_stripe() -> bool:
     """Configure the Stripe SDK if credentials are available. Returns True on success."""
     secret_key = os.getenv("STRIPE_SECRET_KEY", "")
@@ -80,6 +81,7 @@ def _save_state(state: dict) -> None:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _price_id_for_tier(tier: SubscriptionTier, cycle: str = "monthly") -> str:
     """Look up the Stripe Price ID for a tier + billing cycle.
@@ -131,6 +133,7 @@ router = APIRouter(prefix="/billing", tags=["Billing"])
 
 # ── GET /billing/plans ────────────────────────────────────────────────────
 
+
 @router.get("/plans", response_model=list[PlanInfo], summary="List pricing plans")
 async def list_plans() -> list[PlanInfo]:
     """
@@ -141,6 +144,7 @@ async def list_plans() -> list[PlanInfo]:
 
 
 # ── GET /billing/subscription ─────────────────────────────────────────────
+
 
 @router.get(
     "/subscription",
@@ -158,33 +162,36 @@ async def get_subscription() -> SubscriptionInfo:
 
     # Optionally re-validate against Stripe API if state is stale (>5 min)
     last_checked = state.get("last_checked", 0)
-    sub_id       = state.get("subscription_id")
+    sub_id = state.get("subscription_id")
 
     if sub_id and _STRIPE_READY and (time.time() - last_checked > 300):
         try:
-            sub    = stripe.Subscription.retrieve(sub_id)
+            sub = stripe.Subscription.retrieve(sub_id)
             state.get("tier")
-            state.update({
-                "status":               sub.status,
-                "current_period_end":   sub.current_period_end,
-                "cancel_at_period_end": sub.cancel_at_period_end,
-                "last_checked":         int(time.time()),
-            })
+            state.update(
+                {
+                    "status": sub.status,
+                    "current_period_end": sub.current_period_end,
+                    "cancel_at_period_end": sub.cancel_at_period_end,
+                    "last_checked": int(time.time()),
+                }
+            )
             _save_state(state)
         except stripe.StripeError as exc:
             logger.warning("Could not refresh subscription from Stripe: %s", exc)
 
     return SubscriptionInfo(
-        status               = SubscriptionStatus(state.get("status", "none")),
-        tier                 = SubscriptionTier(state["tier"]) if state.get("tier") else None,
-        customer_id          = state.get("customer_id"),
-        subscription_id      = state.get("subscription_id"),
-        current_period_end   = state.get("current_period_end"),
-        cancel_at_period_end = state.get("cancel_at_period_end", False),
+        status=SubscriptionStatus(state.get("status", "none")),
+        tier=SubscriptionTier(state["tier"]) if state.get("tier") else None,
+        customer_id=state.get("customer_id"),
+        subscription_id=state.get("subscription_id"),
+        current_period_end=state.get("current_period_end"),
+        cancel_at_period_end=state.get("cancel_at_period_end", False),
     )
 
 
 # ── POST /billing/checkout ────────────────────────────────────────────────
+
 
 @router.post(
     "/checkout",
@@ -204,17 +211,15 @@ async def create_checkout(body: CheckoutRequest) -> CheckoutResponse:
 
     try:
         # Look up or create Stripe customer
-        customers = stripe.Customer.search(
-            query=f"email:'{body.customer_email}'"
-        )
+        customers = stripe.Customer.search(query=f"email:'{body.customer_email}'")
         if customers.data:
             customer_id = customers.data[0].id
             logger.info("Reusing Stripe customer %s for %s", customer_id, body.customer_email)
         else:
             customer = stripe.Customer.create(
-                email = body.customer_email,
-                name  = body.customer_name or "",
-                metadata = {"source": "coinscopeai"},
+                email=body.customer_email,
+                name=body.customer_name or "",
+                metadata={"source": "coinscopeai"},
             )
             customer_id = customer.id
             logger.info("Created Stripe customer %s for %s", customer_id, body.customer_email)
@@ -229,21 +234,23 @@ async def create_checkout(body: CheckoutRequest) -> CheckoutResponse:
         )
 
         session = stripe.checkout.Session.create(
-            customer           = customer_id,
-            payment_method_types = ["card"],
-            line_items         = [{"price": price_id, "quantity": 1}],
-            mode               = "subscription",
-            success_url        = success_url,
-            cancel_url         = cancel_url,
-            metadata           = {
-                "tier":   body.tier.value,
+            customer=customer_id,
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            mode="subscription",
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "tier": body.tier.value,
                 "source": "coinscopeai_engine",
             },
         )
 
         logger.info(
             "Checkout session created | tier=%s customer=%s session=%s",
-            body.tier.value, customer_id, session.id,
+            body.tier.value,
+            customer_id,
+            session.id,
         )
         return CheckoutResponse(checkout_url=session.url, session_id=session.id)
 
@@ -253,6 +260,7 @@ async def create_checkout(body: CheckoutRequest) -> CheckoutResponse:
 
 
 # ── POST /billing/portal ──────────────────────────────────────────────────
+
 
 @router.post(
     "/portal",
@@ -266,9 +274,7 @@ async def create_portal(body: PortalRequest) -> PortalResponse:
     subscription, update payment method, or cancel.
     """
     try:
-        customers = stripe.Customer.search(
-            query=f"email:'{body.customer_email}'"
-        )
+        customers = stripe.Customer.search(query=f"email:'{body.customer_email}'")
         if not customers.data:
             raise HTTPException(
                 status_code=404,
@@ -280,8 +286,8 @@ async def create_portal(body: PortalRequest) -> PortalResponse:
             "http://localhost:8080/account.html",
         )
         portal = stripe.billing_portal.Session.create(
-            customer   = customers.data[0].id,
-            return_url = portal_return_url,
+            customer=customers.data[0].id,
+            return_url=portal_return_url,
         )
         logger.info("Portal session created for %s", body.customer_email)
         return PortalResponse(portal_url=portal.url)
@@ -289,4 +295,3 @@ async def create_portal(body: PortalRequest) -> PortalResponse:
     except stripe.StripeError as exc:
         logger.error("Stripe portal error: %s", exc)
         raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
-

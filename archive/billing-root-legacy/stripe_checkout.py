@@ -79,11 +79,12 @@ app.add_middleware(
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
+
 class CheckoutRequest(BaseModel):
     tier: Literal["free", "trader", "desk_preview", "desk_full"]
     interval: Literal["monthly", "annual"] = "monthly"
-    customer_email: str | None = None   # pre-fills Stripe checkout form
-    metadata: dict | None = None        # arbitrary k/v stored on Stripe Session
+    customer_email: str | None = None  # pre-fills Stripe checkout form
+    metadata: dict | None = None  # arbitrary k/v stored on Stripe Session
 
     @field_validator("tier")
     @classmethod
@@ -106,6 +107,7 @@ class CheckoutResponse(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
 
 @app.get("/billing/health")
 async def health():
@@ -140,7 +142,9 @@ async def create_checkout_session(req: CheckoutRequest):
         { "tier": "trader", "interval": "monthly", "customer_email": "user@example.com" }
     """
     if not STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=503, detail="Stripe not configured — set STRIPE_SECRET_KEY in .env")
+        raise HTTPException(
+            status_code=503, detail="Stripe not configured — set STRIPE_SECRET_KEY in .env"
+        )
 
     # Resolve the Stripe Price ID for this tier + interval
     try:
@@ -191,10 +195,16 @@ async def create_checkout_session(req: CheckoutRequest):
 
     # Look up display amount for response
     from billing.config import PLANS
+
     plan = PLANS[req.tier]
     amount = plan.annual_usd / 100 if req.interval == "annual" else plan.monthly_usd / 100
 
-    log.info("Checkout session created | tier=%s interval=%s session=%s", req.tier, req.interval, session.id)
+    log.info(
+        "Checkout session created | tier=%s interval=%s session=%s",
+        req.tier,
+        req.interval,
+        session.id,
+    )
 
     return CheckoutResponse(
         session_id=session.id,
@@ -268,6 +278,7 @@ async def stripe_webhook(
 
 # ── Webhook Handlers ──────────────────────────────────────────────────────────
 
+
 def _handle_checkout_completed(session: dict) -> None:
     """
     Fired when a customer completes payment.
@@ -283,7 +294,11 @@ def _handle_checkout_completed(session: dict) -> None:
 
     log.info(
         "✅ Checkout completed | email=%s tier=%s interval=%s customer=%s sub=%s",
-        email, tier, interval, customer_id, subscription_id,
+        email,
+        tier,
+        interval,
+        customer_id,
+        subscription_id,
     )
 
     # ── Fulfilment stub ───────────────────────────────────────────────────────
@@ -313,7 +328,10 @@ def _handle_subscription_updated(subscription: dict) -> None:
 
     log.info(
         "🔄 Subscription updated | sub=%s status=%s customer=%s tier=%s",
-        sub_id, status, customer_id, tier,
+        sub_id,
+        status,
+        customer_id,
+        tier,
     )
 
     # TODO: sync subscription status to your user DB
@@ -327,7 +345,9 @@ def _handle_subscription_deleted(subscription: dict) -> None:
 
     log.info(
         "❌ Subscription cancelled | sub=%s customer=%s tier=%s",
-        sub_id, customer_id, tier,
+        sub_id,
+        customer_id,
+        tier,
     )
 
     # TODO: revoke access for customer in your DB
@@ -345,7 +365,9 @@ def _handle_payment_failed(invoice: dict) -> None:
 
     log.warning(
         "⚠️  Payment failed | customer=%s amount=$%.2f attempt=%d",
-        customer_id, amount, attempt_count,
+        customer_id,
+        amount,
+        attempt_count,
     )
 
     # TODO: send dunning email, Telegram alert to Mohammed
@@ -355,4 +377,5 @@ def _handle_payment_failed(invoice: dict) -> None:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8002, reload=False)

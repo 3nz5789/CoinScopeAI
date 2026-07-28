@@ -25,14 +25,14 @@ class BillingNotifier:
     # Tier display names and emojis
     TIER_META = {
         "starter": ("🌱", "Starter"),
-        "pro":     ("⚡", "Pro"),
-        "elite":   ("🏆", "Elite"),
-        "team":    ("🏢", "Team"),
+        "pro": ("⚡", "Pro"),
+        "elite": ("🏆", "Elite"),
+        "team": ("🏢", "Team"),
         "unknown": ("❓", "Unknown"),
     }
 
     def __init__(self):
-        self.token   = os.getenv("TELEGRAM_BOT_TOKEN", "")
+        self.token = os.getenv("TELEGRAM_BOT_TOKEN", "")
         self.chat_id = os.getenv("TELEGRAM_CHAT_ID", "7296767446")  # Scoopy default
         self.enabled = bool(self.token and self.chat_id)
         if not self.enabled:
@@ -164,9 +164,7 @@ class BillingNotifier:
         """Fired on invoice.payment_failed — HIGH PRIORITY."""
         emoji, name = self.TIER_META.get(tier.lower(), ("❓", tier))
         retry_str = (
-            f"\nNext retry: `{next_attempt.strftime('%Y-%m-%d %H:%M UTC')}`"
-            if next_attempt
-            else ""
+            f"\nNext retry: `{next_attempt.strftime('%Y-%m-%d %H:%M UTC')}`" if next_attempt else ""
         )
         self._send(
             f"🚨 *Payment FAILED*\n"

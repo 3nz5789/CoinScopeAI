@@ -25,6 +25,7 @@ from services.market_data.models import (
 # Mock helpers
 # ---------------------------------------------------------------------------
 
+
 class MockResponse:
     def __init__(self, data, status=200):
         self._data = data
@@ -64,6 +65,7 @@ class MockSession:
 # Tests: CoinGlass Client (with API key)
 # ---------------------------------------------------------------------------
 
+
 class TestCoinGlassClientWithKey:
     @pytest.fixture
     def client(self):
@@ -86,9 +88,11 @@ class TestCoinGlassClientWithKey:
                 }
             ],
         }
-        client._session = MockSession({
-            "liquidation/aggregated-history": mock_data,
-        })
+        client._session = MockSession(
+            {
+                "liquidation/aggregated-history": mock_data,
+            }
+        )
         client._external_session = True
 
         result = await client.get_liquidation_history("BTC", "1h")
@@ -111,9 +115,11 @@ class TestCoinGlassClientWithKey:
                 {"exchangeName": "OKX", "openInterest": 20000},
             ],
         }
-        client._session = MockSession({
-            "open-interest/exchange-list": mock_data,
-        })
+        client._session = MockSession(
+            {
+                "open-interest/exchange-list": mock_data,
+            }
+        )
         client._external_session = True
 
         result = await client.get_oi_exchange_list("BTC")
@@ -133,9 +139,11 @@ class TestCoinGlassClientWithKey:
                 {"exchangeName": "Bybit", "rate": 0.0002},
             ],
         }
-        client._session = MockSession({
-            "funding-rate/exchange-list": mock_data,
-        })
+        client._session = MockSession(
+            {
+                "funding-rate/exchange-list": mock_data,
+            }
+        )
         client._external_session = True
 
         result = await client.get_funding_exchange_list("BTC")
@@ -150,6 +158,7 @@ class TestCoinGlassClientWithKey:
 # Tests: CoinGlass Client (no API key — fallback)
 # ---------------------------------------------------------------------------
 
+
 class TestCoinGlassClientNoKey:
     @pytest.fixture
     def client(self):
@@ -163,6 +172,7 @@ class TestCoinGlassClientNoKey:
 # ---------------------------------------------------------------------------
 # Tests: Exchange Fallback Client
 # ---------------------------------------------------------------------------
+
 
 class TestExchangeFallbackClient:
     @pytest.fixture
@@ -203,6 +213,7 @@ class TestExchangeFallbackClient:
 # ---------------------------------------------------------------------------
 # Tests: Parsing helpers
 # ---------------------------------------------------------------------------
+
 
 class TestCoinGlassParsers:
     def test_parse_liquidation_history_dict(self):

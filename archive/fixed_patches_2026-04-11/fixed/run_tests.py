@@ -99,9 +99,7 @@ def test_journal():
     from storage.trade_journal import TradeJournal
 
     j = TradeJournal(path="logs/test_journal.json")
-    entry = j.log_open(
-        "BTC/USDT", "BUY", "bull", 0.78, 68000, 0.001, 20.0, signal_score=2.5
-    )
+    entry = j.log_open("BTC/USDT", "BUY", "bull", 0.78, 68000, 0.001, 20.0, signal_score=2.5)
     j.log_close(entry.id, 69000, 0.0147, 14.7)
     stats = j.performance_stats()
     print(f"  Stats: {stats}")

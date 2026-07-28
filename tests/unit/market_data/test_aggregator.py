@@ -24,6 +24,7 @@ from services.market_data.scanner.breakout_oi import BreakoutOIScanner
 
 class FakeClient:
     """Minimal fake exchange client for testing aggregator wiring."""
+
     EXCHANGE = Exchange.BINANCE
 
     def __init__(self):

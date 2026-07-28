@@ -21,17 +21,19 @@ log = logging.getLogger(__name__)
 
 # ── Data Model ────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class FundingRateRecord:
-    symbol:           str
-    funding_rate:     float   # e.g. 0.001 = 0.1% per 8h
-    next_funding_time: int    # Unix ms when the next funding settlement occurs
-    mark_price:       float
-    index_price:      float
-    collected_at:     int     # Unix ms when we received this data point
+    symbol: str
+    funding_rate: float  # e.g. 0.001 = 0.1% per 8h
+    next_funding_time: int  # Unix ms when the next funding settlement occurs
+    mark_price: float
+    index_price: float
+    collected_at: int  # Unix ms when we received this data point
 
 
 # ── Database ──────────────────────────────────────────────────────────────────
+
 
 class FundingRateDB:
     """
@@ -96,7 +98,8 @@ class FundingRateDB:
         This is called on every WebSocket update — must be fast.
         """
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO funding_rates_live
                     (symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -106,14 +109,16 @@ class FundingRateDB:
                     mark_price        = excluded.mark_price,
                     index_price       = excluded.index_price,
                     collected_at      = excluded.collected_at
-            """, (
-                record.symbol,
-                record.funding_rate,
-                record.next_funding_time,
-                record.mark_price,
-                record.index_price,
-                record.collected_at,
-            ))
+            """,
+                (
+                    record.symbol,
+                    record.funding_rate,
+                    record.next_funding_time,
+                    record.mark_price,
+                    record.index_price,
+                    record.collected_at,
+                ),
+            )
 
     def save_snapshot(self, records: List[FundingRateRecord]) -> None:
         """
@@ -123,15 +128,24 @@ class FundingRateDB:
         if not records:
             return
         with self._cursor() as cur:
-            cur.executemany("""
+            cur.executemany(
+                """
                 INSERT INTO funding_rates_history
                     (symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, [
-                (r.symbol, r.funding_rate, r.next_funding_time,
-                 r.mark_price, r.index_price, r.collected_at)
-                for r in records
-            ])
+            """,
+                [
+                    (
+                        r.symbol,
+                        r.funding_rate,
+                        r.next_funding_time,
+                        r.mark_price,
+                        r.index_price,
+                        r.collected_at,
+                    )
+                    for r in records
+                ],
+            )
         log.info("[DB] Saved history snapshot: %d symbols", len(records))
 
     # ── Read Operations ───────────────────────────────────────────────────────
@@ -139,11 +153,14 @@ class FundingRateDB:
     def get_symbol(self, symbol: str) -> Optional[FundingRateRecord]:
         """Get the latest funding rate for a single symbol."""
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at
                 FROM funding_rates_live
                 WHERE symbol = ?
-            """, (symbol.upper(),))
+            """,
+                (symbol.upper(),),
+            )
             row = cur.fetchone()
         return _row_to_record(row) if row else None
 
@@ -161,26 +178,32 @@ class FundingRateDB:
     def get_top_positive(self, n: int = 10) -> List[FundingRateRecord]:
         """Get top N symbols with highest (most positive) funding rates. Longs pay shorts."""
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at
                 FROM funding_rates_live
                 WHERE funding_rate > 0
                 ORDER BY funding_rate DESC
                 LIMIT ?
-            """, (n,))
+            """,
+                (n,),
+            )
             rows = cur.fetchall()
         return [_row_to_record(r) for r in rows]
 
     def get_top_negative(self, n: int = 10) -> List[FundingRateRecord]:
         """Get top N symbols with most negative funding rates. Shorts pay longs."""
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at
                 FROM funding_rates_live
                 WHERE funding_rate < 0
                 ORDER BY funding_rate ASC
                 LIMIT ?
-            """, (n,))
+            """,
+                (n,),
+            )
             rows = cur.fetchall()
         return [_row_to_record(r) for r in rows]
 
@@ -190,12 +213,15 @@ class FundingRateDB:
         Default threshold 0.001 = 0.1%.
         """
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at
                 FROM funding_rates_live
                 WHERE ABS(funding_rate) >= ?
                 ORDER BY ABS(funding_rate) DESC
-            """, (threshold,))
+            """,
+                (threshold,),
+            )
             rows = cur.fetchall()
         return [_row_to_record(r) for r in rows]
 
@@ -206,15 +232,20 @@ class FundingRateDB:
         limit: int = 200,
     ) -> List[FundingRateRecord]:
         """Get historical funding rate records for a symbol."""
-        since_ms = since_ms or (int(time.time() * 1000) - 7 * 24 * 3600 * 1000)  # default: last 7 days
+        since_ms = since_ms or (
+            int(time.time() * 1000) - 7 * 24 * 3600 * 1000
+        )  # default: last 7 days
         with self._cursor() as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT symbol, funding_rate, next_funding_time, mark_price, index_price, collected_at
                 FROM funding_rates_history
                 WHERE symbol = ? AND collected_at >= ?
                 ORDER BY collected_at DESC
                 LIMIT ?
-            """, (symbol.upper(), since_ms, limit))
+            """,
+                (symbol.upper(), since_ms, limit),
+            )
             rows = cur.fetchall()
         return [_row_to_record(r) for r in rows]
 
@@ -256,8 +287,8 @@ class FundingRateDB:
             # check_same_thread=False: safe because we use one connection per process
             # and writes are serialized through the async event loop
             self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            self._conn.execute("PRAGMA journal_mode=WAL")   # concurrent reads while writing
-            self._conn.execute("PRAGMA synchronous=NORMAL") # good balance of safety vs speed
+            self._conn.execute("PRAGMA journal_mode=WAL")  # concurrent reads while writing
+            self._conn.execute("PRAGMA synchronous=NORMAL")  # good balance of safety vs speed
         cur = self._conn.cursor()
         try:
             yield cur
@@ -271,12 +302,13 @@ class FundingRateDB:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _row_to_record(row: tuple) -> FundingRateRecord:
     return FundingRateRecord(
-        symbol            = row[0],
-        funding_rate      = row[1],
-        next_funding_time = row[2],
-        mark_price        = row[3],
-        index_price       = row[4],
-        collected_at      = row[5],
+        symbol=row[0],
+        funding_rate=row[1],
+        next_funding_time=row[2],
+        mark_price=row[3],
+        index_price=row[4],
+        collected_at=row[5],
     )

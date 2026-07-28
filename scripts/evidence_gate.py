@@ -52,7 +52,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
-
 # Files that, when changed, require an evidence touch.
 # Patterns use fnmatch semantics (** is not recursive — we expand by walking
 # the matched path's segments).

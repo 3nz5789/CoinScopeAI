@@ -57,11 +57,12 @@ except ImportError:
 
 
 DEFAULT_BASE_URL = "http://localhost:8001"
-DEFAULT_WINDOW_S = 30       # two fills within 30s are suspicious
+DEFAULT_WINDOW_S = 30  # two fills within 30s are suspicious
 DEFAULT_TIMEOUT_S = 5
 
 
 # ----------------------------- Engine calls -----------------------------
+
 
 def fetch_journal(base_url: str, timeout: float) -> list[dict[str, Any]]:
     """GET /journal and return the data list. Raises on non-2xx or schema drift."""
@@ -78,6 +79,7 @@ def fetch_journal(base_url: str, timeout: float) -> list[dict[str, Any]]:
 
 
 # ----------------------------- Detection core -----------------------------
+
 
 def _parse_ts(entry: dict[str, Any]) -> float | None:
     """Parse an entry timestamp into epoch seconds. Returns None if unparseable."""
@@ -138,6 +140,7 @@ def find_duplicates(
 
 # ----------------------------- Alerting -----------------------------
 
+
 def emit_alert(record: dict[str, Any]) -> None:
     """Emit a structured JSON line on stdout. Also ping Telegram if configured."""
     print(json.dumps(record, default=str))
@@ -164,8 +167,11 @@ def emit_alert(record: dict[str, Any]) -> None:
 
 # ----------------------------- Entry point -----------------------------
 
+
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--base-url", default=os.environ.get("ENGINE_BASE_URL", DEFAULT_BASE_URL))
     p.add_argument("--window-s", type=float, default=DEFAULT_WINDOW_S)
     p.add_argument("--timeout-s", type=float, default=DEFAULT_TIMEOUT_S)
@@ -179,22 +185,26 @@ def main() -> int:
 
     dupes = find_duplicates(entries, args.window_s)
     if not dupes:
-        print(f"[OK] no duplicate journal entries in window={args.window_s}s across {len(entries)} entries")
+        print(
+            f"[OK] no duplicate journal entries in window={args.window_s}s across {len(entries)} entries"
+        )
         return 0
 
     now = datetime.now(timezone.utc).isoformat()
     for a, b, delta in dupes:
-        emit_alert({
-            "detected_at": now,
-            "symbol": a.get("symbol"),
-            "side": a.get("side"),
-            "qty": _normalize_qty(a),
-            "delta_s": delta,
-            "trade_ids": [a.get("trade_id"), b.get("trade_id")],
-            "timestamps": [a.get("timestamp"), b.get("timestamp")],
-            "watchdog": "watchdog_journal_duplicates",
-            "incident_ref": "INC-2026-04-18-01",
-        })
+        emit_alert(
+            {
+                "detected_at": now,
+                "symbol": a.get("symbol"),
+                "side": a.get("side"),
+                "qty": _normalize_qty(a),
+                "delta_s": delta,
+                "trade_ids": [a.get("trade_id"), b.get("trade_id")],
+                "timestamps": [a.get("timestamp"), b.get("timestamp")],
+                "watchdog": "watchdog_journal_duplicates",
+                "incident_ref": "INC-2026-04-18-01",
+            }
+        )
     return 1
 
 

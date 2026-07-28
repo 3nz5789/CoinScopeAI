@@ -17,6 +17,7 @@ import os
 @dataclass
 class Profile:
     """Scaling profile"""
+
     name: str
     account_usd: float
     position_pct: float
@@ -85,9 +86,7 @@ class ScaleUpManager:
         """Get scaling status"""
         p = self.current_profile
         next_p = (
-            PROFILES[self.current_index + 1]
-            if self.current_index < len(PROFILES) - 1
-            else None
+            PROFILES[self.current_index + 1] if self.current_index < len(PROFILES) - 1 else None
         )
         return {
             "current": p.name,

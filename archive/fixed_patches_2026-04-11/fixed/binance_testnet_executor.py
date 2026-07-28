@@ -18,6 +18,7 @@ import os
 @dataclass
 class TradeRecord:
     """Single trade record"""
+
     symbol: str
     side: str
     quantity: float
@@ -52,8 +53,8 @@ class TestnetExecutor:
             format="%(asctime)s | %(levelname)s | %(message)s",
             handlers=[
                 logging.FileHandler(f"logs/testnet_{datetime.now():%Y%m%d}.log"),
-                logging.StreamHandler()
-            ]
+                logging.StreamHandler(),
+            ],
         )
         self.logger = logging.getLogger("TestnetExecutor")
 
@@ -107,7 +108,7 @@ class TestnetExecutor:
             regime=regime,
             kelly_usd=kelly_usd,
             order_id=order_id,
-            timestamp=datetime.utcnow().isoformat()
+            timestamp=datetime.utcnow().isoformat(),
         )
 
         self.trade_log.append(record)
@@ -202,7 +203,7 @@ if __name__ == "__main__":
     order_id = executor.place_order(
         symbol="BTC/USDT",
         side="BUY",
-        quantity=0.00292,   # 200 / 68500
+        quantity=0.00292,  # 200 / 68500
         price=68500.0,
         regime="bull",
         kelly_usd=200,

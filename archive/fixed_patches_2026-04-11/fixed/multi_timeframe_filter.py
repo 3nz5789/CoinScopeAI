@@ -35,7 +35,7 @@ class MultiTimeframeFilter:
         multiplier = 2 / (period + 1)
 
         for i in range(1, len(closes)):
-            ema[i] = closes[i] * multiplier + ema[i-1] * (1 - multiplier)
+            ema[i] = closes[i] * multiplier + ema[i - 1] * (1 - multiplier)
 
         return ema
 
@@ -48,7 +48,7 @@ class MultiTimeframeFilter:
         """
 
         if len(closes_4h) < self.ema_slow:
-            return 'neutral'
+            return "neutral"
 
         ema_fast = self.calculate_ema(closes_4h, self.ema_fast)
         ema_slow = self.calculate_ema(closes_4h, self.ema_slow)
@@ -60,21 +60,17 @@ class MultiTimeframeFilter:
 
         # Bullish: fast > slow AND close > both
         if latest_fast > latest_slow and latest_close > latest_fast:
-            return 'bull'
+            return "bull"
 
         # Bearish: fast < slow AND close < both
         elif latest_fast < latest_slow and latest_close < latest_fast:
-            return 'bear'
+            return "bear"
 
         # Neutral
         else:
-            return 'neutral'
+            return "neutral"
 
-    def filter_signal(
-        self,
-        signal_1h: int,
-        trend_4h: str
-    ) -> Tuple[int, str]:
+    def filter_signal(self, signal_1h: int, trend_4h: str) -> Tuple[int, str]:
         """
         Filter 1-hour signal based on 4-hour trend
 
@@ -88,14 +84,14 @@ class MultiTimeframeFilter:
 
         # LONG signal
         if signal_1h == 1:
-            if trend_4h == 'bull':
+            if trend_4h == "bull":
                 return 1, "✅ LONG confirmed (1h signal + 4h bullish)"
             else:
                 return 0, f"❌ LONG blocked (1h signal but 4h {trend_4h})"
 
         # SHORT signal
         elif signal_1h == -1:
-            if trend_4h == 'bear':
+            if trend_4h == "bear":
                 return -1, "✅ SHORT confirmed (1h signal + 4h bearish)"
             else:
                 return 0, f"❌ SHORT blocked (1h signal but 4h {trend_4h})"
@@ -109,7 +105,7 @@ class MultiTimeframeFilter:
         signals_1h: np.ndarray,
         closes_4h: np.ndarray,
         closes_1h: np.ndarray,
-        lookback: int = 96  # 4 days of hourly data
+        lookback: int = 96,  # 4 days of hourly data
     ) -> Tuple[np.ndarray, Dict]:
         """
         Apply multi-timeframe filter to a batch of signals
@@ -135,7 +131,7 @@ class MultiTimeframeFilter:
 
             if idx_4h < len(closes_4h):
                 # Get 4-hour trend
-                trend_4h = self.get_4h_trend(closes_4h[:idx_4h+1])
+                trend_4h = self.get_4h_trend(closes_4h[: idx_4h + 1])
 
                 # Filter signal
                 filtered_signal, reason = self.filter_signal(signals_1h[i], trend_4h)
@@ -147,10 +143,12 @@ class MultiTimeframeFilter:
                     confirmed_count += 1
 
         stats = {
-            'total_signals_1h': np.sum(signals_1h != 0),
-            'confirmed_signals': confirmed_count,
-            'blocked_signals': blocked_count,
-            'filter_efficiency': confirmed_count / np.sum(signals_1h != 0) if np.sum(signals_1h != 0) > 0 else 0,
+            "total_signals_1h": np.sum(signals_1h != 0),
+            "confirmed_signals": confirmed_count,
+            "blocked_signals": blocked_count,
+            "filter_efficiency": (
+                confirmed_count / np.sum(signals_1h != 0) if np.sum(signals_1h != 0) > 0 else 0
+            ),
         }
 
         return filtered_signals, stats

@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Position:
     """Represents an open position"""
+
     symbol: str
     direction: int  # 1=LONG, -1=SHORT
     entry_price: float
@@ -39,10 +40,10 @@ class RiskGate:
         self,
         initial_capital: float = 10000,
         max_daily_loss_pct: float = 0.10,  # 10%
-        max_drawdown_pct: float = 0.20,     # 20%
+        max_drawdown_pct: float = 0.20,  # 20%
         max_consecutive_losses: int = 5,
-        kelly_fraction: float = 0.25,       # Conservative 25% Kelly
-        min_signal_score: float = 0.65      # 65/100
+        kelly_fraction: float = 0.25,  # Conservative 25% Kelly
+        min_signal_score: float = 0.65,  # 65/100
     ):
         self.initial_capital = initial_capital
         self.current_equity = initial_capital
@@ -63,12 +64,7 @@ class RiskGate:
         self.circuit_breaker_active = False
         self.circuit_breaker_reason = ""
 
-    def calculate_stop_loss(
-        self,
-        entry_price: float,
-        atr: float,
-        direction: int
-    ) -> float:
+    def calculate_stop_loss(self, entry_price: float, atr: float, direction: int) -> float:
         """
         Calculate hard stop-loss (ATR-based with 2% cap)
 
@@ -97,12 +93,7 @@ class RiskGate:
 
         return stop_loss
 
-    def calculate_take_profit(
-        self,
-        entry_price: float,
-        stop_loss: float,
-        direction: int
-    ) -> float:
+    def calculate_take_profit(self, entry_price: float, stop_loss: float, direction: int) -> float:
         """
         Calculate take-profit at 2:1 risk-reward ratio
 
@@ -126,11 +117,7 @@ class RiskGate:
         return take_profit
 
     def calculate_position_size(
-        self,
-        win_rate: float,
-        avg_win: float,
-        avg_loss: float,
-        regime: str = 'bull'
+        self, win_rate: float, avg_win: float, avg_loss: float, regime: str = "bull"
     ) -> float:
         """
         Calculate position size using Kelly criterion with regime multipliers
@@ -166,10 +153,10 @@ class RiskGate:
 
         # Regime multipliers
         regime_multipliers = {
-            'bull': 1.0,
-            'neutral': 0.75,
-            'bear': 0.5,
-            'chop': 0.5,
+            "bull": 1.0,
+            "neutral": 0.75,
+            "bear": 0.5,
+            "chop": 0.5,
         }
 
         regime_mult = regime_multipliers.get(regime, 0.75)
@@ -216,7 +203,7 @@ class RiskGate:
         signal_score: float,
         win_rate: float = 0.42,
         avg_win: float = 2.1,
-        avg_loss: float = 1.0
+        avg_loss: float = 1.0,
     ) -> Optional[Position]:
         """
         Open a new position with risk management
@@ -257,7 +244,7 @@ class RiskGate:
             stop_loss=stop_loss,
             take_profit=take_profit,
             kelly_fraction=self.kelly_fraction,
-            regime=regime
+            regime=regime,
         )
 
         self.positions[symbol] = position
@@ -270,11 +257,7 @@ class RiskGate:
         return position
 
     def close_position(
-        self,
-        symbol: str,
-        exit_price: float,
-        exit_time: int,
-        reason: str = "manual"
+        self, symbol: str, exit_price: float, exit_time: int, reason: str = "manual"
     ) -> Optional[Dict]:
         """
         Close a position and record P&L
@@ -311,19 +294,19 @@ class RiskGate:
 
         # Record trade
         trade = {
-            'symbol': symbol,
-            'direction': pos.direction,
-            'entry_price': pos.entry_price,
-            'exit_price': exit_price,
-            'entry_time': pos.entry_time,
-            'exit_time': exit_time,
-            'position_size': pos.position_size,
-            'pnl_pct': pnl_pct,
-            'pnl_dollars': pnl_dollars,
-            'stop_loss': pos.stop_loss,
-            'take_profit': pos.take_profit,
-            'reason': reason,
-            'regime': pos.regime,
+            "symbol": symbol,
+            "direction": pos.direction,
+            "entry_price": pos.entry_price,
+            "exit_price": exit_price,
+            "entry_time": pos.entry_time,
+            "exit_time": exit_time,
+            "position_size": pos.position_size,
+            "pnl_pct": pnl_pct,
+            "pnl_dollars": pnl_dollars,
+            "stop_loss": pos.stop_loss,
+            "take_profit": pos.take_profit,
+            "reason": reason,
+            "regime": pos.regime,
         }
 
         self.trades_history.append(trade)
@@ -340,19 +323,27 @@ class RiskGate:
     def get_status(self) -> Dict:
         """Get current risk status"""
 
-        current_dd = (self.peak_equity - self.current_equity) / self.peak_equity if self.peak_equity > 0 else 0
+        current_dd = (
+            (self.peak_equity - self.current_equity) / self.peak_equity
+            if self.peak_equity > 0
+            else 0
+        )
 
         return {
-            'equity': self.current_equity,
-            'daily_pnl': self.daily_pnl,
-            'peak_equity': self.peak_equity,
-            'drawdown': current_dd,
-            'open_positions': len(self.positions),
-            'consecutive_losses': self.consecutive_losses,
-            'circuit_breaker_active': self.circuit_breaker_active,
-            'circuit_breaker_reason': self.circuit_breaker_reason,
-            'total_trades': len(self.trades_history),
-            'win_rate': sum(1 for t in self.trades_history if t['pnl_pct'] > 0) / len(self.trades_history) if self.trades_history else 0,
+            "equity": self.current_equity,
+            "daily_pnl": self.daily_pnl,
+            "peak_equity": self.peak_equity,
+            "drawdown": current_dd,
+            "open_positions": len(self.positions),
+            "consecutive_losses": self.consecutive_losses,
+            "circuit_breaker_active": self.circuit_breaker_active,
+            "circuit_breaker_reason": self.circuit_breaker_reason,
+            "total_trades": len(self.trades_history),
+            "win_rate": (
+                sum(1 for t in self.trades_history if t["pnl_pct"] > 0) / len(self.trades_history)
+                if self.trades_history
+                else 0
+            ),
         }
 
 
@@ -371,17 +362,14 @@ if __name__ == "__main__":
         signal_score=0.75,
         win_rate=0.42,
         avg_win=2.1,
-        avg_loss=1.0
+        avg_loss=1.0,
     )
 
     print(f"Position: {pos}")
 
     # Close with profit
     trade = gate.close_position(
-        symbol="BTC/USDT",
-        exit_price=45900,
-        exit_time=1,
-        reason="take_profit"
+        symbol="BTC/USDT", exit_price=45900, exit_time=1, reason="take_profit"
     )
 
     print(f"Trade: {trade}")

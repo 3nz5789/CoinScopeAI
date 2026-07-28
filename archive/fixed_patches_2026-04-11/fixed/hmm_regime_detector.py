@@ -25,10 +25,7 @@ class HMMRegimeDetector:
     def __init__(self, n_regimes=3):
         self.n_regimes = n_regimes
         self.model = GaussianHMM(
-            n_components=n_regimes,
-            covariance_type="full",
-            n_iter=1000,
-            random_state=42
+            n_components=n_regimes, covariance_type="full", n_iter=1000, random_state=42
         )
         self.scaler = StandardScaler()
         self.fitted = False
@@ -58,7 +55,7 @@ class HMMRegimeDetector:
         self.regime_map = {
             sorted_states[0]: "bear",
             sorted_states[1]: "chop",
-            sorted_states[2]: "bull"
+            sorted_states[2]: "bull",
         }
 
     def predict(self, returns: np.ndarray, volatility: np.ndarray) -> dict:
@@ -67,9 +64,7 @@ class HMMRegimeDetector:
             return {"regime": "chop", "confidence": 0.5}
 
         min_len = min(len(returns), len(volatility))
-        X = self.scaler.transform(
-            np.column_stack([returns[-min_len:], volatility[-min_len:]])
-        )
+        X = self.scaler.transform(np.column_stack([returns[-min_len:], volatility[-min_len:]]))
         probs = self.model.predict_proba(X)
         last_probs = probs[-1]
         state = np.argmax(last_probs)
@@ -84,9 +79,7 @@ class EnsembleRegimeDetector:
 
     def __init__(self):
         self.hmm = HMMRegimeDetector(n_regimes=3)
-        self.rf = RandomForestClassifier(
-            n_estimators=100, random_state=42, n_jobs=-1
-        )
+        self.rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
         self.rf_fitted = False
 
     def fit(self, returns: np.ndarray, volatility: np.ndarray):
@@ -106,13 +99,13 @@ class EnsembleRegimeDetector:
         window = 20
 
         for i in range(window, len(returns)):
-            r_window = returns[i-window:i]
-            v_window = volatility[i-window:i] if len(volatility) >= i else np.zeros(window)
+            r_window = returns[i - window : i]
+            v_window = volatility[i - window : i] if len(volatility) >= i else np.zeros(window)
 
             feat = [
                 r_window.mean(),
                 r_window.std(),
-                r_window[-5:].mean(),   # short-term momentum
+                r_window[-5:].mean(),  # short-term momentum
                 v_window.mean(),
                 v_window[-5:].mean(),
                 np.sum(r_window > 0) / window,  # % positive days
@@ -120,7 +113,7 @@ class EnsembleRegimeDetector:
             features.append(feat)
 
             # Label using HMM prediction on this window
-            hmm_result = self.hmm.predict(r_window, v_window[:len(r_window)])
+            hmm_result = self.hmm.predict(r_window, v_window[: len(r_window)])
             labels.append(hmm_result["regime"])
 
         return np.array(features), np.array(labels)
@@ -135,38 +128,43 @@ class EnsembleRegimeDetector:
         # RF prediction
         r_w = returns[-20:]
         v_w = volatility[-20:] if len(volatility) >= 20 else np.zeros(20)
-        feat = np.array([[
-            r_w.mean(), r_w.std(), r_w[-5:].mean(),
-            v_w.mean(), v_w[-5:].mean(),
-            np.sum(r_w > 0) / 20
-        ]])
+        feat = np.array(
+            [
+                [
+                    r_w.mean(),
+                    r_w.std(),
+                    r_w[-5:].mean(),
+                    v_w.mean(),
+                    v_w[-5:].mean(),
+                    np.sum(r_w > 0) / 20,
+                ]
+            ]
+        )
 
         rf_regime = self.rf.predict(feat)[0]
-        rf_probs  = self.rf.predict_proba(feat)[0]
-        rf_conf   = float(rf_probs.max())
+        rf_probs = self.rf.predict_proba(feat)[0]
+        rf_conf = float(rf_probs.max())
 
         # Ensemble vote
         if hmm_result["regime"] == rf_regime:
             return {
                 "regime": rf_regime,
-                "confidence": round((hmm_result["confidence"] + rf_conf) / 2, 3)
+                "confidence": round((hmm_result["confidence"] + rf_conf) / 2, 3),
             }
         else:
             # Disagreement — use higher confidence
             if hmm_result["confidence"] >= rf_conf:
                 return {
                     "regime": hmm_result["regime"],
-                    "confidence": round(hmm_result["confidence"] * 0.8, 3)
+                    "confidence": round(hmm_result["confidence"] * 0.8, 3),
                 }
             else:
-                return {
-                    "regime": rf_regime,
-                    "confidence": round(rf_conf * 0.8, 3)
-                }
+                return {"regime": rf_regime, "confidence": round(rf_conf * 0.8, 3)}
 
     def cross_val_accuracy(self, returns, volatility) -> float:
         """Quick cross-validation accuracy estimate"""
         from sklearn.model_selection import cross_val_score
+
         features, labels = self._build_features(returns, volatility)
         if len(features) < 50:
             return 0.0

@@ -44,10 +44,7 @@ from billing.subscription_store import SubscriptionStore
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 MIGRATION_FILE = (
-    Path(__file__).parent.parent
-    / "billing"
-    / "migrations"
-    / "001_initial_billing_tables.sql"
+    Path(__file__).parent.parent / "billing" / "migrations" / "001_initial_billing_tables.sql"
 )
 
 ALL_TIERS = ["free", "trader", "desk_preview", "desk_full", "unknown"]
@@ -55,6 +52,7 @@ PAID_TIERS = ["trader", "desk_preview", "desk_full"]
 
 
 # ─── 1. Static entitlement consistency ───────────────────────────────────────
+
 
 class TestStaticEntitlements:
 
@@ -75,9 +73,9 @@ class TestStaticEntitlements:
             ents = TIER_ENTITLEMENTS[tier]
             annual_full = ents.monthly_price_usd_cents * 12
             savings_pct = (annual_full - ents.annual_price_usd_cents) / annual_full
-            assert savings_pct >= 0.15, (
-                f"{tier}: annual savings only {savings_pct:.0%} — expected ≥15%"
-            )
+            assert (
+                savings_pct >= 0.15
+            ), f"{tier}: annual savings only {savings_pct:.0%} — expected ≥15%"
 
     def test_unknown_tier_grants_nothing(self):
         u = TIER_ENTITLEMENTS["unknown"]
@@ -114,8 +112,7 @@ class TestStaticEntitlements:
     def test_all_paid_tiers_have_telegram(self):
         """Telegram alerts are available on every paid tier."""
         for tier in PAID_TIERS:
-            assert TIER_ENTITLEMENTS[tier].telegram_alerts, \
-                f"{tier}: telegram_alerts is False"
+            assert TIER_ENTITLEMENTS[tier].telegram_alerts, f"{tier}: telegram_alerts is False"
 
     def test_unlimited_markers(self):
         """Desk Preview and Desk Full should use -1 for unlimited quantities."""
@@ -138,7 +135,7 @@ class TestStaticEntitlements:
         assert f.allows_symbol_count(3)
         assert not f.allows_symbol_count(4)
         assert f.allows_alert_count(4)
-        assert not f.allows_alert_count(5)   # 5 is AT the limit (< 5 only)
+        assert not f.allows_alert_count(5)  # 5 is AT the limit (< 5 only)
 
     def test_for_tier_unknown_fallback(self):
         """for_tier() returns 'unknown' for unrecognised tier strings."""
@@ -147,6 +144,7 @@ class TestStaticEntitlements:
 
     def test_to_dict_is_serialisable(self):
         import json
+
         d = TIER_ENTITLEMENTS["trader"].to_dict()
         assert isinstance(d, dict)
         # Should JSON-serialise without errors
@@ -154,6 +152,7 @@ class TestStaticEntitlements:
 
 
 # ─── 2. Tier ordering helpers ─────────────────────────────────────────────────
+
 
 class TestTierOrdering:
 
@@ -184,47 +183,46 @@ class TestTierOrdering:
 
 # ─── 3. Entitlements.for_customer mock ───────────────────────────────────────
 
+
 class TestEntitlementsForCustomer:
 
     def _make_mock_row(self, tier: str) -> dict:
         """Build a fake asyncpg-style row dict from the static lookup."""
         e = TIER_ENTITLEMENTS[tier]
         return {
-            "tier":                       e.tier,
-            "monthly_price_usd_cents":    e.monthly_price_usd_cents,
-            "annual_price_usd_cents":     e.annual_price_usd_cents,
-            "max_symbols":                e.max_symbols,
-            "scan_interval_minutes":      e.scan_interval_minutes,
-            "max_alerts_per_day":         e.max_alerts_per_day,
-            "journal_retention_days":     e.journal_retention_days,
-            "api_access":                 e.api_access,
-            "api_rate_limit_rpm":         e.api_rate_limit_rpm,
-            "ml_signals_v3":              e.ml_signals_v3,
-            "regime_detection":           e.regime_detection,
-            "multi_exchange":             e.multi_exchange,
-            "cvd_whale_signals":          e.cvd_whale_signals,
-            "backtesting_enabled":        e.backtesting_enabled,
-            "kelly_position_sizing":      e.kelly_position_sizing,
-            "walk_forward_validation":    e.walk_forward_validation,
-            "telegram_alerts":            e.telegram_alerts,
-            "email_alerts":               e.email_alerts,
-            "tradingview_webhooks":       e.tradingview_webhooks,
-            "alpha_decay_monitoring":     e.alpha_decay_monitoring,
-            "max_team_seats":             e.max_team_seats,
-            "priority_support":           e.priority_support,
-            "dedicated_onboarding":       e.dedicated_onboarding,
-            "custom_regime_tuning":       e.custom_regime_tuning,
-            "sla_support":                e.sla_support,
-            "white_label":                e.white_label,
+            "tier": e.tier,
+            "monthly_price_usd_cents": e.monthly_price_usd_cents,
+            "annual_price_usd_cents": e.annual_price_usd_cents,
+            "max_symbols": e.max_symbols,
+            "scan_interval_minutes": e.scan_interval_minutes,
+            "max_alerts_per_day": e.max_alerts_per_day,
+            "journal_retention_days": e.journal_retention_days,
+            "api_access": e.api_access,
+            "api_rate_limit_rpm": e.api_rate_limit_rpm,
+            "ml_signals_v3": e.ml_signals_v3,
+            "regime_detection": e.regime_detection,
+            "multi_exchange": e.multi_exchange,
+            "cvd_whale_signals": e.cvd_whale_signals,
+            "backtesting_enabled": e.backtesting_enabled,
+            "kelly_position_sizing": e.kelly_position_sizing,
+            "walk_forward_validation": e.walk_forward_validation,
+            "telegram_alerts": e.telegram_alerts,
+            "email_alerts": e.email_alerts,
+            "tradingview_webhooks": e.tradingview_webhooks,
+            "alpha_decay_monitoring": e.alpha_decay_monitoring,
+            "max_team_seats": e.max_team_seats,
+            "priority_support": e.priority_support,
+            "dedicated_onboarding": e.dedicated_onboarding,
+            "custom_regime_tuning": e.custom_regime_tuning,
+            "sla_support": e.sla_support,
+            "white_label": e.white_label,
         }
 
     @pytest.mark.asyncio
     async def test_for_customer_active_trader(self):
         """for_customer returns correct entitlements when customer has Trader sub."""
         mock_store = MagicMock()
-        mock_store.get_entitlements = AsyncMock(
-            return_value=self._make_mock_row("trader")
-        )
+        mock_store.get_entitlements = AsyncMock(return_value=self._make_mock_row("trader"))
         ents = await Entitlements.for_customer(mock_store, "cus_test_trader")
         assert ents.tier == "trader"
         assert ents.ml_signals_v3
@@ -243,9 +241,7 @@ class TestEntitlementsForCustomer:
     @pytest.mark.asyncio
     async def test_for_customer_desk_preview_has_api(self):
         mock_store = MagicMock()
-        mock_store.get_entitlements = AsyncMock(
-            return_value=self._make_mock_row("desk_preview")
-        )
+        mock_store.get_entitlements = AsyncMock(return_value=self._make_mock_row("desk_preview"))
         ents = await Entitlements.for_customer(mock_store, "cus_desk_preview")
         assert ents.api_access
         assert ents.api_rate_limit_rpm == 300
@@ -255,17 +251,21 @@ class TestEntitlementsForCustomer:
 
 # ─── 4. Migration file existence + content ────────────────────────────────────
 
+
 class TestMigrationFile:
 
     def test_migration_file_exists(self):
-        assert MIGRATION_FILE.exists(), (
-            f"Migration file not found: {MIGRATION_FILE}"
-        )
+        assert MIGRATION_FILE.exists(), f"Migration file not found: {MIGRATION_FILE}"
 
     def test_migration_has_required_tables(self):
         sql = MIGRATION_FILE.read_text()
-        for table in ("subscriptions", "webhook_events", "entitlements",
-                      "invoice_history", "api_usage"):
+        for table in (
+            "subscriptions",
+            "webhook_events",
+            "entitlements",
+            "invoice_history",
+            "api_usage",
+        ):
             assert table in sql, f"Table '{table}' not found in migration SQL"
 
     def test_migration_has_enum_types(self):
@@ -280,21 +280,19 @@ class TestMigrationFile:
 
     def test_migration_has_rollback_comments(self):
         sql = MIGRATION_FILE.read_text()
-        assert "Rollback" in sql or "rollback" in sql.lower(), \
-            "Migration should include rollback instructions"
+        assert (
+            "Rollback" in sql or "rollback" in sql.lower()
+        ), "Migration should include rollback instructions"
 
     def test_migration_is_transactional(self):
         sql = MIGRATION_FILE.read_text()
         # File may start with comment headers — BEGIN must appear before any DDL
-        assert "BEGIN;" in sql, \
-            "Migration should contain BEGIN;"
-        assert "COMMIT;" in sql, \
-            "Migration should contain COMMIT;"
+        assert "BEGIN;" in sql, "Migration should contain BEGIN;"
+        assert "COMMIT;" in sql, "Migration should contain COMMIT;"
         # BEGIN should come before the first CREATE TABLE
-        begin_pos  = sql.index("BEGIN;")
+        begin_pos = sql.index("BEGIN;")
         create_pos = sql.index("CREATE TABLE")
-        assert begin_pos < create_pos, \
-            "BEGIN; must appear before the first CREATE TABLE"
+        assert begin_pos < create_pos, "BEGIN; must appear before the first CREATE TABLE"
 
     def test_migration_has_view(self):
         sql = MIGRATION_FILE.read_text()
@@ -302,6 +300,7 @@ class TestMigrationFile:
 
 
 # ─── 5. PgSubscriptionStore interface parity ─────────────────────────────────
+
 
 class TestPgStoreInterface:
     """
@@ -322,27 +321,34 @@ class TestPgStoreInterface:
 
     def test_pg_store_has_all_sqlite_methods(self):
         for method in self.SHARED_METHODS:
-            assert hasattr(PgSubscriptionStore, method), \
-                f"PgSubscriptionStore missing method: {method}"
+            assert hasattr(
+                PgSubscriptionStore, method
+            ), f"PgSubscriptionStore missing method: {method}"
 
     def test_pg_store_methods_are_coroutines(self):
         """All shared methods on PgSubscriptionStore must be async."""
         store = PgSubscriptionStore.__new__(PgSubscriptionStore)
         for method in self.SHARED_METHODS:
             fn = getattr(store, method)
-            assert asyncio.iscoroutinefunction(fn), \
-                f"PgSubscriptionStore.{method} should be async"
+            assert asyncio.iscoroutinefunction(fn), f"PgSubscriptionStore.{method} should be async"
 
     def test_pg_store_has_extra_methods(self):
         """PgSubscriptionStore should extend the interface with PG-specific ops."""
-        for method in ("append_invoice", "increment_api_usage",
-                       "get_entitlements", "connect", "close"):
-            assert hasattr(PgSubscriptionStore, method), \
-                f"PgSubscriptionStore missing expected method: {method}"
+        for method in (
+            "append_invoice",
+            "increment_api_usage",
+            "get_entitlements",
+            "connect",
+            "close",
+        ):
+            assert hasattr(
+                PgSubscriptionStore, method
+            ), f"PgSubscriptionStore missing expected method: {method}"
 
     def test_sqlite_store_methods_are_sync(self):
         """Original SubscriptionStore methods should remain synchronous."""
         for method in self.SHARED_METHODS:
             fn = getattr(SubscriptionStore, method)
-            assert not asyncio.iscoroutinefunction(fn), \
-                f"SubscriptionStore.{method} should be sync (not async)"
+            assert not asyncio.iscoroutinefunction(
+                fn
+            ), f"SubscriptionStore.{method} should be sync (not async)"

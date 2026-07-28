@@ -30,6 +30,7 @@ import sys
 # ── Load .env before importing project modules ──────────────────────────────
 try:
     from dotenv import load_dotenv
+
     # Walk up to find the project root .env
     _here = Path(__file__).resolve().parent
     _env_path = _here.parent / ".env"
@@ -63,6 +64,7 @@ logger = logging.getLogger("FundingMonitor")
 # Safety check — enforce testnet during validation phase
 # ---------------------------------------------------------------------------
 
+
 def startup_safety_check(is_testnet: bool) -> None:
     """
     Confirm environment before starting the pipeline.
@@ -91,6 +93,7 @@ def startup_safety_check(is_testnet: bool) -> None:
 # ---------------------------------------------------------------------------
 # Stats reporter (runs every 5 minutes)
 # ---------------------------------------------------------------------------
+
 
 async def stats_reporter(pipeline: FundingRatePipeline, interval: int = 300) -> None:
     """Log a pipeline health snapshot every `interval` seconds."""
@@ -121,8 +124,10 @@ async def stats_reporter(pipeline: FundingRatePipeline, interval: int = 300) -> 
 # Graceful shutdown handler
 # ---------------------------------------------------------------------------
 
+
 def _install_signal_handlers(loop: asyncio.AbstractEventLoop) -> None:
     """Register SIGINT / SIGTERM to cancel all running tasks cleanly."""
+
     def _shutdown(*_):
         logger.info("[Shutdown] Signal received — cancelling tasks…")
         for task in asyncio.all_tasks(loop):
@@ -135,6 +140,7 @@ def _install_signal_handlers(loop: asyncio.AbstractEventLoop) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 async def main() -> None:
     # 1. Resolve config from env
@@ -169,9 +175,7 @@ async def main() -> None:
     ]
 
     # 6. Prune old data once at startup (keep 30 days)
-    deleted = await asyncio.get_event_loop().run_in_executor(
-        None, store.prune_old, 30
-    )
+    deleted = await asyncio.get_event_loop().run_in_executor(None, store.prune_old, 30)
     if deleted:
         logger.info(f"[Startup] Pruned {deleted} rows > 30 days old.")
 

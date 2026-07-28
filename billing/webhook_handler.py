@@ -58,6 +58,7 @@ def _webhook_secret() -> str:
 
 # ── Price ID → Tier/Interval lookup ──────────────────────────────────────────
 
+
 def _build_price_map() -> dict[str, tuple[SubscriptionTier, BillingInterval]]:
     """
     Build reverse map: price_xxx → (tier, interval).
@@ -65,20 +66,21 @@ def _build_price_map() -> dict[str, tuple[SubscriptionTier, BillingInterval]]:
     """
     mapping: dict[str, tuple[SubscriptionTier, BillingInterval]] = {}
     pairs = [
-        ("FREE",         SubscriptionTier.FREE),
-        ("TRADER",       SubscriptionTier.TRADER),
+        ("FREE", SubscriptionTier.FREE),
+        ("TRADER", SubscriptionTier.TRADER),
         ("DESK_PREVIEW", SubscriptionTier.DESK_PREVIEW),
-        ("DESK_FULL",    SubscriptionTier.DESK_FULL),
+        ("DESK_FULL", SubscriptionTier.DESK_FULL),
     ]
     for env_tier, tier_enum in pairs:
         for env_interval, interval_enum in [
             ("MONTHLY", BillingInterval.MONTHLY),
-            ("ANNUAL",  BillingInterval.ANNUAL),
+            ("ANNUAL", BillingInterval.ANNUAL),
         ]:
             price_id = os.getenv(f"STRIPE_PRICE_{env_tier}_{env_interval}", "")
             if price_id and price_id.startswith("price_"):
                 mapping[price_id] = (tier_enum, interval_enum)
     return mapping
+
 
 def resolve_price(price_id: str) -> tuple[SubscriptionTier, BillingInterval]:
     """Return (tier, interval) for a Stripe price ID, or (UNKNOWN, MONTHLY).
@@ -86,6 +88,7 @@ def resolve_price(price_id: str) -> tuple[SubscriptionTier, BillingInterval]:
     Rebuilds the lookup each call so tests can set env vars after import.
     """
     return _build_price_map().get(price_id, (SubscriptionTier.UNKNOWN, BillingInterval.MONTHLY))
+
 
 # ── App + dependencies ────────────────────────────────────────────────────────
 
@@ -124,7 +127,9 @@ def _get_notifier() -> BillingNotifier:
         _notifier_instance = BillingNotifier()
     return _notifier_instance
 
+
 # ── Health ────────────────────────────────────────────────────────────────────
+
 
 @app.get("/billing/health")
 async def health():
@@ -138,6 +143,7 @@ async def health():
         "price_ids_loaded": len(_build_price_map()),
     }
 
+
 @app.get("/billing/subscriptions")
 async def list_subscriptions():
     """Internal endpoint — list all active subscriptions."""
@@ -147,6 +153,7 @@ async def list_subscriptions():
         "subscriptions": [s.model_dump(mode="json") for s in subs],
     }
 
+
 @app.get("/billing/customer/{customer_id}")
 async def get_customer(customer_id: str):
     """Internal endpoint — lookup subscription by Stripe customer ID."""
@@ -155,7 +162,9 @@ async def get_customer(customer_id: str):
         raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
     return sub.model_dump(mode="json")
 
+
 # ── Main webhook endpoint ─────────────────────────────────────────────────────
+
 
 @app.post("/billing/webhook")
 async def stripe_webhook(request: Request):
@@ -197,7 +206,7 @@ async def stripe_webhook(request: Request):
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    event_id   = event.get("id", "unknown")
+    event_id = event.get("id", "unknown")
     event_type = event.get("type", "unknown")
     logger.info(f"[Billing] Received event {event_id} ({event_type})")
 
@@ -223,7 +232,9 @@ async def stripe_webhook(request: Request):
 
     return JSONResponse({"received": True, "event_id": event_id})
 
+
 # ── Event handlers ────────────────────────────────────────────────────────────
+
 
 def _handle_checkout_completed(event_id: str, event_type: str, data: dict):
     """
@@ -231,14 +242,16 @@ def _handle_checkout_completed(event_id: str, event_type: str, data: dict):
     Fired when a customer completes the Stripe Checkout flow.
     Creates the subscription record and sends the welcome notification.
     """
-    session_id       = data.get("id", "")
-    customer_id      = data.get("customer", "")
-    subscription_id  = data.get("subscription", "")
-    customer_email   = data.get("customer_details", {}).get("email") or data.get("customer_email")
-    mode             = data.get("mode", "")
+    session_id = data.get("id", "")
+    customer_id = data.get("customer", "")
+    subscription_id = data.get("subscription", "")
+    customer_email = data.get("customer_details", {}).get("email") or data.get("customer_email")
+    mode = data.get("mode", "")
 
     if mode != "subscription":
-        logger.info(f"[Billing] checkout.session.completed non-subscription mode ({mode}) — skipping")
+        logger.info(
+            f"[Billing] checkout.session.completed non-subscription mode ({mode}) — skipping"
+        )
         _get_store().mark_event_processed(event_id, event_type, customer_id)
         return
 
@@ -280,11 +293,11 @@ def _handle_subscription_updated(event_id: str, event_type: str, data: dict):
     Covers: tier upgrades, downgrades, renewals, cancel_at_period_end flag changes.
     Fetches existing record to detect tier changes for notification routing.
     """
-    subscription_id      = data.get("id", "")
-    customer_id          = data.get("customer", "")
-    status_raw           = data.get("status", "incomplete")
+    subscription_id = data.get("id", "")
+    customer_id = data.get("customer", "")
+    status_raw = data.get("status", "incomplete")
     cancel_at_period_end = data.get("cancel_at_period_end", False)
-    current_period_end   = _ts_to_dt(data.get("current_period_end"))
+    current_period_end = _ts_to_dt(data.get("current_period_end"))
 
     # Resolve tier from plan items
     tier, interval = _resolve_tier_from_sub_object(data)
@@ -315,7 +328,7 @@ def _handle_subscription_updated(event_id: str, event_type: str, data: dict):
     _get_store().mark_event_processed(event_id, event_type, customer_id, subscription_id)
 
     tier_str = getattr(tier, "value", tier)
-    email    = existing.email if existing else None
+    email = existing.email if existing else None
 
     # Tier change notifications
     if old_tier and old_tier != tier_str and old_tier != "unknown":
@@ -329,9 +342,7 @@ def _handle_subscription_updated(event_id: str, event_type: str, data: dict):
     if status == SubscriptionStatus.PAST_DUE:
         _get_notifier().subscription_past_due(customer_id, email, tier_str)
 
-    logger.info(
-        f"[Billing] Subscription updated: {customer_id} / {tier_str} / {status_raw}"
-    )
+    logger.info(f"[Billing] Subscription updated: {customer_id} / {tier_str} / {status_raw}")
 
 
 def _handle_subscription_deleted(event_id: str, event_type: str, data: dict):
@@ -341,11 +352,11 @@ def _handle_subscription_deleted(event_id: str, event_type: str, data: dict):
     or immediately if canceled mid-cycle.
     """
     subscription_id = data.get("id", "")
-    customer_id     = data.get("customer", "")
+    customer_id = data.get("customer", "")
 
     existing = _get_store().get_subscription_by_stripe_id(subscription_id)
-    email    = existing.email if existing else None
-    tier     = str(existing.tier) if existing else "unknown"
+    email = existing.email if existing else None
+    tier = str(existing.tier) if existing else "unknown"
 
     _get_store().cancel_subscription(customer_id)
     _get_store().mark_event_processed(event_id, event_type, customer_id, subscription_id)
@@ -364,9 +375,9 @@ def _handle_invoice_payment_succeeded(event_id: str, event_type: str, data: dict
     invoice.payment_succeeded
     Fires on new subscriptions AND renewals. Skip 'amount_paid == 0' (free trials).
     """
-    customer_id     = data.get("customer", "")
+    customer_id = data.get("customer", "")
     subscription_id = data.get("subscription", "")
-    amount_paid     = data.get("amount_paid", 0)   # cents
+    amount_paid = data.get("amount_paid", 0)  # cents
     data.get("currency", "usd")
 
     if amount_paid == 0:
@@ -375,8 +386,8 @@ def _handle_invoice_payment_succeeded(event_id: str, event_type: str, data: dict
         return
 
     existing = _get_store().get_subscription_by_customer(customer_id)
-    tier     = getattr(existing.tier, "value", "unknown") if existing else "unknown"
-    email    = existing.email if existing else None
+    tier = getattr(existing.tier, "value", "unknown") if existing else "unknown"
+    email = existing.email if existing else None
 
     amount_usd = amount_paid / 100.0
     _get_store().mark_event_processed(event_id, event_type, customer_id, subscription_id)
@@ -395,14 +406,14 @@ def _handle_invoice_payment_failed(event_id: str, event_type: str, data: dict):
     invoice.payment_failed
     Payment retry scheduled by Stripe. Alert immediately — customer may need action.
     """
-    customer_id          = data.get("customer", "")
-    subscription_id      = data.get("subscription", "")
-    amount_due           = data.get("amount_due", 0)   # cents
+    customer_id = data.get("customer", "")
+    subscription_id = data.get("subscription", "")
+    amount_due = data.get("amount_due", 0)  # cents
     next_payment_attempt = _ts_to_dt(data.get("next_payment_attempt"))
 
     existing = _get_store().get_subscription_by_customer(customer_id)
-    tier     = getattr(existing.tier, "value", "unknown") if existing else "unknown"
-    email    = existing.email if existing else None
+    tier = getattr(existing.tier, "value", "unknown") if existing else "unknown"
+    email = existing.email if existing else None
 
     _get_store().mark_event_processed(event_id, event_type, customer_id, subscription_id)
 
@@ -419,14 +430,15 @@ def _handle_invoice_payment_failed(event_id: str, event_type: str, data: dict):
 # ── Handler registry ──────────────────────────────────────────────────────────
 
 EVENT_HANDLERS = {
-    "checkout.session.completed":     _handle_checkout_completed,
-    "customer.subscription.updated":  _handle_subscription_updated,
-    "customer.subscription.deleted":  _handle_subscription_deleted,
-    "invoice.payment_succeeded":      _handle_invoice_payment_succeeded,
-    "invoice.payment_failed":         _handle_invoice_payment_failed,
+    "checkout.session.completed": _handle_checkout_completed,
+    "customer.subscription.updated": _handle_subscription_updated,
+    "customer.subscription.deleted": _handle_subscription_deleted,
+    "invoice.payment_succeeded": _handle_invoice_payment_succeeded,
+    "invoice.payment_failed": _handle_invoice_payment_failed,
 }
 
 # ── Private helpers ───────────────────────────────────────────────────────────
+
 
 def _ts_to_dt(ts: Optional[int]) -> Optional[datetime]:
     """Convert Unix timestamp (int) to UTC datetime, or None."""

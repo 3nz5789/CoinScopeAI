@@ -21,10 +21,7 @@ from urllib.parse import urlencode
 
 import requests
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger("BinanceTestnetClient")
 
 
@@ -37,10 +34,12 @@ class BinanceFuturesTestnetClient:
         self.base_url = "https://demo-fapi.binance.com"
 
         self.session = requests.Session()
-        self.session.headers.update({
-            'Accept': 'application/json',
-            'User-Agent': 'CoinScopeAI/1.0',
-        })
+        self.session.headers.update(
+            {
+                "Accept": "application/json",
+                "User-Agent": "CoinScopeAI/1.0",
+            }
+        )
 
         self.server_time_offset = 0
         self._sync_server_time()
@@ -49,7 +48,7 @@ class BinanceFuturesTestnetClient:
         """Synchronize with server time to avoid timestamp errors"""
         try:
             response = requests.get(f"{self.base_url}/fapi/v1/time")
-            server_time = response.json()['serverTime']
+            server_time = response.json()["serverTime"]
             local_time = int(time.time() * 1000)
             self.server_time_offset = server_time - local_time
             logger.info(f"Server time offset: {self.server_time_offset}ms")
@@ -65,21 +64,21 @@ class BinanceFuturesTestnetClient:
         """Sign request with HMAC SHA256"""
         query_string = urlencode(params)
         signature = hmac.new(
-            self.api_secret.encode(),
-            query_string.encode(),
-            hashlib.sha256
+            self.api_secret.encode(), query_string.encode(), hashlib.sha256
         ).hexdigest()
         return signature
 
-    def _request(self, method: str, endpoint: str, params: Dict = None, signed: bool = False) -> Dict:
+    def _request(
+        self, method: str, endpoint: str, params: Dict = None, signed: bool = False
+    ) -> Dict:
         """Make HTTP request to Binance API"""
         params = params or {}
 
         if signed:
-            params['timestamp'] = self._get_timestamp()
-            params['recvWindow'] = 10000
-            params['signature'] = self._sign_request(params)
-            self.session.headers.update({'X-MBX-APIKEY': self.api_key})
+            params["timestamp"] = self._get_timestamp()
+            params["recvWindow"] = 10000
+            params["signature"] = self._sign_request(params)
+            self.session.headers.update({"X-MBX-APIKEY": self.api_key})
 
         url = f"{self.base_url}{endpoint}"
 
@@ -98,7 +97,7 @@ class BinanceFuturesTestnetClient:
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 logger.error(f"Response: {e.response.text}")
             raise
 
@@ -109,7 +108,7 @@ class BinanceFuturesTestnetClient:
     def get_server_time(self) -> int:
         """Get server time"""
         result = self._request("GET", "/fapi/v1/time")
-        return result.get('serverTime', 0)
+        return result.get("serverTime", 0)
 
     def get_balance(self) -> Dict:
         """Get account balance"""
@@ -117,8 +116,8 @@ class BinanceFuturesTestnetClient:
         balances = {}
         if isinstance(result, list):
             for asset in result:
-                symbol = asset.get('asset')
-                balance = float(asset.get('balance', 0))
+                symbol = asset.get("asset")
+                balance = float(asset.get("balance", 0))
                 if balance > 0:
                     balances[symbol] = balance
         return balances
@@ -130,7 +129,7 @@ class BinanceFuturesTestnetClient:
     def get_positions(self) -> list:
         """Get open positions"""
         account = self.get_account()
-        return account.get('positions', [])
+        return account.get("positions", [])
 
     def place_order(
         self,
@@ -139,32 +138,34 @@ class BinanceFuturesTestnetClient:
         order_type: str = "MARKET",
         quantity: float = None,
         price: float = None,
-        **kwargs
+        **kwargs,
     ) -> Dict:
         """Place an order"""
         params = {
-            'symbol': symbol,
-            'side': side,
-            'type': order_type,
+            "symbol": symbol,
+            "side": side,
+            "type": order_type,
         }
 
         if quantity:
-            params['quantity'] = quantity
+            params["quantity"] = quantity
         if price:
-            params['price'] = price
+            params["price"] = price
 
         params.update(kwargs)
 
         return self._request("POST", "/fapi/v1/order", params, signed=True)
 
-    def cancel_order(self, symbol: str, order_id: int = None, orig_client_order_id: str = None) -> Dict:
+    def cancel_order(
+        self, symbol: str, order_id: int = None, orig_client_order_id: str = None
+    ) -> Dict:
         """Cancel an order"""
-        params = {'symbol': symbol}
+        params = {"symbol": symbol}
 
         if order_id:
-            params['orderId'] = order_id
+            params["orderId"] = order_id
         if orig_client_order_id:
-            params['origClientOrderId'] = orig_client_order_id
+            params["origClientOrderId"] = orig_client_order_id
 
         return self._request("DELETE", "/fapi/v1/order", params, signed=True)
 
@@ -172,25 +173,27 @@ class BinanceFuturesTestnetClient:
         """Get open orders"""
         params = {}
         if symbol:
-            params['symbol'] = symbol
+            params["symbol"] = symbol
 
         result = self._request("GET", "/fapi/v1/openOrders", params, signed=True)
         return result if isinstance(result, list) else [result]
 
-    def get_order(self, symbol: str, order_id: int = None, orig_client_order_id: str = None) -> Dict:
+    def get_order(
+        self, symbol: str, order_id: int = None, orig_client_order_id: str = None
+    ) -> Dict:
         """Get order status"""
-        params = {'symbol': symbol}
+        params = {"symbol": symbol}
 
         if order_id:
-            params['orderId'] = order_id
+            params["orderId"] = order_id
         if orig_client_order_id:
-            params['origClientOrderId'] = orig_client_order_id
+            params["origClientOrderId"] = orig_client_order_id
 
         return self._request("GET", "/fapi/v1/order", params, signed=True)
 
     def get_ticker(self, symbol: str) -> Dict:
         """Get ticker information"""
-        return self._request("GET", "/fapi/v1/ticker/24hr", {'symbol': symbol})
+        return self._request("GET", "/fapi/v1/ticker/24hr", {"symbol": symbol})
 
 
 def test_connection():
@@ -200,6 +203,7 @@ def test_connection():
     #   export BINANCE_TESTNET_API_KEY=<your key>
     #   export BINANCE_TESTNET_API_SECRET=<your secret>
     import os as _os
+
     api_key = _os.environ.get("BINANCE_TESTNET_API_KEY", "")
     api_secret = _os.environ.get("BINANCE_TESTNET_API_SECRET", "")
     if not api_key or not api_secret:
@@ -255,6 +259,7 @@ def test_connection():
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -8,27 +8,17 @@ Implements fractional Kelly formula with:
 """
 
 
-
 class KellyRiskController:
     """Kelly criterion position sizing controller"""
 
     def __init__(self, fraction: float = 0.25, hard_cap_pct: float = 0.02):
-        self.fraction    = fraction       # fractional Kelly (conservative)
-        self.hard_cap    = hard_cap_pct   # never exceed 2% per trade
-        self.REGIME_MULT = {
-            "bull": 1.0,
-            "chop": 0.5,
-            "bear": 0.3
-        }
+        self.fraction = fraction  # fractional Kelly (conservative)
+        self.hard_cap = hard_cap_pct  # never exceed 2% per trade
+        self.REGIME_MULT = {"bull": 1.0, "chop": 0.5, "bear": 0.3}
         self.peak_equity = None
 
     def calculate_position_size(
-        self,
-        win_rate: float,
-        avg_win: float,
-        avg_loss: float,
-        regime: str,
-        account_balance: float
+        self, win_rate: float, avg_win: float, avg_loss: float, regime: str, account_balance: float
     ) -> float:
         """
         Calculate position size using Kelly criterion
@@ -94,18 +84,11 @@ class KellyRiskController:
             return 0.25  # severe drawdown
 
     def size_summary(
-        self,
-        win_rate: float,
-        avg_win: float,
-        avg_loss: float,
-        regime: str,
-        balance: float
+        self, win_rate: float, avg_win: float, avg_loss: float, regime: str, balance: float
     ) -> dict:
         """Get detailed sizing summary"""
 
-        size = self.calculate_position_size(
-            win_rate, avg_win, avg_loss, regime, balance
-        )
+        size = self.calculate_position_size(win_rate, avg_win, avg_loss, regime, balance)
 
         b = avg_win / avg_loss if avg_loss > 0 else 0
         p = win_rate
@@ -127,11 +110,7 @@ if __name__ == "__main__":
 
     # Example: 44% win rate, 2.1% avg win, 1.0% avg loss
     size = kelly.calculate_position_size(
-        win_rate=0.44,
-        avg_win=0.021,
-        avg_loss=0.010,
-        regime="bull",
-        account_balance=10000
+        win_rate=0.44, avg_win=0.021, avg_loss=0.010, regime="bull", account_balance=10000
     )
 
     print(f"Position size: ${size:.2f}")

@@ -53,8 +53,12 @@ class TestEventBus:
         event_bus.subscribe_all(handler)
 
         mp = MarkPrice(exchange=Exchange.BINANCE, symbol="BTCUSDT", mark_price=50000.0)
-        event1 = MarketEvent(event_type=EventType.MARK_PRICE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT")
-        event2 = MarketEvent(event_type=EventType.TRADE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT")
+        event1 = MarketEvent(
+            event_type=EventType.MARK_PRICE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT"
+        )
+        event2 = MarketEvent(
+            event_type=EventType.TRADE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT"
+        )
 
         await event_bus.publish(event1)
         await event_bus.publish(event2)
@@ -76,7 +80,9 @@ class TestEventBus:
         event_bus.subscribe(EventType.TRADE, trade_handler)
 
         mp = MarkPrice(exchange=Exchange.BINANCE, symbol="BTCUSDT", mark_price=50000.0)
-        event = MarketEvent(event_type=EventType.MARK_PRICE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT")
+        event = MarketEvent(
+            event_type=EventType.MARK_PRICE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT"
+        )
         await event_bus.publish(event)
 
         assert len(mark_received) == 1
@@ -96,7 +102,9 @@ class TestEventBus:
         event_bus.subscribe(EventType.MARK_PRICE, good_handler)
 
         mp = MarkPrice(exchange=Exchange.BINANCE, symbol="BTCUSDT", mark_price=50000.0)
-        event = MarketEvent(event_type=EventType.MARK_PRICE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT")
+        event = MarketEvent(
+            event_type=EventType.MARK_PRICE, data=mp, exchange=Exchange.BINANCE, symbol="BTCUSDT"
+        )
         await event_bus.publish(event)
 
         # good_handler should still receive the event

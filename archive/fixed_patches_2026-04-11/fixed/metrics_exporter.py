@@ -14,6 +14,7 @@ try:
         Histogram,
         start_http_server,
     )
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False

@@ -66,7 +66,7 @@ except ImportError:
 
 
 DEFAULT_ENGINE_URL = "http://localhost:8001"
-BINANCE_TESTNET_FAPI = "https://testnet.binancefuture.com"   # futures testnet — DO NOT change
+BINANCE_TESTNET_FAPI = "https://testnet.binancefuture.com"  # futures testnet — DO NOT change
 SUPPORTED_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT")
 DEFAULT_LOOKBACK_H = 1
 DEFAULT_TIMEOUT_S = 10
@@ -74,6 +74,7 @@ QTY_TOLERANCE = 1e-6
 
 
 # ----------------------------- Signing -----------------------------
+
 
 def _sign(secret: str, params: dict[str, Any]) -> str:
     qs = urlencode(params)
@@ -108,6 +109,7 @@ def binance_all_orders(
 
 # ----------------------------- Engine journal -----------------------------
 
+
 def fetch_journal(base_url: str, timeout_s: float) -> list[dict[str, Any]]:
     resp = requests.get(f"{base_url.rstrip('/')}/journal", timeout=timeout_s)
     resp.raise_for_status()
@@ -118,6 +120,7 @@ def fetch_journal(base_url: str, timeout_s: float) -> list[dict[str, Any]]:
 
 
 # ----------------------------- Reconciliation -----------------------------
+
 
 def _qty_of(o: dict[str, Any]) -> float:
     for k in ("executedQty", "origQty", "qty", "size", "quantity"):
@@ -182,11 +185,16 @@ def reconcile(
                 matched = True
                 break
             if not matched:
-                report["binance_without_journal"].append({
-                    "symbol": symbol, "orderId": o.get("orderId"),
-                    "clientOrderId": o.get("clientOrderId"),
-                    "side": o_side, "qty": o_qty, "ts_ms": o_ts,
-                })
+                report["binance_without_journal"].append(
+                    {
+                        "symbol": symbol,
+                        "orderId": o.get("orderId"),
+                        "clientOrderId": o.get("clientOrderId"),
+                        "side": o_side,
+                        "qty": o_qty,
+                        "ts_ms": o_ts,
+                    }
+                )
 
         # --- Check: every journal row has at least one Binance fill ---
         for j in j_entries:
@@ -196,24 +204,33 @@ def reconcile(
             j_side = str(j.get("side", "")).upper()
             j_qty = _qty_of(j)
             matches = [
-                o for o in b_orders
+                o
+                for o in b_orders
                 if o.get("status") in ("FILLED", "PARTIALLY_FILLED")
                 and str(o.get("side", "")).upper() in (j_side, _long_short(j_side))
                 and abs(_qty_of(o) - j_qty) <= QTY_TOLERANCE
                 and abs(int(o.get("updateTime") or o.get("time") or 0) - j_ts) <= match_window_ms
             ]
             if not matches:
-                report["journal_without_binance"].append({
-                    "symbol": symbol, "trade_id": j.get("trade_id"),
-                    "side": j_side, "qty": j_qty, "ts_ms": j_ts,
-                })
+                report["journal_without_binance"].append(
+                    {
+                        "symbol": symbol,
+                        "trade_id": j.get("trade_id"),
+                        "side": j_side,
+                        "qty": j_qty,
+                        "ts_ms": j_ts,
+                    }
+                )
             elif len(matches) > 1:
-                report["binance_duplicate_per_journal"].append({
-                    "symbol": symbol, "trade_id": j.get("trade_id"),
-                    "matched_order_ids": [m.get("orderId") for m in matches],
-                    "matched_client_order_ids": [m.get("clientOrderId") for m in matches],
-                    "qty": j_qty,
-                })
+                report["binance_duplicate_per_journal"].append(
+                    {
+                        "symbol": symbol,
+                        "trade_id": j.get("trade_id"),
+                        "matched_order_ids": [m.get("orderId") for m in matches],
+                        "matched_client_order_ids": [m.get("clientOrderId") for m in matches],
+                        "qty": j_qty,
+                    }
+                )
 
     return report
 
@@ -225,8 +242,11 @@ def _long_short(side: str) -> str:
 
 # ----------------------------- Entry point -----------------------------
 
+
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--base-url", default=os.environ.get("ENGINE_BASE_URL", DEFAULT_ENGINE_URL))
     p.add_argument("--lookback-h", type=float, default=DEFAULT_LOOKBACK_H)
     p.add_argument("--timeout-s", type=float, default=DEFAULT_TIMEOUT_S)
@@ -246,11 +266,15 @@ def main() -> int:
         return 2
 
     # Fetch Binance per symbol
-    start_ms = int((datetime.now(timezone.utc) - timedelta(hours=args.lookback_h)).timestamp() * 1000)
+    start_ms = int(
+        (datetime.now(timezone.utc) - timedelta(hours=args.lookback_h)).timestamp() * 1000
+    )
     binance_by_symbol: dict[str, list[dict[str, Any]]] = {}
     for sym in SUPPORTED_SYMBOLS:
         try:
-            binance_by_symbol[sym] = binance_all_orders(api_key, api_secret, sym, start_ms, args.timeout_s)
+            binance_by_symbol[sym] = binance_all_orders(
+                api_key, api_secret, sym, start_ms, args.timeout_s
+            )
         except requests.RequestException as ex:
             print(f"[ERROR] Binance allOrders failed for {sym}: {ex}", file=sys.stderr)
             return 2
@@ -259,14 +283,19 @@ def main() -> int:
     now = datetime.now(timezone.utc).isoformat()
     any_divergence = any(report[k] for k in report)
 
-    print(json.dumps({
-        "reconciled_at": now,
-        "lookback_h": args.lookback_h,
-        "journal_rows": len(journal),
-        "binance_orders_by_symbol": {s: len(v) for s, v in binance_by_symbol.items()},
-        "divergence": report,
-        "incident_ref": "INC-2026-04-18-01",
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "reconciled_at": now,
+                "lookback_h": args.lookback_h,
+                "journal_rows": len(journal),
+                "binance_orders_by_symbol": {s: len(v) for s, v in binance_by_symbol.items()},
+                "divergence": report,
+                "incident_ref": "INC-2026-04-18-01",
+            },
+            indent=2,
+        )
+    )
 
     return 1 if any_divergence else 0
 

@@ -48,6 +48,7 @@ client = TestClient(app)
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def tmp_store(tmp_path):
     """Temporary SQLite store isolated per test."""
@@ -89,6 +90,7 @@ def _mock_customer() -> MagicMock:
 
 # ── SubscriptionStore.get_customer_id_by_email tests ─────────────────────────
 
+
 class TestGetCustomerIdByEmail:
     def test_returns_customer_id_for_known_email(self, tmp_store):
         tmp_store.upsert_subscription(_sample_record())
@@ -122,13 +124,16 @@ class TestGetCustomerIdByEmail:
 
 # ── GET /billing/portal/config tests ─────────────────────────────────────────
 
+
 class TestPortalConfig:
     def test_config_when_portal_configured(self):
         mock_config = MagicMock()
         mock_config.data = [MagicMock()]  # one active configuration
 
-        with patch("billing.customer_portal.stripe.billing_portal.Configuration.list",
-                   return_value=mock_config):
+        with patch(
+            "billing.customer_portal.stripe.billing_portal.Configuration.list",
+            return_value=mock_config,
+        ):
             resp = client.get("/billing/portal/config")
 
         assert resp.status_code == 200
@@ -142,8 +147,10 @@ class TestPortalConfig:
         mock_config = MagicMock()
         mock_config.data = []  # no configurations
 
-        with patch("billing.customer_portal.stripe.billing_portal.Configuration.list",
-                   return_value=mock_config):
+        with patch(
+            "billing.customer_portal.stripe.billing_portal.Configuration.list",
+            return_value=mock_config,
+        ):
             resp = client.get("/billing/portal/config")
 
         assert resp.status_code == 200
@@ -154,8 +161,11 @@ class TestPortalConfig:
 
     def test_config_stripe_auth_error(self):
         import stripe as stripe_lib
-        with patch("billing.customer_portal.stripe.billing_portal.Configuration.list",
-                   side_effect=stripe_lib.AuthenticationError("bad key")):
+
+        with patch(
+            "billing.customer_portal.stripe.billing_portal.Configuration.list",
+            side_effect=stripe_lib.AuthenticationError("bad key"),
+        ):
             resp = client.get("/billing/portal/config")
 
         assert resp.status_code == 200
@@ -166,19 +176,23 @@ class TestPortalConfig:
 
 # ── POST /billing/portal/session tests ───────────────────────────────────────
 
+
 class TestCreatePortalSession:
 
     # ── Happy path: customer_id provided ─────────────────────────────────
 
     def test_session_created_with_customer_id(self):
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   return_value=_mock_portal_session()) as mock_create:
+        with (
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                return_value=_mock_portal_session(),
+            ) as mock_create,
+        ):
 
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_test_001"
-            })
+            resp = client.post("/billing/portal/session", json={"customer_id": "cus_test_001"})
 
         assert resp.status_code == 200
         data = resp.json()
@@ -192,15 +206,23 @@ class TestCreatePortalSession:
         )
 
     def test_session_with_custom_return_url(self):
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   return_value=_mock_portal_session()) as mock_create:
+        with (
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                return_value=_mock_portal_session(),
+            ) as mock_create,
+        ):
 
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_test_001",
-                "return_url": "https://dashboard.myapp.com/settings",
-            })
+            resp = client.post(
+                "/billing/portal/session",
+                json={
+                    "customer_id": "cus_test_001",
+                    "return_url": "https://dashboard.myapp.com/settings",
+                },
+            )
 
         assert resp.status_code == 200
         assert resp.json()["return_url"] == "https://dashboard.myapp.com/settings"
@@ -212,20 +234,25 @@ class TestCreatePortalSession:
     # ── Happy path: email lookup ──────────────────────────────────────────
 
     def test_session_created_via_email_lookup(self, tmp_store):
-        tmp_store.upsert_subscription(_sample_record(
-            customer_id="cus_email_lookup",
-            email="pro@trader.com",
-        ))
+        tmp_store.upsert_subscription(
+            _sample_record(
+                customer_id="cus_email_lookup",
+                email="pro@trader.com",
+            )
+        )
 
-        with patch("billing.customer_portal._get_store", return_value=tmp_store), \
-             patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   return_value=_mock_portal_session()) as mock_create:
+        with (
+            patch("billing.customer_portal._get_store", return_value=tmp_store),
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                return_value=_mock_portal_session(),
+            ) as mock_create,
+        ):
 
-            resp = client.post("/billing/portal/session", json={
-                "email": "pro@trader.com"
-            })
+            resp = client.post("/billing/portal/session", json={"email": "pro@trader.com"})
 
         assert resp.status_code == 200
         data = resp.json()
@@ -236,34 +263,47 @@ class TestCreatePortalSession:
         )
 
     def test_email_lookup_case_insensitive(self, tmp_store):
-        tmp_store.upsert_subscription(_sample_record(
-            customer_id="cus_case_test",
-            email="User@Example.COM",
-        ))
+        tmp_store.upsert_subscription(
+            _sample_record(
+                customer_id="cus_case_test",
+                email="User@Example.COM",
+            )
+        )
 
-        with patch("billing.customer_portal._get_store", return_value=tmp_store), \
-             patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   return_value=_mock_portal_session()):
+        with (
+            patch("billing.customer_portal._get_store", return_value=tmp_store),
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                return_value=_mock_portal_session(),
+            ),
+        ):
 
-            resp = client.post("/billing/portal/session", json={
-                "email": "user@example.com"
-            })
+            resp = client.post("/billing/portal/session", json={"email": "user@example.com"})
 
         assert resp.status_code == 200
 
     def test_customer_id_takes_precedence_over_email(self):
         """When both customer_id and email are provided, customer_id wins."""
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   return_value=_mock_portal_session()) as mock_create:
+        with (
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                return_value=_mock_portal_session(),
+            ) as mock_create,
+        ):
 
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_test_001",
-                "email": "someone@else.com",  # should be ignored
-            })
+            resp = client.post(
+                "/billing/portal/session",
+                json={
+                    "customer_id": "cus_test_001",
+                    "email": "someone@else.com",  # should be ignored
+                },
+            )
 
         assert resp.status_code == 200
         mock_create.assert_called_once_with(
@@ -278,28 +318,25 @@ class TestCreatePortalSession:
         assert resp.status_code == 422
 
     def test_invalid_customer_id_format(self):
-        resp = client.post("/billing/portal/session", json={
-            "customer_id": "not_a_cus_id"
-        })
+        resp = client.post("/billing/portal/session", json={"customer_id": "not_a_cus_id"})
         assert resp.status_code == 422
 
     # ── Not found cases ───────────────────────────────────────────────────
 
     def test_email_not_in_db_returns_404(self, tmp_store):
         with patch("billing.customer_portal._get_store", return_value=tmp_store):
-            resp = client.post("/billing/portal/session", json={
-                "email": "ghost@nobody.com"
-            })
+            resp = client.post("/billing/portal/session", json={"email": "ghost@nobody.com"})
         assert resp.status_code == 404
         assert "not found" in resp.json()["detail"].lower()
 
     def test_stripe_customer_not_found_returns_404(self):
         import stripe as stripe_lib
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   side_effect=stripe_lib.InvalidRequestError("No such customer", param=None)):
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_ghost_999"
-            })
+
+        with patch(
+            "billing.customer_portal.stripe.Customer.retrieve",
+            side_effect=stripe_lib.InvalidRequestError("No such customer", param=None),
+        ):
+            resp = client.post("/billing/portal/session", json={"customer_id": "cus_ghost_999"})
         assert resp.status_code == 404
         assert "cus_ghost_999" in resp.json()["detail"]
 
@@ -308,42 +345,51 @@ class TestCreatePortalSession:
     def test_portal_not_configured_returns_422(self):
         import stripe as stripe_lib
 
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   side_effect=stripe_lib.InvalidRequestError(
-                       "No configuration provided and no default exists", param=None
-                   )):
+        with (
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                side_effect=stripe_lib.InvalidRequestError(
+                    "No configuration provided and no default exists", param=None
+                ),
+            ),
+        ):
 
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_test_001"
-            })
+            resp = client.post("/billing/portal/session", json={"customer_id": "cus_test_001"})
 
         assert resp.status_code == 422
         assert "dashboard.stripe.com" in resp.json()["detail"]
 
     def test_stripe_auth_error_returns_503(self):
         import stripe as stripe_lib
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   side_effect=stripe_lib.AuthenticationError("bad key")):
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_test_001"
-            })
+
+        with patch(
+            "billing.customer_portal.stripe.Customer.retrieve",
+            side_effect=stripe_lib.AuthenticationError("bad key"),
+        ):
+            resp = client.post("/billing/portal/session", json={"customer_id": "cus_test_001"})
         assert resp.status_code == 503
 
     def test_generic_stripe_error_on_session_create_returns_502(self):
         import stripe as stripe_lib
-        with patch("billing.customer_portal.stripe.Customer.retrieve",
-                   return_value=_mock_customer()), \
-             patch("billing.customer_portal.stripe.billing_portal.Session.create",
-                   side_effect=stripe_lib.APIConnectionError("network down")):
-            resp = client.post("/billing/portal/session", json={
-                "customer_id": "cus_test_001"
-            })
+
+        with (
+            patch(
+                "billing.customer_portal.stripe.Customer.retrieve", return_value=_mock_customer()
+            ),
+            patch(
+                "billing.customer_portal.stripe.billing_portal.Session.create",
+                side_effect=stripe_lib.APIConnectionError("network down"),
+            ),
+        ):
+            resp = client.post("/billing/portal/session", json={"customer_id": "cus_test_001"})
         assert resp.status_code == 502
 
 
 # ── Route registration sanity check ──────────────────────────────────────────
+
 
 class TestRouteRegistration:
     def test_portal_session_route_exists(self):

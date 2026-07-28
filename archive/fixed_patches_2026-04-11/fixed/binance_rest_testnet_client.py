@@ -35,29 +35,31 @@ class BinanceRestTestnetClient:
             self.base_url = "https://api.binance.com/api"
 
         self.session = requests.Session()
-        self.session.headers.update({
-            'Accept': 'application/json',
-            'User-Agent': 'CoinScopeAI/1.0',
-        })
+        self.session.headers.update(
+            {
+                "Accept": "application/json",
+                "User-Agent": "CoinScopeAI/1.0",
+            }
+        )
 
     def _sign_request(self, params: Dict) -> str:
         """Sign request with HMAC SHA256"""
         query_string = urlencode(params)
         signature = hmac.new(
-            self.api_secret.encode(),
-            query_string.encode(),
-            hashlib.sha256
+            self.api_secret.encode(), query_string.encode(), hashlib.sha256
         ).hexdigest()
         return signature
 
-    def _request(self, method: str, endpoint: str, params: Dict = None, signed: bool = False) -> Dict:
+    def _request(
+        self, method: str, endpoint: str, params: Dict = None, signed: bool = False
+    ) -> Dict:
         """Make HTTP request to Binance API"""
         params = params or {}
 
         if signed:
-            params['timestamp'] = int(time.time() * 1000)
-            params['signature'] = self._sign_request(params)
-            self.session.headers.update({'X-MBX-APIKEY': self.api_key})
+            params["timestamp"] = int(time.time() * 1000)
+            params["signature"] = self._sign_request(params)
+            self.session.headers.update({"X-MBX-APIKEY": self.api_key})
 
         url = f"{self.base_url}{endpoint}"
 
@@ -76,7 +78,7 @@ class BinanceRestTestnetClient:
 
         except requests.exceptions.RequestException as e:
             print(f"❌ Request failed: {e}")
-            if hasattr(e, 'response') and e.response is not None:
+            if hasattr(e, "response") and e.response is not None:
                 print(f"Response: {e.response.text}")
             raise
 
@@ -87,7 +89,7 @@ class BinanceRestTestnetClient:
     def get_server_time(self) -> int:
         """Get server time"""
         result = self._request("GET", "/v3/time")
-        return result.get('serverTime', 0)
+        return result.get("serverTime", 0)
 
     def get_account(self) -> Dict:
         """Get account information"""
@@ -97,16 +99,12 @@ class BinanceRestTestnetClient:
         """Get account balance"""
         account = self.get_account()
         balances = {}
-        for balance in account.get('balances', []):
-            asset = balance['asset']
-            free = float(balance['free'])
-            locked = float(balance['locked'])
+        for balance in account.get("balances", []):
+            asset = balance["asset"]
+            free = float(balance["free"])
+            locked = float(balance["locked"])
             if free > 0 or locked > 0:
-                balances[asset] = {
-                    'free': free,
-                    'locked': locked,
-                    'total': free + locked
-                }
+                balances[asset] = {"free": free, "locked": locked, "total": free + locked}
         return balances
 
     def place_order(
@@ -116,32 +114,34 @@ class BinanceRestTestnetClient:
         order_type: str = "MARKET",
         quantity: float = None,
         price: float = None,
-        **kwargs
+        **kwargs,
     ) -> Dict:
         """Place an order"""
         params = {
-            'symbol': symbol,
-            'side': side,
-            'type': order_type,
+            "symbol": symbol,
+            "side": side,
+            "type": order_type,
         }
 
         if quantity:
-            params['quantity'] = quantity
+            params["quantity"] = quantity
         if price:
-            params['price'] = price
+            params["price"] = price
 
         params.update(kwargs)
 
         return self._request("POST", "/v3/order", params, signed=True)
 
-    def cancel_order(self, symbol: str, order_id: int = None, orig_client_order_id: str = None) -> Dict:
+    def cancel_order(
+        self, symbol: str, order_id: int = None, orig_client_order_id: str = None
+    ) -> Dict:
         """Cancel an order"""
-        params = {'symbol': symbol}
+        params = {"symbol": symbol}
 
         if order_id:
-            params['orderId'] = order_id
+            params["orderId"] = order_id
         if orig_client_order_id:
-            params['origClientOrderId'] = orig_client_order_id
+            params["origClientOrderId"] = orig_client_order_id
 
         return self._request("DELETE", "/v3/order", params, signed=True)
 
@@ -149,24 +149,26 @@ class BinanceRestTestnetClient:
         """Get open orders"""
         params = {}
         if symbol:
-            params['symbol'] = symbol
+            params["symbol"] = symbol
 
         return self._request("GET", "/v3/openOrders", params, signed=True)
 
-    def get_order(self, symbol: str, order_id: int = None, orig_client_order_id: str = None) -> Dict:
+    def get_order(
+        self, symbol: str, order_id: int = None, orig_client_order_id: str = None
+    ) -> Dict:
         """Get order status"""
-        params = {'symbol': symbol}
+        params = {"symbol": symbol}
 
         if order_id:
-            params['orderId'] = order_id
+            params["orderId"] = order_id
         if orig_client_order_id:
-            params['origClientOrderId'] = orig_client_order_id
+            params["origClientOrderId"] = orig_client_order_id
 
         return self._request("GET", "/v3/order", params, signed=True)
 
     def get_ticker(self, symbol: str) -> Dict:
         """Get ticker information"""
-        return self._request("GET", "/v3/ticker/24hr", {'symbol': symbol})
+        return self._request("GET", "/v3/ticker/24hr", {"symbol": symbol})
 
 
 def test_connection():
@@ -225,6 +227,7 @@ def test_connection():
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

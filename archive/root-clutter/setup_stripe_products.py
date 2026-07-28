@@ -39,32 +39,32 @@ import stripe  # noqa: E402
 
 PLANS = [
     {
-        "tier":        "starter",
-        "name":        "CoinScopeAI — Starter",
+        "tier": "starter",
+        "name": "CoinScopeAI — Starter",
         "description": "5 pairs · ML alerts · Basic confluence scoring · Daily report",
-        "price_usd":   1900,   # Stripe uses cents
-        "metadata":    {"tier": "starter", "source": "coinscopeai"},
+        "price_usd": 1900,  # Stripe uses cents
+        "metadata": {"tier": "starter", "source": "coinscopeai"},
     },
     {
-        "tier":        "pro",
-        "name":        "CoinScopeAI — Pro",
+        "tier": "pro",
+        "name": "CoinScopeAI — Pro",
         "description": "20 pairs · All signals · Telegram + webhook · Regime detection · Trade journal",
-        "price_usd":   4900,
-        "metadata":    {"tier": "pro", "source": "coinscopeai"},
+        "price_usd": 4900,
+        "metadata": {"tier": "pro", "source": "coinscopeai"},
     },
     {
-        "tier":        "elite",
-        "name":        "CoinScopeAI — Elite",
+        "tier": "elite",
+        "name": "CoinScopeAI — Elite",
         "description": "Unlimited pairs · V3 LightGBM ML · API access · Walk-forward validation",
-        "price_usd":   9900,
-        "metadata":    {"tier": "elite", "source": "coinscopeai"},
+        "price_usd": 9900,
+        "metadata": {"tier": "elite", "source": "coinscopeai"},
     },
     {
-        "tier":        "team",
-        "name":        "CoinScopeAI — Team",
+        "tier": "team",
+        "name": "CoinScopeAI — Team",
         "description": "Everything in Elite · 5 seats · White-label · Dedicated onboarding · SLA",
-        "price_usd":   29900,
-        "metadata":    {"tier": "team", "source": "coinscopeai"},
+        "price_usd": 29900,
+        "metadata": {"tier": "team", "source": "coinscopeai"},
     },
 ]
 
@@ -78,7 +78,9 @@ def create_products(dry_run: bool = False) -> dict[str, str]:
 
     for plan in PLANS:
         tier = plan["tier"]
-        print(f"\n{'[DRY RUN] ' if dry_run else ''}Creating: {plan['name']} (${plan['price_usd']//100}/mo)")
+        print(
+            f"\n{'[DRY RUN] ' if dry_run else ''}Creating: {plan['name']} (${plan['price_usd']//100}/mo)"
+        )
 
         if dry_run:
             results[tier] = f"price_DRY_RUN_{tier.upper()}"
@@ -86,15 +88,17 @@ def create_products(dry_run: bool = False) -> dict[str, str]:
             continue
 
         # Check if product already exists
-        existing = stripe.Product.search(query=f"metadata['tier']:'{tier}' AND metadata['source']:'coinscopeai'")
+        existing = stripe.Product.search(
+            query=f"metadata['tier']:'{tier}' AND metadata['source']:'coinscopeai'"
+        )
         if existing.data:
             product = existing.data[0]
             print(f"  → Reusing existing product: {product.id}")
         else:
             product = stripe.Product.create(
-                name        = plan["name"],
-                description = plan["description"],
-                metadata    = plan["metadata"],
+                name=plan["name"],
+                description=plan["description"],
+                metadata=plan["metadata"],
             )
             print(f"  → Created product: {product.id}")
 
@@ -107,11 +111,11 @@ def create_products(dry_run: bool = False) -> dict[str, str]:
             print(f"  → Reusing existing price: {price.id} (${price.unit_amount//100}/mo)")
         else:
             price = stripe.Price.create(
-                product            = product.id,
-                unit_amount        = plan["price_usd"],
-                currency           = "usd",
-                recurring          = {"interval": "month"},
-                metadata           = plan["metadata"],
+                product=product.id,
+                unit_amount=plan["price_usd"],
+                currency="usd",
+                recurring={"interval": "month"},
+                metadata=plan["metadata"],
             )
             print(f"  → Created price: {price.id} (${price.unit_amount//100}/mo)")
 
@@ -134,8 +138,10 @@ def print_env_block(results: dict[str, str]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create CoinScopeAI Stripe products")
-    parser.add_argument("--dry-run", action="store_true", help="Simulate without calling Stripe API")
-    parser.add_argument("--live",    action="store_true", help="Use STRIPE_SECRET_KEY (sk_live_...)")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Simulate without calling Stripe API"
+    )
+    parser.add_argument("--live", action="store_true", help="Use STRIPE_SECRET_KEY (sk_live_...)")
     args = parser.parse_args()
 
     # Pick the right key

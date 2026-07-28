@@ -36,15 +36,16 @@ sys.path.insert(0, ROOT)
 # FIXTURES
 # ===========================================================================
 
+
 @pytest.fixture
 def sample_ohlcv(n=500):
     """Generate realistic OHLCV data."""
     np.random.seed(42)
     close = 100 + np.cumsum(np.random.randn(n) * 0.5)
-    high  = close + np.abs(np.random.randn(n) * 0.3)
-    low   = close - np.abs(np.random.randn(n) * 0.3)
-    vol   = np.random.uniform(1000, 5000, n)
-    spread = np.random.uniform(0.001, 0.01, n)   # absolute USD spread
+    high = close + np.abs(np.random.randn(n) * 0.3)
+    low = close - np.abs(np.random.randn(n) * 0.3)
+    vol = np.random.uniform(1000, 5000, n)
+    spread = np.random.uniform(0.001, 0.01, n)  # absolute USD spread
     return close, high, low, vol, spread
 
 
@@ -67,11 +68,13 @@ def tmp_journal_path(tmp_path):
 # 1. SCORING ENGINE
 # ===========================================================================
 
+
 class TestFixedScorer:
     """Tests for scoring_fixed.FixedScorer"""
 
     def _scorer(self):
         from scoring_fixed import FixedScorer
+
         return FixedScorer()
 
     def test_generate_signals_returns_correct_shapes(self, sample_ohlcv):
@@ -100,14 +103,14 @@ class TestFixedScorer:
         _, sub_scores = scorer.generate_signals(c, h, lo, v, sp)
         for key in ("momentum", "trend", "volatility", "volume", "entry", "liquidity"):
             arr = sub_scores[key]
-            assert arr.min() >= 0,  f"{key} score below 0: {arr.min()}"
-            assert arr.max() <= 3,  f"{key} score above 3: {arr.max()}"
+            assert arr.min() >= 0, f"{key} score below 0: {arr.min()}"
+            assert arr.max() <= 3, f"{key} score above 3: {arr.max()}"
 
     def test_total_score_range_0_12(self, sample_ohlcv):
         c, h, lo, v, sp = sample_ohlcv
         scorer = self._scorer()
         total, sub_scores = scorer.calculate_total_score(c, h, lo, v, sp)
-        assert total.min() >= 0,  f"Total score below 0: {total.min()}"
+        assert total.min() >= 0, f"Total score below 0: {total.min()}"
         assert total.max() <= 12, f"Total score above 12: {total.max()}"
 
     def test_rsi_stays_in_0_100(self, sample_ohlcv):
@@ -139,20 +142,22 @@ class TestFixedScorer:
         conflict_signals = signals[conflict_mask]
         # All should end up as -1 (SHORT) due to sequential overwrite
         if conflict_mask.sum() > 0:
-            assert (conflict_signals == -1).all(), (
-                "BUG: scores in [5.5, 6.5] should all be SHORT (overwrite bug)"
-            )
+            assert (
+                conflict_signals == -1
+            ).all(), "BUG: scores in [5.5, 6.5] should all be SHORT (overwrite bug)"
 
 
 # ===========================================================================
 # 2. RISK GATE
 # ===========================================================================
 
+
 class TestRiskGate:
     """Tests for risk_gate.RiskGate"""
 
     def _gate(self, **kwargs):
         from risk_gate import RiskGate
+
         return RiskGate(initial_capital=10_000, **kwargs)
 
     # --- Position Sizing ---
@@ -201,14 +206,14 @@ class TestRiskGate:
         entry = 100.0
         sl = gate.calculate_stop_loss(entry, 1.0, direction=1)
         tp = gate.calculate_take_profit(entry, sl, direction=1)
-        risk   = entry - sl
+        risk = entry - sl
         reward = tp - entry
         assert abs(reward - 2 * risk) < 1e-9, f"TP should be 2x risk: {reward} vs {2*risk}"
 
     # --- Circuit Breakers ---
     def test_circuit_breaker_daily_loss(self):
         gate = self._gate(max_daily_loss_pct=0.10)
-        gate.daily_pnl = -1001.0   # exceeds 10% of 10,000
+        gate.daily_pnl = -1001.0  # exceeds 10% of 10,000
         halted, reason = gate.check_circuit_breakers()
         assert halted, "Daily loss should trigger circuit breaker"
         assert "daily" in reason.lower()
@@ -216,7 +221,7 @@ class TestRiskGate:
     def test_circuit_breaker_max_drawdown(self):
         gate = self._gate(max_drawdown_pct=0.20)
         gate.peak_equity = 10_000
-        gate.current_equity = 7_000   # 30% drawdown
+        gate.current_equity = 7_000  # 30% drawdown
         halted, reason = gate.check_circuit_breakers()
         assert halted, "Max drawdown should trigger circuit breaker"
 
@@ -234,11 +239,19 @@ class TestRiskGate:
     # --- Open / Close Position ---
     def test_open_position_returns_position_object(self):
         from risk_gate import Position
+
         gate = self._gate()
         pos = gate.open_position(
-            symbol="BTC/USDT", direction=1, entry_price=50_000,
-            entry_time=0, atr=500, regime="bull",
-            signal_score=0.80, win_rate=0.44, avg_win=2.1, avg_loss=1.0
+            symbol="BTC/USDT",
+            direction=1,
+            entry_price=50_000,
+            entry_time=0,
+            atr=500,
+            regime="bull",
+            signal_score=0.80,
+            win_rate=0.44,
+            avg_win=2.1,
+            avg_loss=1.0,
         )
         assert pos is not None
         assert isinstance(pos, Position)
@@ -246,26 +259,40 @@ class TestRiskGate:
     def test_open_position_blocked_by_low_score(self):
         gate = self._gate(min_signal_score=0.65)
         pos = gate.open_position(
-            symbol="BTC/USDT", direction=1, entry_price=50_000,
-            entry_time=0, atr=500, regime="bull",
-            signal_score=0.40   # below threshold
+            symbol="BTC/USDT",
+            direction=1,
+            entry_price=50_000,
+            entry_time=0,
+            atr=500,
+            regime="bull",
+            signal_score=0.40,  # below threshold
         )
         assert pos is None, "Low-score position should be blocked"
 
     def test_open_position_blocked_by_circuit_breaker(self):
         gate = self._gate()
-        gate.consecutive_losses = 10   # force circuit breaker
+        gate.consecutive_losses = 10  # force circuit breaker
         pos = gate.open_position(
-            symbol="BTC/USDT", direction=1, entry_price=50_000,
-            entry_time=0, atr=500, regime="bull", signal_score=0.80
+            symbol="BTC/USDT",
+            direction=1,
+            entry_price=50_000,
+            entry_time=0,
+            atr=500,
+            regime="bull",
+            signal_score=0.80,
         )
         assert pos is None, "CB-active position should be blocked"
 
     def test_close_position_profitable(self):
         gate = self._gate()
         gate.open_position(
-            symbol="BTC/USDT", direction=1, entry_price=50_000,
-            entry_time=0, atr=500, regime="bull", signal_score=0.80
+            symbol="BTC/USDT",
+            direction=1,
+            entry_price=50_000,
+            entry_time=0,
+            atr=500,
+            regime="bull",
+            signal_score=0.80,
         )
         trade = gate.close_position("BTC/USDT", exit_price=51_000, exit_time=1)
         assert trade is not None
@@ -275,8 +302,13 @@ class TestRiskGate:
     def test_close_position_loss(self):
         gate = self._gate()
         gate.open_position(
-            symbol="BTC/USDT", direction=1, entry_price=50_000,
-            entry_time=0, atr=500, regime="bull", signal_score=0.80
+            symbol="BTC/USDT",
+            direction=1,
+            entry_price=50_000,
+            entry_time=0,
+            atr=500,
+            regime="bull",
+            signal_score=0.80,
         )
         trade = gate.close_position("BTC/USDT", exit_price=49_000, exit_time=1)
         assert trade["pnl_pct"] < 0, "Losing close should have negative PnL"
@@ -289,8 +321,13 @@ class TestRiskGate:
     def test_pnl_calculation_long_correct(self):
         gate = self._gate()
         gate.open_position(
-            symbol="ETH/USDT", direction=1, entry_price=2_000,
-            entry_time=0, atr=50, regime="bull", signal_score=0.80
+            symbol="ETH/USDT",
+            direction=1,
+            entry_price=2_000,
+            entry_time=0,
+            atr=50,
+            regime="bull",
+            signal_score=0.80,
         )
         trade = gate.close_position("ETH/USDT", exit_price=2_200, exit_time=1)
         expected_pnl_pct = (2_200 - 2_000) / 2_000  # = 0.10
@@ -299,8 +336,13 @@ class TestRiskGate:
     def test_pnl_calculation_short_correct(self):
         gate = self._gate()
         gate.open_position(
-            symbol="ETH/USDT", direction=-1, entry_price=2_000,
-            entry_time=0, atr=50, regime="bear", signal_score=0.80
+            symbol="ETH/USDT",
+            direction=-1,
+            entry_price=2_000,
+            entry_time=0,
+            atr=50,
+            regime="bear",
+            signal_score=0.80,
         )
         trade = gate.close_position("ETH/USDT", exit_price=1_800, exit_time=1)
         expected_pnl_pct = (2_000 - 1_800) / 2_000  # = 0.10
@@ -329,11 +371,13 @@ class TestRiskGate:
 # 3. KELLY POSITION SIZER
 # ===========================================================================
 
+
 class TestKellyRiskController:
     """Tests for kelly_position_sizer.KellyRiskController"""
 
     def _kelly(self):
         from kelly_position_sizer import KellyRiskController
+
         return KellyRiskController(fraction=0.25, hard_cap_pct=0.02)
 
     def test_bull_size_gt_chop_gt_bear(self):
@@ -368,9 +412,9 @@ class TestKellyRiskController:
         # At fraction=0.25, no drawdown, bull regime (1.0x), balance=10000
         expected_usd = min(expected_full_kelly * 0.25 * 1.0 * 1.0, 0.02) * 10_000
         actual = kelly.calculate_position_size(win_rate, avg_win, avg_loss, "bull", 10_000)
-        assert abs(actual - expected_usd) < 0.01, (
-            f"Kelly formula mismatch: expected ${expected_usd:.2f}, got ${actual:.2f}"
-        )
+        assert (
+            abs(actual - expected_usd) < 0.01
+        ), f"Kelly formula mismatch: expected ${expected_usd:.2f}, got ${actual:.2f}"
 
     def test_drawdown_reduces_size(self):
         kelly = self._kelly()
@@ -385,8 +429,13 @@ class TestKellyRiskController:
     def test_size_summary_keys(self):
         kelly = self._kelly()
         summary = kelly.size_summary(0.44, 0.018, 0.012, "bull", 10_000)
-        for key in ("kelly_full_pct", "kelly_fraction_pct", "regime_mult",
-                    "final_size_usd", "final_pct"):
+        for key in (
+            "kelly_full_pct",
+            "kelly_fraction_pct",
+            "regime_mult",
+            "final_size_usd",
+            "final_pct",
+        ):
             assert key in summary, f"Missing key in summary: {key}"
 
     def test_unknown_regime_defaults_to_conservative(self):
@@ -400,11 +449,13 @@ class TestKellyRiskController:
 # 4. HMM REGIME DETECTOR
 # ===========================================================================
 
+
 class TestEnsembleRegimeDetector:
     """Tests for hmm_regime_detector.EnsembleRegimeDetector"""
 
     def _detector(self):
         from hmm_regime_detector import EnsembleRegimeDetector
+
         return EnsembleRegimeDetector()
 
     def test_predict_without_fit_returns_default(self, regime_data):
@@ -460,6 +511,7 @@ class TestEnsembleRegimeDetector:
     def test_short_data_returns_default(self):
         """Less than 50 returns → should return default."""
         from hmm_regime_detector import EnsembleRegimeDetector
+
         det = EnsembleRegimeDetector()
         short_returns = np.array([0.01, -0.02, 0.005])
         short_vol = np.array([0.01, 0.02, 0.01])
@@ -471,11 +523,13 @@ class TestEnsembleRegimeDetector:
 # 5. TRADE JOURNAL
 # ===========================================================================
 
+
 class TestTradeJournal:
     """Tests for trade_journal.TradeJournal"""
 
     def _journal(self, path):
         from trade_journal import TradeJournal
+
         return TradeJournal(path=path)
 
     def test_log_open_creates_entry(self, tmp_journal_path):
@@ -516,9 +570,9 @@ class TestTradeJournal:
     def test_win_rate_50_pct(self, tmp_journal_path):
         j = self._journal(tmp_journal_path)
         e1 = j.log_open("BTC/USDT", "BUY", "bull", 0.78, 68_000, 0.001, 20.0)
-        j.log_close(e1.id, 69_000, 0.0147, 14.7)    # win
+        j.log_close(e1.id, 69_000, 0.0147, 14.7)  # win
         e2 = j.log_open("ETH/USDT", "BUY", "bull", 0.70, 2_000, 0.01, 10.0)
-        j.log_close(e2.id, 1_900, -0.05, -5.0)       # loss
+        j.log_close(e2.id, 1_900, -0.05, -5.0)  # loss
         stats = j.performance_stats()
         assert stats["total_trades"] == 2
         assert abs(stats["win_rate"] - 0.5) < 1e-9
@@ -561,14 +615,17 @@ class TestTradeJournal:
 # 6. TESTNET EXECUTOR
 # ===========================================================================
 
+
 class TestTestnetExecutor:
     """Tests for binance_testnet_executor.TestnetExecutor"""
 
     def _executor(self, tmp_path):
         import os
+
         os.makedirs(str(tmp_path / "logs"), exist_ok=True)
         # Patch log dir to tmp
         from binance_testnet_executor import TestnetExecutor
+
         ex = TestnetExecutor.__new__(TestnetExecutor)
         ex.testnet = True
         ex.trade_log = []
@@ -577,8 +634,10 @@ class TestTestnetExecutor:
         ex.peak_equity = 10_000.0
         ex.current_equity = 10_000.0
         from datetime import date
+
         ex._reset_date = date.today()
         import logging
+
         ex.logger = logging.getLogger("test_executor")
         return ex
 
@@ -621,7 +680,7 @@ class TestTestnetExecutor:
 
     def test_circuit_breaker_daily_loss(self, tmp_path):
         ex = self._executor(tmp_path)
-        ex.daily_pnl = -0.05   # -5%, exceeds -3% threshold
+        ex.daily_pnl = -0.05  # -5%, exceeds -3% threshold
         ok, reason = ex._circuit_breakers()
         assert not ok
         assert "daily" in reason.lower() or "loss" in reason.lower()
@@ -635,13 +694,13 @@ class TestTestnetExecutor:
     def test_circuit_breaker_max_drawdown(self, tmp_path):
         ex = self._executor(tmp_path)
         ex.peak_equity = 10_000
-        ex.current_equity = 8_900   # 11% drawdown
+        ex.current_equity = 8_900  # 11% drawdown
         ok, reason = ex._circuit_breakers()
         assert not ok
 
     def test_blocked_order_not_added_to_log(self, tmp_path):
         ex = self._executor(tmp_path)
-        ex.consecutive_losses = 5   # trigger CB
+        ex.consecutive_losses = 5  # trigger CB
         record = ex.place_order("BTC/USDT", "BUY", kelly_usd=200, regime="bull")
         assert record is None
         assert len(ex.trade_log) == 0
@@ -664,7 +723,7 @@ class TestTestnetExecutor:
         ex = self._executor(tmp_path)
         record = ex.place_order("BTC/USDT", "BUY", kelly_usd=200, regime="bull")
         entry = record.entry_price
-        exit_price = entry * 1.05   # 5% profit
+        exit_price = entry * 1.05  # 5% profit
         pnl = ex.close_position(record, exit_price=exit_price)
         assert abs(pnl - 0.05) < 1e-6, f"Expected ~5%, got {pnl:.4%}"
 
@@ -683,11 +742,13 @@ class TestTestnetExecutor:
 # 7. MULTI-TIMEFRAME FILTER
 # ===========================================================================
 
+
 class TestMultiTimeframeFilter:
     """Tests for multi_timeframe_filter.MultiTimeframeFilter"""
 
     def _filter(self):
         from multi_timeframe_filter import MultiTimeframeFilter
+
         return MultiTimeframeFilter()
 
     def test_long_confirmed_on_bull_4h(self):
@@ -761,11 +822,13 @@ class TestMultiTimeframeFilter:
 # 8. SCALE-UP MANAGER
 # ===========================================================================
 
+
 class TestScaleUpManager:
     """Tests for scale_up_manager.ScaleUpManager"""
 
     def _manager(self):
         from scale_up_manager import ScaleUpManager
+
         return ScaleUpManager()
 
     def test_initial_profile_is_seed(self):
@@ -785,8 +848,8 @@ class TestScaleUpManager:
 
     def test_sequential_promotions(self):
         sm = self._manager()
-        sm.check_promotion(100, 0.85)   # S0 → S1
-        sm.check_promotion(200, 1.05)   # S1 → S2
+        sm.check_promotion(100, 0.85)  # S0 → S1
+        sm.check_promotion(200, 1.05)  # S1 → S2
         assert sm.current_profile.name == "S2_GROWTH"
 
     def test_no_promotion_beyond_max(self):
@@ -812,6 +875,7 @@ class TestScaleUpManager:
 # ===========================================================================
 # 9. INTEGRATION TESTS — End-to-End Signal → Execution Flow
 # ===========================================================================
+
 
 class TestEndToEndFlow:
     """Integration tests simulating the full signal → risk → execution pipeline."""
@@ -841,12 +905,13 @@ class TestEndToEndFlow:
         # Risk gate
         gate = RiskGate(initial_capital=10_000)
         pos = gate.open_position(
-            symbol="BTC/USDT", direction=1,
+            symbol="BTC/USDT",
+            direction=1,
             entry_price=float(c[idx]),
             entry_time=int(idx),
             atr=float(h[idx] - lo[idx]),
             regime="bull",
-            signal_score=0.80
+            signal_score=0.80,
         )
         assert pos is not None
 
@@ -867,8 +932,10 @@ class TestEndToEndFlow:
     def test_circuit_breaker_prevents_trade_after_losses(self, tmp_path):
         """After max consecutive losses, all new orders should be blocked."""
         import os
+
         os.makedirs(str(tmp_path / "logs"), exist_ok=True)
         from binance_testnet_executor import TestnetExecutor
+
         ex = TestnetExecutor.__new__(TestnetExecutor)
         ex.testnet = True
         ex.trade_log = []
@@ -877,15 +944,17 @@ class TestEndToEndFlow:
         ex.peak_equity = 10_000.0
         ex.current_equity = 10_000.0
         from datetime import date
+
         ex._reset_date = date.today()
         import logging
+
         ex.logger = logging.getLogger("test_cb")
 
         # Simulate 5 consecutive losses
         for i in range(5):
             r = ex.place_order("BTC/USDT", "BUY", kelly_usd=50, regime="bull")
             assert r is not None
-            ex.close_position(r, exit_price=68_000)   # loss (entry is 68500)
+            ex.close_position(r, exit_price=68_000)  # loss (entry is 68500)
 
         # 6th order should be blocked
         blocked = ex.place_order("BTC/USDT", "BUY", kelly_usd=50, regime="bull")
@@ -898,22 +967,24 @@ class TestEndToEndFlow:
 
         kelly = KellyRiskController(fraction=0.25)
         size_usd = kelly.calculate_position_size(0.44, 0.018, 0.012, "bull", 10_000)
-        assert 0 < size_usd <= 200   # 2% cap on $10k
+        assert 0 < size_usd <= 200  # 2% cap on $10k
 
         gate = RiskGate(initial_capital=10_000)
         size_frac = gate.calculate_position_size(0.44, 0.018, 0.012, "bull")
-        assert 0 < size_frac <= 0.05   # 5% cap
+        assert 0 < size_frac <= 0.05  # 5% cap
 
 
 # ===========================================================================
 # 10. EDGE CASES & REGRESSION TESTS
 # ===========================================================================
 
+
 class TestEdgeCases:
     """Boundary conditions and regression tests for known bugs."""
 
     def test_scorer_handles_single_bar(self):
         from scoring_fixed import FixedScorer
+
         scorer = FixedScorer()
         c = np.array([100.0] * 50)
         h = c + 1.0
@@ -926,6 +997,7 @@ class TestEdgeCases:
 
     def test_risk_gate_handles_zero_atr(self):
         from risk_gate import RiskGate
+
         gate = RiskGate()
         sl = gate.calculate_stop_loss(100.0, atr=0.0, direction=1)
         # With atr=0, stop distance = min(0, 2%) = 0 → stop = entry
@@ -937,11 +1009,13 @@ class TestEdgeCases:
         with open(p, "w") as f:
             f.write("NOT VALID JSON {{{")
         from trade_journal import TradeJournal
+
         j = TradeJournal(path=p)
         assert j.entries == []
 
     def test_kelly_negative_kelly_returns_zero(self):
         from kelly_position_sizer import KellyRiskController
+
         kelly = KellyRiskController()
         # Terrible odds: 10% win rate, 1% avg win, 5% avg loss
         size = kelly.calculate_position_size(0.10, 0.01, 0.05, "bull", 10_000)
@@ -949,18 +1023,20 @@ class TestEdgeCases:
 
     def test_mtf_filter_all_neutral_input(self):
         from multi_timeframe_filter import MultiTimeframeFilter
+
         f = MultiTimeframeFilter()
         np.random.seed(0)
         n = 200
         closes_1h = 100 + np.cumsum(np.random.randn(n) * 0.5)
         closes_4h = closes_1h[::4]
-        signals_1h = np.zeros(n, dtype=int)   # all neutral
+        signals_1h = np.zeros(n, dtype=int)  # all neutral
         filtered, stats = f.apply_filter_batch(signals_1h, closes_4h, closes_1h)
         assert stats["total_signals_1h"] == 0
         assert stats["confirmed_signals"] == 0
 
     def test_scale_manager_correct_account_progression(self):
         from scale_up_manager import PROFILES, ScaleUpManager
+
         ScaleUpManager()
         # Account sizes should increase with each profile
         account_sizes = [p.account_usd for p in PROFILES]

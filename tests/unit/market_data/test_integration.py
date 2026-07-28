@@ -35,6 +35,7 @@ from services.market_data.regime.enricher import RegimeEnricher
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_trending_scenario():
     """Create data that should classify as TRENDING."""
     now = time.time()
@@ -45,18 +46,24 @@ def make_trending_scenario():
         AggregatedOI(
             symbol=symbol,
             timestamp=now - (20 - i) * 3600,
-            by_exchange={"Binance": 100000 * (1.03 ** i), "Bybit": 50000 * (1.03 ** i)},
+            by_exchange={"Binance": 100000 * (1.03**i), "Bybit": 50000 * (1.03**i)},
         )
         for i in range(20)
     ]
 
     # Normal funding
     funding_history = [
-        FundingRate(symbol=symbol, exchange=Exchange.HYPERLIQUID, rate=0.0001, timestamp=now - (20 - i) * 3600)
+        FundingRate(
+            symbol=symbol,
+            exchange=Exchange.HYPERLIQUID,
+            rate=0.0001,
+            timestamp=now - (20 - i) * 3600,
+        )
         for i in range(20)
     ]
     funding_snap = FundingSnapshot(
-        symbol=symbol, timestamp=now,
+        symbol=symbol,
+        timestamp=now,
         rates={"Binance": 0.0001, "Bybit": 0.00012, "OKX": 0.00009},
     )
 
@@ -65,7 +72,9 @@ def make_trending_scenario():
 
     # Normal book
     book = L2OrderBook(
-        symbol=symbol, exchange=Exchange.HYPERLIQUID, timestamp=now,
+        symbol=symbol,
+        exchange=Exchange.HYPERLIQUID,
+        timestamp=now,
         bids=[OrderBookLevel(price=53000 - i * 10, size=10 - i * 0.5) for i in range(10)],
         asks=[OrderBookLevel(price=53010 + i * 10, size=10 - i * 0.5) for i in range(10)],
     )
@@ -73,9 +82,11 @@ def make_trending_scenario():
     # Low liquidations
     liqs = [
         LiquidationSnapshot(
-            symbol=symbol, timestamp=now - (10 - i) * 3600,
+            symbol=symbol,
+            timestamp=now - (10 - i) * 3600,
             window_seconds=3600,
-            long_liquidations_usd=50000, short_liquidations_usd=50000,
+            long_liquidations_usd=50000,
+            short_liquidations_usd=50000,
         )
         for i in range(10)
     ]
@@ -109,7 +120,8 @@ def make_volatile_scenario():
     # Extreme liquidations
     liqs = [
         LiquidationSnapshot(
-            symbol=symbol, timestamp=now - (10 - i) * 3600,
+            symbol=symbol,
+            timestamp=now - (10 - i) * 3600,
             window_seconds=3600,
             long_liquidations_usd=100000 if i < 8 else 5000000,
             short_liquidations_usd=100000 if i < 8 else 3000000,
@@ -119,7 +131,9 @@ def make_volatile_scenario():
 
     # Wide-spread book
     book = L2OrderBook(
-        symbol=symbol, exchange=Exchange.HYPERLIQUID, timestamp=now,
+        symbol=symbol,
+        exchange=Exchange.HYPERLIQUID,
+        timestamp=now,
         bids=[OrderBookLevel(price=3000, size=2)],
         asks=[OrderBookLevel(price=3010, size=2)],  # ~33 bps spread
     )
@@ -139,6 +153,7 @@ def make_volatile_scenario():
 # ---------------------------------------------------------------------------
 # Integration Tests
 # ---------------------------------------------------------------------------
+
 
 class TestFullPipeline:
     """Test the complete pipeline: raw data → alpha signals → regime."""
@@ -169,14 +184,10 @@ class TestFullPipeline:
         )
 
         liq_gen = LiquidationAlphaGenerator(config)
-        all_signals.extend(
-            liq_gen.generate(data["symbol"], data["liqs"])
-        )
+        all_signals.extend(liq_gen.generate(data["symbol"], data["liqs"]))
 
         book_gen = OrderBookAlphaGenerator(config)
-        all_signals.extend(
-            book_gen.generate(data["symbol"], book=data["book"])
-        )
+        all_signals.extend(book_gen.generate(data["symbol"], book=data["book"]))
 
         # All signals should be valid AlphaSignal objects
         for sig in all_signals:
@@ -206,19 +217,13 @@ class TestFullPipeline:
         all_signals = []
 
         oi_gen = OIAlphaGenerator(config)
-        all_signals.extend(
-            oi_gen.generate(data["symbol"], oi_snapshots=data["oi"])
-        )
+        all_signals.extend(oi_gen.generate(data["symbol"], oi_snapshots=data["oi"]))
 
         liq_gen = LiquidationAlphaGenerator(config)
-        all_signals.extend(
-            liq_gen.generate(data["symbol"], data["liqs"])
-        )
+        all_signals.extend(liq_gen.generate(data["symbol"], data["liqs"]))
 
         book_gen = OrderBookAlphaGenerator(config)
-        all_signals.extend(
-            book_gen.generate(data["symbol"], book=data["book"])
-        )
+        all_signals.extend(book_gen.generate(data["symbol"], book=data["book"]))
 
         enricher = RegimeEnricher()
         result = enricher.classify(
@@ -296,7 +301,8 @@ class TestFullPipeline:
             history=[
                 FundingRate("BTC", Exchange.HYPERLIQUID, 0.0001, now - i * 3600)
                 for i in range(10, 0, -1)
-            ] + [FundingRate("BTC", Exchange.HYPERLIQUID, 0.005, now)],
+            ]
+            + [FundingRate("BTC", Exchange.HYPERLIQUID, 0.005, now)],
         )
 
         # OI signals
@@ -316,7 +322,8 @@ class TestFullPipeline:
             [
                 LiquidationSnapshot("BTC", now - i * 3600, 3600, 50000, 50000)
                 for i in range(10, 1, -1)
-            ] + [LiquidationSnapshot("BTC", now, 3600, 5000000, 3000000)],
+            ]
+            + [LiquidationSnapshot("BTC", now, 3600, 5000000, 3000000)],
         )
 
         # Collect all signal names

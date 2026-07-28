@@ -2,6 +2,7 @@
 Diagnose why the paper trading engine isn't generating signals.
 Tests the full pipeline: data → features → normalize → predict → filter.
 """
+
 import sys
 
 sys.path.insert(0, ".")
@@ -38,21 +39,26 @@ print("\n" + "=" * 60)
 print("STEP 3: Test feature engine import")
 try:
     from ai.features.engine_v2 import FeatureEngineV2
+
     print("  FOUND: ai.features.engine_v2.FeatureEngineV2")
 except ImportError as e:
     print(f"  MISSING: FeatureEngineV2 - {e}")
 
 try:
     from ai.features.engine_v2 import LongTFFeatureEngine
+
     print("  FOUND: ai.features.engine_v2.LongTFFeatureEngine")
 except ImportError as e:
     print(f"  MISSING: LongTFFeatureEngine - {e}")
 
 try:
     from ai.features.engine import FeatureEngine
+
     print("  FOUND: ai.features.engine.FeatureEngine")
     fe = FeatureEngine()
-    print(f"  FeatureEngine methods: {[m for m in dir(fe) if not m.startswith('_') and callable(getattr(fe, m))]}")
+    print(
+        f"  FeatureEngine methods: {[m for m in dir(fe) if not m.startswith('_') and callable(getattr(fe, m))]}"
+    )
 except ImportError as e:
     print(f"  MISSING: FeatureEngine - {e}")
 
@@ -62,11 +68,23 @@ print("STEP 4: Test feature computation")
 
 # Build DataFrame from klines
 klines = client.get_klines(symbol="BTCUSDT", interval="4h", limit=200)
-df = pd.DataFrame(klines, columns=[
-    "open_time", "open", "high", "low", "close", "volume",
-    "close_time", "quote_volume", "trades", "taker_buy_base",
-    "taker_buy_quote", "ignore",
-])
+df = pd.DataFrame(
+    klines,
+    columns=[
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "close_time",
+        "quote_volume",
+        "trades",
+        "taker_buy_base",
+        "taker_buy_quote",
+        "ignore",
+    ],
+)
 for col in ["open", "high", "low", "close", "volume"]:
     df[col] = df[col].astype(float)
 df["timestamp"] = pd.to_datetime(df["open_time"], unit="ms")
@@ -92,7 +110,9 @@ fe = FeatureEngine()
 features_v1 = fe.extract(df)
 print(f"  FeatureEngine (v1) features: {len(features_v1.columns)} features")
 missing_v1 = set(model._feature_names) - set(features_v1.columns)
-print(f"  v1 missing model features: {len(missing_v1)} ({len(missing_v1)}/{len(model._feature_names)})")
+print(
+    f"  v1 missing model features: {len(missing_v1)} ({len(missing_v1)}/{len(model._feature_names)})"
+)
 
 # 5. Test the signal engine's _compute_features path
 print("\n" + "=" * 60)
@@ -116,6 +136,7 @@ try:
 except Exception as e:
     print(f"  _compute_features ERROR: {e}")
     import traceback
+
     traceback.print_exc()
 
 # 5b. Test with timestamp column added
@@ -205,7 +226,9 @@ X_norm = X_norm.replace([np.inf, -np.inf], np.nan).fillna(0)
 
 proba_norm = model.predict_proba(X_norm.values)[0]
 print(f"  Normalized probabilities (S/N/L): {proba_norm}")
-print(f"  Predicted class: {np.argmax(proba_norm)} ({['SHORT', 'NEUTRAL', 'LONG'][np.argmax(proba_norm)]})")
+print(
+    f"  Predicted class: {np.argmax(proba_norm)} ({['SHORT', 'NEUTRAL', 'LONG'][np.argmax(proba_norm)]})"
+)
 print(f"  Max confidence: {np.max(proba_norm):.4f}")
 
 print("\n" + "=" * 60)

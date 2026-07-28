@@ -86,12 +86,15 @@ try:
         STATE_ARCHIVED,
         TradeMonitor,
     )
+
     TRADE_MONITOR_AVAILABLE = True
 except ImportError:
     TRADE_MONITOR_AVAILABLE = False
 
 
-@pytest.mark.skipif(not TRADE_MONITOR_AVAILABLE, reason="TradeMonitor not importable from this path")
+@pytest.mark.skipif(
+    not TRADE_MONITOR_AVAILABLE, reason="TradeMonitor not importable from this path"
+)
 class TestSelfCancel:
 
     def _make_monitor(self, tmp_path: Path) -> "TradeMonitor":
@@ -142,12 +145,15 @@ try:
         MAX_LOG_SIZE,
         DailySessionState,
     )
+
     SESSION_STATE_AVAILABLE = True
 except ImportError:
     SESSION_STATE_AVAILABLE = False
 
 
-@pytest.mark.skipif(not SESSION_STATE_AVAILABLE, reason="DailySessionState not importable from this path")
+@pytest.mark.skipif(
+    not SESSION_STATE_AVAILABLE, reason="DailySessionState not importable from this path"
+)
 class TestTradeLogPersistence:
 
     def test_trade_log_survives_save_load_cycle(self, tmp_path):
@@ -164,12 +170,16 @@ class TestTradeLogPersistence:
     def test_load_old_file_without_trade_log_key(self, tmp_path):
         """Old session files without trade_log key must load cleanly."""
         old_file = tmp_path / "state.json"
-        old_file.write_text(json.dumps({
-            "session_date": "2026-05-10",
-            "daily_pnl": 0.0,
-            "open_positions": 0,
-            # no trade_log key — simulates pre-COI-7 file
-        }))
+        old_file.write_text(
+            json.dumps(
+                {
+                    "session_date": "2026-05-10",
+                    "daily_pnl": 0.0,
+                    "open_positions": 0,
+                    # no trade_log key — simulates pre-COI-7 file
+                }
+            )
+        )
         state = DailySessionState.load(old_file)
         assert isinstance(state._trade_log, collections.deque)
         assert len(state._trade_log) == 0

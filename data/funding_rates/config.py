@@ -12,28 +12,27 @@ Usage:
 import os
 from dataclasses import dataclass, field
 
-
 # ── Binance URLs ───────────────────────────────────────────────────────────────
 
 MAINNET_REST_URL = "https://fapi.binance.com"
-MAINNET_WS_URL   = "wss://fstream.binance.com"
+MAINNET_WS_URL = "wss://fstream.binance.com"
 
 TESTNET_REST_URL = "https://testnet.binancefuture.com"
-TESTNET_WS_URL   = "wss://stream.binancefuture.com"
+TESTNET_WS_URL = "wss://stream.binancefuture.com"
 
 # ── Funding Rate Alert Thresholds ─────────────────────────────────────────────
 
 # Funding rate is expressed as a decimal (e.g. 0.001 = 0.1%)
-FUNDING_RATE_WARNING  = 0.001   # |rate| > 0.1%  → warning alert
-FUNDING_RATE_CRITICAL = 0.003   # |rate| > 0.3%  → critical alert
+FUNDING_RATE_WARNING = 0.001  # |rate| > 0.1%  → warning alert
+FUNDING_RATE_CRITICAL = 0.003  # |rate| > 0.3%  → critical alert
 
 # Alert cooldown per symbol — prevents spam on sustained extreme rates
-ALERT_COOLDOWN_SECONDS = 3600   # 1 hour between repeated alerts per symbol
+ALERT_COOLDOWN_SECONDS = 3600  # 1 hour between repeated alerts per symbol
 
 # ── Pipeline Timings ──────────────────────────────────────────────────────────
 
-REST_BOOTSTRAP_INTERVAL = 300   # Re-sync full snapshot via REST every 5 min (seconds)
-SNAPSHOT_SAVE_INTERVAL  = 3600  # Save hourly snapshot to history table (seconds)
+REST_BOOTSTRAP_INTERVAL = 300  # Re-sync full snapshot via REST every 5 min (seconds)
+SNAPSHOT_SAVE_INTERVAL = 3600  # Save hourly snapshot to history table (seconds)
 
 # ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -42,14 +41,14 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "funding_rates.db")
 
 @dataclass
 class FundingRateConfig:
-    rest_url:      str
-    ws_url:        str
-    api_key:       str
-    api_secret:    str
-    is_testnet:    bool
+    rest_url: str
+    ws_url: str
+    api_key: str
+    api_secret: str
+    is_testnet: bool
     telegram_token: str = ""
     telegram_chat_id: str = ""
-    db_path:       str = DB_PATH
+    db_path: str = DB_PATH
 
 
 def load_config(dotenv_path: str = None) -> FundingRateConfig:
@@ -75,12 +74,12 @@ def load_config(dotenv_path: str = None) -> FundingRateConfig:
 
     if is_testnet:
         rest_url = TESTNET_REST_URL
-        ws_url   = TESTNET_WS_URL
+        ws_url = TESTNET_WS_URL
     else:
         rest_url = MAINNET_REST_URL
-        ws_url   = MAINNET_WS_URL
+        ws_url = MAINNET_WS_URL
 
-    api_key    = os.getenv("BINANCE_API_KEY", "")
+    api_key = os.getenv("BINANCE_API_KEY", "")
     api_secret = os.getenv("BINANCE_API_SECRET", "")
 
     # API keys are required even for public market data streams
@@ -96,13 +95,13 @@ def load_config(dotenv_path: str = None) -> FundingRateConfig:
         )
 
     cfg = FundingRateConfig(
-        rest_url      = rest_url,
-        ws_url        = ws_url,
-        api_key       = api_key,
-        api_secret    = api_secret,
-        is_testnet    = is_testnet,
-        telegram_token   = os.getenv("TELEGRAM_BOT_TOKEN", ""),
-        telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID", ""),
+        rest_url=rest_url,
+        ws_url=ws_url,
+        api_key=api_key,
+        api_secret=api_secret,
+        is_testnet=is_testnet,
+        telegram_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
+        telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
     )
 
     _print_banner(cfg)
@@ -126,10 +125,14 @@ def _load_dotenv(dotenv_path: str = None) -> None:
     Minimal .env loader — avoids requiring python-dotenv as a hard dependency.
     Loads KEY=VALUE pairs, strips quotes and comments.
     """
-    search_paths = [dotenv_path] if dotenv_path else [
-        os.path.join(os.getcwd(), ".env"),
-        os.path.join(os.path.dirname(__file__), "..", "..", ".env"),
-    ]
+    search_paths = (
+        [dotenv_path]
+        if dotenv_path
+        else [
+            os.path.join(os.getcwd(), ".env"),
+            os.path.join(os.path.dirname(__file__), "..", "..", ".env"),
+        ]
+    )
 
     for path in search_paths:
         if path and os.path.isfile(path):
@@ -139,7 +142,7 @@ def _load_dotenv(dotenv_path: str = None) -> None:
                     if not line or line.startswith("#") or "=" not in line:
                         continue
                     key, _, value = line.partition("=")
-                    key   = key.strip()
+                    key = key.strip()
                     value = value.strip().strip('"').strip("'")
                     # Don't override already-set env vars
                     if key and key not in os.environ:

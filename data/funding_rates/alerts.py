@@ -24,7 +24,12 @@ from typing import Dict, Optional
 
 import aiohttp
 
-from .config import FundingRateConfig, FUNDING_RATE_WARNING, FUNDING_RATE_CRITICAL, ALERT_COOLDOWN_SECONDS
+from .config import (
+    FundingRateConfig,
+    FUNDING_RATE_WARNING,
+    FUNDING_RATE_CRITICAL,
+    ALERT_COOLDOWN_SECONDS,
+)
 from .storage import FundingRateRecord
 
 log = logging.getLogger(__name__)
@@ -41,8 +46,8 @@ class FundingRateAlertManager:
 
     def __init__(self, config: FundingRateConfig):
         self.cfg = config
-        self._cooldowns: Dict[str, float] = {}   # symbol → last_alerted epoch seconds
-        self._alert_count = 0                    # total alerts sent (for monitoring)
+        self._cooldowns: Dict[str, float] = {}  # symbol → last_alerted epoch seconds
+        self._alert_count = 0  # total alerts sent (for monitoring)
 
         if not config.telegram_token:
             log.warning("[Alerts] No TELEGRAM_BOT_TOKEN set — alerts will only be logged.")
@@ -101,8 +106,8 @@ class FundingRateAlertManager:
         """
         url = f"https://api.telegram.org/bot{self.cfg.telegram_token}/sendMessage"
         payload = {
-            "chat_id":    self.cfg.telegram_chat_id,
-            "text":       message,
+            "chat_id": self.cfg.telegram_chat_id,
+            "text": message,
             "parse_mode": "HTML",
         }
 
@@ -135,6 +140,7 @@ class FundingRateAlertManager:
 
 # ── Message Formatting ────────────────────────────────────────────────────────
 
+
 def _format_alert(tier: str, rec: FundingRateRecord) -> str:
     """Build the Telegram-ready alert message."""
     rate_pct = rec.funding_rate * 100
@@ -143,10 +149,10 @@ def _format_alert(tier: str, rec: FundingRateRecord) -> str:
     # Direction and emoji
     if rec.funding_rate > 0:
         direction = "longs pay shorts 🐂→🐻"
-        rate_str  = f"+{rate_pct:.4f}%"
+        rate_str = f"+{rate_pct:.4f}%"
     else:
         direction = "shorts pay longs 🐻→🐂"
-        rate_str  = f"{rate_pct:.4f}%"
+        rate_str = f"{rate_pct:.4f}%"
 
     # Urgency emoji
     if tier == "CRITICAL":
@@ -172,6 +178,7 @@ def _format_alert(tier: str, rec: FundingRateRecord) -> str:
 
 
 # ── Diagnostic Helper ─────────────────────────────────────────────────────────
+
 
 def format_funding_table(records, top_n: int = 15) -> str:
     """

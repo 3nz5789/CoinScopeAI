@@ -32,6 +32,7 @@ env_file = Path(__file__).parent / ".env"
 if env_file.exists():
     try:
         from dotenv import load_dotenv
+
         load_dotenv(env_file)
         print(f"[billing_server] Loaded .env from {env_file}")
     except ImportError:
@@ -46,6 +47,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("billing_server")
 
+
 # ── Startup validation ────────────────────────────────────────────────────────
 def _validate_config():
     warnings = []
@@ -58,6 +60,7 @@ def _validate_config():
     for w in warnings:
         logger.warning(f"[Config] ⚠️  {w}")
     return len(warnings)
+
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":

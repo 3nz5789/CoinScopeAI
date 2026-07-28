@@ -41,27 +41,27 @@ class FixedScorer:
     def calculate_rsi(self, closes: np.ndarray, period: int = 14) -> np.ndarray:
         """Calculate RSI"""
         deltas = np.diff(closes)
-        seed = deltas[:period+1]
+        seed = deltas[: period + 1]
         up = seed[seed >= 0].sum() / period
         down = -seed[seed < 0].sum() / period
         rs = up / down if down != 0 else 0
         rsi = np.zeros_like(closes)
-        rsi[:period] = 100. - 100. / (1. + rs)
+        rsi[:period] = 100.0 - 100.0 / (1.0 + rs)
 
         for i in range(period, len(closes)):
-            delta = deltas[i-1]
+            delta = deltas[i - 1]
             if delta > 0:
                 upval = delta
-                downval = 0.
+                downval = 0.0
             else:
-                upval = 0.
+                upval = 0.0
                 downval = -delta
 
             up = (up * (period - 1) + upval) / period
             down = (down * (period - 1) + downval) / period
 
             rs = up / down if down != 0 else 0
-            rsi[i] = 100. - 100. / (1. + rs)
+            rsi[i] = 100.0 - 100.0 / (1.0 + rs)
 
         return rsi
 
@@ -72,27 +72,26 @@ class FixedScorer:
         multiplier = 2 / (period + 1)
 
         for i in range(1, len(closes)):
-            ema[i] = closes[i] * multiplier + ema[i-1] * (1 - multiplier)
+            ema[i] = closes[i] * multiplier + ema[i - 1] * (1 - multiplier)
 
         return ema
 
-    def calculate_atr(self, high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14) -> np.ndarray:
+    def calculate_atr(
+        self, high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int = 14
+    ) -> np.ndarray:
         """Calculate ATR"""
         tr = np.maximum(
             high - low,
-            np.maximum(
-                np.abs(high - np.roll(close, 1)),
-                np.abs(low - np.roll(close, 1))
-            )
+            np.maximum(np.abs(high - np.roll(close, 1)), np.abs(low - np.roll(close, 1))),
         )
         # BUG-12 FIX: np.roll wraps close[-1] to index 0, producing a spurious TR.
         # Override first bar with the simple high-low range.
         tr[0] = high[0] - low[0]
         atr = np.zeros_like(tr)
-        atr[period-1] = np.mean(tr[:period])
+        atr[period - 1] = np.mean(tr[:period])
 
         for i in range(period, len(tr)):
-            atr[i] = (atr[i-1] * (period - 1) + tr[i]) / period
+            atr[i] = (atr[i - 1] * (period - 1) + tr[i]) / period
 
         return atr
 
@@ -114,7 +113,9 @@ class FixedScorer:
 
         return scores
 
-    def score_trend(self, close: np.ndarray, ema_fast: np.ndarray, ema_slow: np.ndarray) -> np.ndarray:
+    def score_trend(
+        self, close: np.ndarray, ema_fast: np.ndarray, ema_slow: np.ndarray
+    ) -> np.ndarray:
         """
         Score trend (0-3) based on EMA alignment
 
@@ -129,7 +130,9 @@ class FixedScorer:
         scores[close < np.minimum(ema_fast, ema_slow)] = 0
 
         # Weak uptrend
-        scores[(close >= np.minimum(ema_fast, ema_slow)) & (close < np.maximum(ema_fast, ema_slow))] = 1
+        scores[
+            (close >= np.minimum(ema_fast, ema_slow)) & (close < np.maximum(ema_fast, ema_slow))
+        ] = 1
 
         # Uptrend
         scores[(close >= np.maximum(ema_fast, ema_slow)) & (ema_fast > ema_slow)] = 2
@@ -223,7 +226,7 @@ class FixedScorer:
         high: np.ndarray,
         low: np.ndarray,
         volume: np.ndarray,
-        bid_ask_spread: np.ndarray
+        bid_ask_spread: np.ndarray,
     ) -> Tuple[np.ndarray, Dict]:
         """
         Calculate total score (0-12) with all graduated sub-scores
@@ -237,7 +240,7 @@ class FixedScorer:
         ema_fast = self.calculate_ema(close, self.ema_fast)
         ema_slow = self.calculate_ema(close, self.ema_slow)
         atr = self.calculate_atr(high, low, close, self.atr_period)
-        volume_ma = np.convolve(volume, np.ones(20)/20, mode='same')
+        volume_ma = np.convolve(volume, np.ones(20) / 20, mode="same")
 
         # Calculate sub-scores (all graduated 0-3)
         momentum = self.score_momentum(rsi)
@@ -251,16 +254,16 @@ class FixedScorer:
         total_score = momentum + trend + volatility + vol_score + entry + liquidity
 
         return total_score, {
-            'momentum': momentum,
-            'trend': trend,
-            'volatility': volatility,
-            'volume': vol_score,
-            'entry': entry,
-            'liquidity': liquidity,
-            'rsi': rsi,
-            'ema_fast': ema_fast,
-            'ema_slow': ema_slow,
-            'atr': atr,
+            "momentum": momentum,
+            "trend": trend,
+            "volatility": volatility,
+            "volume": vol_score,
+            "entry": entry,
+            "liquidity": liquidity,
+            "rsi": rsi,
+            "ema_fast": ema_fast,
+            "ema_slow": ema_slow,
+            "atr": atr,
         }
 
     def generate_signals(
@@ -271,7 +274,7 @@ class FixedScorer:
         volume: np.ndarray,
         bid_ask_spread: np.ndarray,
         long_threshold: float = 5.5,
-        short_threshold: float = 6.5
+        short_threshold: float = 6.5,
     ) -> Tuple[np.ndarray, Dict]:
         """
         Generate BUY/SELL signals based on graduated scoring
@@ -290,8 +293,8 @@ class FixedScorer:
         )
 
         signals = np.zeros_like(close, dtype=int)
-        signals[total_score >= long_threshold] = 1      # LONG
-        signals[total_score <= short_threshold] = -1    # SHORT
+        signals[total_score >= long_threshold] = 1  # LONG
+        signals[total_score <= short_threshold] = -1  # SHORT
 
         return signals, sub_scores
 
@@ -316,4 +319,6 @@ if __name__ == "__main__":
     print(f"✅ Generated {np.sum(signals == 1)} LONG signals")
     print(f"✅ Generated {np.sum(signals == -1)} SHORT signals")
     print(f"✅ Neutral: {np.sum(signals == 0)} bars")
-    print(f"\nScore range: {sub_scores['momentum'].min():.1f} to {sub_scores['momentum'].max():.1f}")
+    print(
+        f"\nScore range: {sub_scores['momentum'].min():.1f} to {sub_scores['momentum'].max():.1f}"
+    )

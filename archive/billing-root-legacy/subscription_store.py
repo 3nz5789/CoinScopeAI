@@ -76,7 +76,7 @@ class SubscriptionStore:
         """Yield a transactional SQLite connection."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")   # Safe for concurrent reads
+        conn.execute("PRAGMA journal_mode=WAL")  # Safe for concurrent reads
         conn.execute("PRAGMA foreign_keys=ON")
         try:
             yield conn
@@ -131,11 +131,7 @@ class SubscriptionStore:
         Uses customer_id as the primary key — one row per customer.
         """
         now = datetime.utcnow().isoformat()
-        period_end = (
-            record.current_period_end.isoformat()
-            if record.current_period_end
-            else None
-        )
+        period_end = record.current_period_end.isoformat() if record.current_period_end else None
         with self._conn() as conn:
             conn.execute(
                 """
@@ -180,7 +176,9 @@ class SubscriptionStore:
             ).fetchone()
         return self._row_to_record(row) if row else None
 
-    def get_subscription_by_stripe_id(self, stripe_subscription_id: str) -> Optional[SubscriptionRecord]:
+    def get_subscription_by_stripe_id(
+        self, stripe_subscription_id: str
+    ) -> Optional[SubscriptionRecord]:
         """Fetch subscription by Stripe subscription ID."""
         with self._conn() as conn:
             row = conn.execute(
@@ -234,9 +232,7 @@ class SubscriptionStore:
     @staticmethod
     def _row_to_record(row: sqlite3.Row) -> SubscriptionRecord:
         period_end = (
-            datetime.fromisoformat(row["current_period_end"])
-            if row["current_period_end"]
-            else None
+            datetime.fromisoformat(row["current_period_end"]) if row["current_period_end"] else None
         )
         return SubscriptionRecord(
             customer_id=row["customer_id"],

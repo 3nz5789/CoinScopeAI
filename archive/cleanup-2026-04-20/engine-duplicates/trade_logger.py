@@ -11,6 +11,7 @@ from integrations.notion_integration import get_notion_integration
 
 logger = logging.getLogger(__name__)
 
+
 class TradeLogger:
     """Handles automatic trade logging to Notion"""
 
@@ -33,23 +34,25 @@ class TradeLogger:
         try:
             # Format trade for Notion
             formatted_trade = {
-                'pair': trade_data.get('pair'),
-                'entry_price': trade_data.get('entry_price'),
-                'exit_price': trade_data.get('exit_price'),
-                'quantity': trade_data.get('quantity'),
-                'strategy': trade_data.get('strategy', 'CoinScopeAI MTF'),
-                'pnl': trade_data.get('pnl', 0),
-                'pnl_pct': trade_data.get('pnl_pct', 0),
-                'entry_time': trade_data.get('entry_time', datetime.now()),
-                'exit_time': trade_data.get('exit_time', datetime.now()),
-                'notes': trade_data.get('notes', '')
+                "pair": trade_data.get("pair"),
+                "entry_price": trade_data.get("entry_price"),
+                "exit_price": trade_data.get("exit_price"),
+                "quantity": trade_data.get("quantity"),
+                "strategy": trade_data.get("strategy", "CoinScopeAI MTF"),
+                "pnl": trade_data.get("pnl", 0),
+                "pnl_pct": trade_data.get("pnl_pct", 0),
+                "entry_time": trade_data.get("entry_time", datetime.now()),
+                "exit_time": trade_data.get("exit_time", datetime.now()),
+                "notes": trade_data.get("notes", ""),
             }
 
             # Log to Notion
             success = await self.notion.log_trade_to_journal(formatted_trade)
 
             if success:
-                logger.info(f"✅ Trade logged: {formatted_trade['pair']} {formatted_trade['pnl_pct']:+.2f}%")
+                logger.info(
+                    f"✅ Trade logged: {formatted_trade['pair']} {formatted_trade['pnl_pct']:+.2f}%"
+                )
             else:
                 logger.warning(f"⚠️ Failed to log trade to Notion: {formatted_trade['pair']}")
 
@@ -86,10 +89,7 @@ class TradeLogger:
             trade_id: Unique trade identifier
             trade_data: Trade information
         """
-        self.pending_trades[trade_id] = {
-            'data': trade_data,
-            'opened_at': datetime.now()
-        }
+        self.pending_trades[trade_id] = {"data": trade_data, "opened_at": datetime.now()}
         logger.info(f"📊 Tracking open trade: {trade_id}")
 
     async def close_tracked_trade(self, trade_id: str, exit_data: Dict[str, Any]) -> bool:
@@ -110,11 +110,7 @@ class TradeLogger:
         trade_info = self.pending_trades[trade_id]
 
         # Merge entry and exit data
-        complete_trade = {
-            **trade_info['data'],
-            **exit_data,
-            'entry_time': trade_info['opened_at']
-        }
+        complete_trade = {**trade_info["data"], **exit_data, "entry_time": trade_info["opened_at"]}
 
         # Log to Notion
         success = await self.log_trade_execution(complete_trade)
@@ -127,6 +123,7 @@ class TradeLogger:
 
 # Singleton instance
 _trade_logger = None
+
 
 def get_trade_logger() -> TradeLogger:
     """Get or create trade logger singleton"""

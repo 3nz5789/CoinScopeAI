@@ -27,10 +27,10 @@ class AlphaDecayMonitor:
     """
 
     DECAY_THRESHOLDS = {
-        "win_rate_drop": 0.05,      # Alert if 7d WR drops 5% vs 30d
-        "sharpe_drop": 0.3,          # Alert if rolling Sharpe drops 0.3
-        "pf_below": 1.2,             # Alert if profit factor < 1.2
-        "consec_loss_warn": 4,       # Warn at 4+ consecutive losses
+        "win_rate_drop": 0.05,  # Alert if 7d WR drops 5% vs 30d
+        "sharpe_drop": 0.3,  # Alert if rolling Sharpe drops 0.3
+        "pf_below": 1.2,  # Alert if profit factor < 1.2
+        "consec_loss_warn": 4,  # Warn at 4+ consecutive losses
         "regime_transition_fail": 0.15,  # Alert if regime accuracy drops 15%
     }
 
@@ -56,10 +56,15 @@ class AlphaDecayMonitor:
         try:
             # BUG-8 FIX: use the correct synchronous method get_recent_trades(days=30)
             trades_30d = self.journal.get_recent_trades(days=30)
-            trades_7d = [t for t in trades_30d if
-                        (datetime.utcnow() - datetime.fromisoformat(
-                            t["closed_at"] if isinstance(t, dict) else t.closed_at
-                        )).days <= 7]
+            trades_7d = [
+                t
+                for t in trades_30d
+                if (
+                    datetime.utcnow()
+                    - datetime.fromisoformat(t["closed_at"] if isinstance(t, dict) else t.closed_at)
+                ).days
+                <= 7
+            ]
 
             if len(trades_30d) < 20:
                 logger.info("⏳ Not enough trades yet for decay analysis")
@@ -79,64 +84,72 @@ class AlphaDecayMonitor:
             if len(trades_7d) >= 10:
                 wr_decay = baseline_wr - recent_wr
                 if wr_decay > self.DECAY_THRESHOLDS["win_rate_drop"]:
-                    decay_signals.append({
-                        'type': 'win_rate_decay',
-                        'baseline': baseline_wr,
-                        'recent': recent_wr,
-                        'decay': wr_decay,
-                        'message': f"⚠️ Win rate decay: {recent_wr:.1%} (7d) vs {baseline_wr:.1%} (30d baseline)"
-                    })
+                    decay_signals.append(
+                        {
+                            "type": "win_rate_decay",
+                            "baseline": baseline_wr,
+                            "recent": recent_wr,
+                            "decay": wr_decay,
+                            "message": f"⚠️ Win rate decay: {recent_wr:.1%} (7d) vs {baseline_wr:.1%} (30d baseline)",
+                        }
+                    )
                     severity = "WARN"
 
             # Profit factor
             if pf_7d < self.DECAY_THRESHOLDS["pf_below"]:
-                decay_signals.append({
-                    'type': 'low_profit_factor',
-                    'value': pf_7d,
-                    'threshold': self.DECAY_THRESHOLDS["pf_below"],
-                    'message': f"⚠️ Low profit factor: {pf_7d:.2f} (7d) — target > 1.2"
-                })
+                decay_signals.append(
+                    {
+                        "type": "low_profit_factor",
+                        "value": pf_7d,
+                        "threshold": self.DECAY_THRESHOLDS["pf_below"],
+                        "message": f"⚠️ Low profit factor: {pf_7d:.2f} (7d) — target > 1.2",
+                    }
+                )
                 severity = "WARN"
 
             # Sharpe decay
             if len(trades_7d) >= 10:
                 sharpe_decay = baseline_sharpe - recent_sharpe
                 if sharpe_decay > self.DECAY_THRESHOLDS["sharpe_drop"]:
-                    decay_signals.append({
-                        'type': 'sharpe_decay',
-                        'baseline': baseline_sharpe,
-                        'recent': recent_sharpe,
-                        'decay': sharpe_decay,
-                        'message': f"⚠️ Sharpe decay: {recent_sharpe:.2f} (7d) vs {baseline_sharpe:.2f} (30d)"
-                    })
+                    decay_signals.append(
+                        {
+                            "type": "sharpe_decay",
+                            "baseline": baseline_sharpe,
+                            "recent": recent_sharpe,
+                            "decay": sharpe_decay,
+                            "message": f"⚠️ Sharpe decay: {recent_sharpe:.2f} (7d) vs {baseline_sharpe:.2f} (30d)",
+                        }
+                    )
                     severity = "WARN"
 
             # Consecutive losses
             consec_losses = self._consecutive_losses(trades_7d)
             if consec_losses >= self.DECAY_THRESHOLDS["consec_loss_warn"]:
-                decay_signals.append({
-                    'type': 'consecutive_losses',
-                    'value': consec_losses,
-                    'message': f"⚠️ {consec_losses} consecutive losses — check regime"
-                })
+                decay_signals.append(
+                    {
+                        "type": "consecutive_losses",
+                        "value": consec_losses,
+                        "message": f"⚠️ {consec_losses} consecutive losses — check regime",
+                    }
+                )
                 severity = "CRITICAL" if consec_losses >= 6 else "WARN"
 
             # Compile report
             report = {
-                'timestamp': datetime.utcnow().isoformat(),
-                'severity': severity,
-                'metrics': {
-                    'trades_30d': len(trades_30d),
-                    'trades_7d': len(trades_7d),
-                    'win_rate_30d': baseline_wr,
-                    'win_rate_7d': recent_wr,
-                    'sharpe_30d': baseline_sharpe,
-                    'sharpe_7d': recent_sharpe,
-                    'profit_factor_7d': pf_7d,
-                    'consecutive_losses': consec_losses,
+                "timestamp": datetime.utcnow().isoformat(),
+                "severity": severity,
+                "metrics": {
+                    "trades_30d": len(trades_30d),
+                    "trades_7d": len(trades_7d),
+                    "win_rate_30d": baseline_wr,
+                    "win_rate_7d": recent_wr,
+                    "sharpe_30d": baseline_sharpe,
+                    "sharpe_7d": recent_sharpe,
+                    "profit_factor_7d": pf_7d,
+                    "consecutive_losses": consec_losses,
                 },
-                'decay_signals': decay_signals,
-                'recommendations': self._get_recommendations(decay_signals)
+                "decay_signals": decay_signals,
+                "recommendations": self._get_recommendations(decay_signals),
             }
 
             # Send alerts
@@ -215,37 +228,25 @@ class AlphaDecayMonitor:
         recommendations = []
 
         for signal in decay_signals:
-            if signal['type'] == 'win_rate_decay':
-                recommendations.append(
-                    "🔧 Review multi-timeframe filter — may be too strict"
-                )
-                recommendations.append(
-                    "🔧 Check regime detector — might be misclassifying"
-                )
+            if signal["type"] == "win_rate_decay":
+                recommendations.append("🔧 Review multi-timeframe filter — may be too strict")
+                recommendations.append("🔧 Check regime detector — might be misclassifying")
 
-            elif signal['type'] == 'low_profit_factor':
-                recommendations.append(
-                    "🔧 Increase stop-loss distance (currently 2.06%)"
-                )
-                recommendations.append(
-                    "🔧 Review take-profit levels — may be too tight"
-                )
+            elif signal["type"] == "low_profit_factor":
+                recommendations.append("🔧 Increase stop-loss distance (currently 2.06%)")
+                recommendations.append("🔧 Review take-profit levels — may be too tight")
 
-            elif signal['type'] == 'sharpe_decay':
-                recommendations.append(
-                    "🔧 Retrain HMM regime detector on latest data"
-                )
+            elif signal["type"] == "sharpe_decay":
+                recommendations.append("🔧 Retrain HMM regime detector on latest data")
                 recommendations.append(
                     "🔧 Check for regime drift — market conditions may have changed"
                 )
 
-            elif signal['type'] == 'consecutive_losses':
+            elif signal["type"] == "consecutive_losses":
                 recommendations.append(
                     "🔧 Reduce position size temporarily (Kelly fraction 0.25 → 0.15)"
                 )
-                recommendations.append(
-                    "🔧 Review recent market regime — may be in transition"
-                )
+                recommendations.append("🔧 Review recent market regime — may be in transition")
 
         return list(set(recommendations))  # Deduplicate
 
@@ -253,7 +254,7 @@ class AlphaDecayMonitor:
         """Send critical decay alert to Telegram"""
         msg = "🔴 *ALPHA DECAY DETECTED*\n\n"
 
-        for signal in report['decay_signals']:
+        for signal in report["decay_signals"]:
             msg += f"• {signal['message']}\n"
 
         msg += "\n*Metrics:*\n"
@@ -262,7 +263,7 @@ class AlphaDecayMonitor:
         msg += f"• Profit Factor: {report['metrics']['profit_factor_7d']:.2f}\n"
 
         msg += "\n*Recommendations:*\n"
-        for rec in report['recommendations'][:3]:  # Top 3 recommendations
+        for rec in report["recommendations"][:3]:  # Top 3 recommendations
             msg += f"• {rec}\n"
 
         msg += "\n_Action: Review and consider retraining HMM_"
@@ -283,15 +284,12 @@ class AlphaDecayMonitor:
 _All metrics within normal ranges_
 """
         # BUG-6 FIX: use existing TelegramAlerts.send_heartbeat (synchronous, no await)
-        self.alerts.send_heartbeat(report['metrics'])
+        self.alerts.send_heartbeat(report["metrics"])
 
     def get_alert_history(self, days: int = 7) -> List[Dict]:
         """Get alert history for the past N days"""
         cutoff = datetime.utcnow() - timedelta(days=days)
-        return [
-            a for a in self.alert_history
-            if datetime.fromisoformat(a['timestamp']) > cutoff
-        ]
+        return [a for a in self.alert_history if datetime.fromisoformat(a["timestamp"]) > cutoff]
 
 
 # Example usage
@@ -314,5 +312,6 @@ async def example():
 
 if __name__ == "__main__":
     import asyncio
+
     logging.basicConfig(level=logging.INFO)
     asyncio.run(example())

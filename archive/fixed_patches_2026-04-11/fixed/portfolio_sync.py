@@ -11,6 +11,7 @@ from integrations.notion_integration import get_notion_integration
 
 logger = logging.getLogger(__name__)
 
+
 class PortfolioSync:
     """Handles portfolio synchronization with Notion"""
 
@@ -40,12 +41,15 @@ class PortfolioSync:
 
             for asset, data in holdings.items():
                 portfolio_entry = {
-                    'asset': asset,
-                    'quantity': data.get('quantity', 0),
-                    'avg_buy_price': data.get('avg_buy', 0),
-                    'current_price': data.get('current', 0),
-                    'value': data.get('quantity', 0) * data.get('current', 0),
-                    'performance': ((data.get('current', 0) - data.get('avg_buy', 0)) / data.get('avg_buy', 1)) * 100
+                    "asset": asset,
+                    "quantity": data.get("quantity", 0),
+                    "avg_buy_price": data.get("avg_buy", 0),
+                    "current_price": data.get("current", 0),
+                    "value": data.get("quantity", 0) * data.get("current", 0),
+                    "performance": (
+                        (data.get("current", 0) - data.get("avg_buy", 0)) / data.get("avg_buy", 1)
+                    )
+                    * 100,
                 }
 
                 success = await self.notion.update_portfolio_tracker(portfolio_entry)
@@ -75,12 +79,12 @@ class PortfolioSync:
         for position in positions:
             try:
                 portfolio_entry = {
-                    'asset': position.get('pair', 'N/A'),
-                    'quantity': position.get('quantity', 0),
-                    'avg_buy_price': position.get('entry_price', 0),
-                    'current_price': position.get('current_price', 0),
-                    'value': position.get('position_value', 0),
-                    'performance': position.get('unrealized_pnl_pct', 0)
+                    "asset": position.get("pair", "N/A"),
+                    "quantity": position.get("quantity", 0),
+                    "avg_buy_price": position.get("entry_price", 0),
+                    "current_price": position.get("current_price", 0),
+                    "value": position.get("position_value", 0),
+                    "performance": position.get("unrealized_pnl_pct", 0),
                 }
 
                 success = await self.notion.update_portfolio_tracker(portfolio_entry)
@@ -120,26 +124,29 @@ class PortfolioSync:
         total_invested = 0
 
         for _asset, data in holdings.items():
-            quantity = data.get('quantity', 0)
-            current = data.get('current', 0)
-            avg_buy = data.get('avg_buy', 0)
+            quantity = data.get("quantity", 0)
+            current = data.get("current", 0)
+            avg_buy = data.get("avg_buy", 0)
 
             total_value += quantity * current
             total_invested += quantity * avg_buy
 
-        overall_performance = ((total_value - total_invested) / total_invested * 100) if total_invested > 0 else 0
+        overall_performance = (
+            ((total_value - total_invested) / total_invested * 100) if total_invested > 0 else 0
+        )
 
         return {
-            'total_value': total_value,
-            'total_invested': total_invested,
-            'overall_performance': overall_performance,
-            'asset_count': len(holdings),
-            'last_updated': datetime.now().isoformat()
+            "total_value": total_value,
+            "total_invested": total_invested,
+            "overall_performance": overall_performance,
+            "asset_count": len(holdings),
+            "last_updated": datetime.now().isoformat(),
         }
 
 
 # Singleton instance
 _portfolio_sync = None
+
 
 def get_portfolio_sync() -> PortfolioSync:
     """Get or create portfolio sync singleton"""

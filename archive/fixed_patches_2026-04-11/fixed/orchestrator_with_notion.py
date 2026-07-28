@@ -17,10 +17,7 @@ from live.master_orchestrator import CoinScopeOrchestrator
 
 from storage.trade_journal import TradeJournal
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger("CoinScopeOrchestrator+Notion")
 
 
@@ -68,15 +65,19 @@ class OrchestratorWithNotion(CoinScopeOrchestrator):
             # Get account balance from testnet
             if self.testnet:
                 balance = self.exchange.get_balance()
-                total_value = balance.get('total', 0)
-                total_invested = balance.get('used', 0)
-                performance_pct = ((total_value - total_invested) / total_invested * 100) if total_invested > 0 else 0
+                total_value = balance.get("total", 0)
+                total_invested = balance.get("used", 0)
+                performance_pct = (
+                    ((total_value - total_invested) / total_invested * 100)
+                    if total_invested > 0
+                    else 0
+                )
 
                 return {
-                    'total_value': total_value,
-                    'total_invested': total_invested,
-                    'performance_pct': performance_pct,
-                    'holdings': balance.get('holdings', {})
+                    "total_value": total_value,
+                    "total_invested": total_invested,
+                    "performance_pct": performance_pct,
+                    "holdings": balance.get("holdings", {}),
                 }
         except Exception as e:
             logger.error(f"Error calculating portfolio: {e}")
@@ -88,27 +89,27 @@ class OrchestratorWithNotion(CoinScopeOrchestrator):
         try:
             if not trades:
                 return {
-                    'total_trades': 0,
-                    'winning_trades': 0,
-                    'losing_trades': 0,
-                    'win_rate': 0,
-                    'total_pnl': 0,
-                    'sharpe_ratio': 0,
-                    'max_drawdown': 0,
-                    'profit_factor': 0,
-                    'avg_win': 0,
-                    'avg_loss': 0
+                    "total_trades": 0,
+                    "winning_trades": 0,
+                    "losing_trades": 0,
+                    "win_rate": 0,
+                    "total_pnl": 0,
+                    "sharpe_ratio": 0,
+                    "max_drawdown": 0,
+                    "profit_factor": 0,
+                    "avg_win": 0,
+                    "avg_loss": 0,
                 }
 
             # Calculate metrics
             total_trades = len(trades)
-            winning_trades = sum(1 for t in trades if t.get('pnl', 0) > 0)
+            winning_trades = sum(1 for t in trades if t.get("pnl", 0) > 0)
             losing_trades = total_trades - winning_trades
             win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
 
-            total_pnl = sum(t.get('pnl', 0) for t in trades)
-            wins = [t.get('pnl', 0) for t in trades if t.get('pnl', 0) > 0]
-            losses = [t.get('pnl', 0) for t in trades if t.get('pnl', 0) < 0]
+            total_pnl = sum(t.get("pnl", 0) for t in trades)
+            wins = [t.get("pnl", 0) for t in trades if t.get("pnl", 0) > 0]
+            losses = [t.get("pnl", 0) for t in trades if t.get("pnl", 0) < 0]
 
             avg_win = sum(wins) / len(wins) if wins else 0
             avg_loss = sum(losses) / len(losses) if losses else 0
@@ -120,16 +121,16 @@ class OrchestratorWithNotion(CoinScopeOrchestrator):
             max_drawdown = 5.0  # Placeholder
 
             return {
-                'total_trades': total_trades,
-                'winning_trades': winning_trades,
-                'losing_trades': losing_trades,
-                'win_rate': win_rate,
-                'total_pnl': total_pnl,
-                'sharpe_ratio': sharpe_ratio,
-                'max_drawdown': max_drawdown,
-                'profit_factor': profit_factor,
-                'avg_win': avg_win,
-                'avg_loss': abs(avg_loss) if avg_loss else 0
+                "total_trades": total_trades,
+                "winning_trades": winning_trades,
+                "losing_trades": losing_trades,
+                "win_rate": win_rate,
+                "total_pnl": total_pnl,
+                "sharpe_ratio": sharpe_ratio,
+                "max_drawdown": max_drawdown,
+                "profit_factor": profit_factor,
+                "avg_win": avg_win,
+                "avg_loss": abs(avg_loss) if avg_loss else 0,
             }
 
         except Exception as e:

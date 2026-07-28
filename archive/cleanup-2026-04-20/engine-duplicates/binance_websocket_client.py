@@ -28,16 +28,13 @@ import uuid
 import websockets
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger("BinanceWSClient")
 
 # Reconnection constants
-_RECONNECT_INITIAL_DELAY = 1.0   # seconds
-_RECONNECT_MAX_DELAY     = 60.0  # seconds
-_RECONNECT_MAX_ATTEMPTS  = 50    # give up after this many consecutive failures
+_RECONNECT_INITIAL_DELAY = 1.0  # seconds
+_RECONNECT_MAX_DELAY = 60.0  # seconds
+_RECONNECT_MAX_ATTEMPTS = 50  # give up after this many consecutive failures
 
 
 class BinanceWebSocketClient:
@@ -74,7 +71,7 @@ class BinanceWebSocketClient:
         # Reconnect state
         self._running = False
         self._reconnect_count = 0
-        self._ready_event = asyncio.Event()   # set when connected+authenticated
+        self._ready_event = asyncio.Event()  # set when connected+authenticated
 
     # ── context-manager support ───────────────────────────────────────────
 
@@ -113,7 +110,9 @@ class BinanceWebSocketClient:
                     break
                 logger.error(
                     "Connection failed (%s) — retrying in %.1fs (attempt %d)",
-                    exc, backoff, self._reconnect_count,
+                    exc,
+                    backoff,
+                    self._reconnect_count,
                 )
             finally:
                 self._mark_disconnected()
@@ -148,8 +147,8 @@ class BinanceWebSocketClient:
         logger.info("Connecting to %s …", self.endpoint)
         async with websockets.connect(
             self.endpoint,
-            ping_interval=20,   # send WS ping every 20 s — keeps Binance alive
-            ping_timeout=10,    # if no pong within 10 s, close & reconnect
+            ping_interval=20,  # send WS ping every 20 s — keeps Binance alive
+            ping_timeout=10,  # if no pong within 10 s, close & reconnect
             close_timeout=5,
         ) as ws:
             self.ws = ws
@@ -301,7 +300,7 @@ class BinanceWebSocketClient:
         order_type: str = "MARKET",
         quantity: float = None,
         price: float = None,
-        **kwargs
+        **kwargs,
     ) -> Dict:
         """Place an order"""
         params = {
@@ -319,7 +318,9 @@ class BinanceWebSocketClient:
 
         return await self._send_request("order.place", params)
 
-    async def cancel_order(self, symbol: str, order_id: int = None, client_order_id: str = None) -> Dict:
+    async def cancel_order(
+        self, symbol: str, order_id: int = None, client_order_id: str = None
+    ) -> Dict:
         """Cancel an order"""
         params = {"symbol": symbol}
 
@@ -339,7 +340,9 @@ class BinanceWebSocketClient:
         result = await self._send_request("openOrders.status", params)
         return result if isinstance(result, list) else [result]
 
-    async def get_order(self, symbol: str, order_id: int = None, client_order_id: str = None) -> Dict:
+    async def get_order(
+        self, symbol: str, order_id: int = None, client_order_id: str = None
+    ) -> Dict:
         """Get order status"""
         params = {"symbol": symbol}
 

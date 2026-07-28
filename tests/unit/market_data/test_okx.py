@@ -50,14 +50,18 @@ class TestOKXOrderBook:
 
         bus.subscribe(EventType.ORDER_BOOK, handler)
 
-        raw = json.dumps({
-            "arg": {"channel": "books5", "instId": "BTC-USDT-SWAP"},
-            "data": [{
-                "bids": [["50000", "1.5", "0", "3"], ["49999", "2.0", "0", "5"]],
-                "asks": [["50001", "0.5", "0", "2"], ["50002", "1.0", "0", "4"]],
-                "ts": "1700000000000",
-            }]
-        })
+        raw = json.dumps(
+            {
+                "arg": {"channel": "books5", "instId": "BTC-USDT-SWAP"},
+                "data": [
+                    {
+                        "bids": [["50000", "1.5", "0", "3"], ["49999", "2.0", "0", "5"]],
+                        "asks": [["50001", "0.5", "0", "2"], ["50002", "1.0", "0", "4"]],
+                        "ts": "1700000000000",
+                    }
+                ],
+            }
+        )
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -79,20 +83,24 @@ class TestOKXTicker:
 
         bus.subscribe(EventType.TICKER, handler)
 
-        raw = json.dumps({
-            "arg": {"channel": "tickers", "instId": "BTC-USDT-SWAP"},
-            "data": [{
-                "instId": "BTC-USDT-SWAP",
-                "last": "50000.5",
-                "bidPx": "50000",
-                "askPx": "50001",
-                "high24h": "51000",
-                "low24h": "49000",
-                "vol24h": "10000",
-                "volCcy24h": "500000000",
-                "ts": "1700000000000",
-            }]
-        })
+        raw = json.dumps(
+            {
+                "arg": {"channel": "tickers", "instId": "BTC-USDT-SWAP"},
+                "data": [
+                    {
+                        "instId": "BTC-USDT-SWAP",
+                        "last": "50000.5",
+                        "bidPx": "50000",
+                        "askPx": "50001",
+                        "high24h": "51000",
+                        "low24h": "49000",
+                        "vol24h": "10000",
+                        "volCcy24h": "500000000",
+                        "ts": "1700000000000",
+                    }
+                ],
+            }
+        )
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -112,14 +120,18 @@ class TestOKXMarkPrice:
 
         bus.subscribe(EventType.MARK_PRICE, handler)
 
-        raw = json.dumps({
-            "arg": {"channel": "mark-price", "instId": "ETH-USDT-SWAP"},
-            "data": [{
-                "instId": "ETH-USDT-SWAP",
-                "markPx": "3000.50",
-                "ts": "1700000000000",
-            }]
-        })
+        raw = json.dumps(
+            {
+                "arg": {"channel": "mark-price", "instId": "ETH-USDT-SWAP"},
+                "data": [
+                    {
+                        "instId": "ETH-USDT-SWAP",
+                        "markPx": "3000.50",
+                        "ts": "1700000000000",
+                    }
+                ],
+            }
+        )
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -139,16 +151,20 @@ class TestOKXFundingRate:
 
         bus.subscribe(EventType.FUNDING_RATE, handler)
 
-        raw = json.dumps({
-            "arg": {"channel": "funding-rate", "instId": "BTC-USDT-SWAP"},
-            "data": [{
-                "instId": "BTC-USDT-SWAP",
-                "fundingRate": "0.00015",
-                "nextFundingRate": "0.00012",
-                "nextFundingTime": "1700003600000",
-                "ts": "1700000000000",
-            }]
-        })
+        raw = json.dumps(
+            {
+                "arg": {"channel": "funding-rate", "instId": "BTC-USDT-SWAP"},
+                "data": [
+                    {
+                        "instId": "BTC-USDT-SWAP",
+                        "fundingRate": "0.00015",
+                        "nextFundingRate": "0.00012",
+                        "nextFundingTime": "1700003600000",
+                        "ts": "1700000000000",
+                    }
+                ],
+            }
+        )
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -168,15 +184,19 @@ class TestOKXOpenInterest:
 
         bus.subscribe(EventType.OPEN_INTEREST, handler)
 
-        raw = json.dumps({
-            "arg": {"channel": "open-interest", "instId": "BTC-USDT-SWAP"},
-            "data": [{
-                "instId": "BTC-USDT-SWAP",
-                "oi": "15000",
-                "oiCcy": "750000000",
-                "ts": "1700000000000",
-            }]
-        })
+        raw = json.dumps(
+            {
+                "arg": {"channel": "open-interest", "instId": "BTC-USDT-SWAP"},
+                "data": [
+                    {
+                        "instId": "BTC-USDT-SWAP",
+                        "oi": "15000",
+                        "oiCcy": "750000000",
+                        "ts": "1700000000000",
+                    }
+                ],
+            }
+        )
         await client._handle_message(raw)
 
         assert len(received) == 1
@@ -196,7 +216,9 @@ class TestOKXControlMessages:
 
         bus.subscribe_all(handler)
 
-        raw = json.dumps({"event": "subscribe", "arg": {"channel": "books5", "instId": "BTC-USDT-SWAP"}})
+        raw = json.dumps(
+            {"event": "subscribe", "arg": {"channel": "books5", "instId": "BTC-USDT-SWAP"}}
+        )
         await client._handle_message(raw)
 
         assert len(received) == 0

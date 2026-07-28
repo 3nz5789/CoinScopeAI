@@ -42,6 +42,7 @@ log = logging.getLogger(__name__)
 
 # ── Collector ─────────────────────────────────────────────────────────────────
 
+
 class FundingRateCollector:
     """
     Collects real-time funding rates from Binance Futures.
@@ -62,9 +63,9 @@ class FundingRateCollector:
     WS_STREAM_PATH = "/ws/!markPrice@arr@1s"
 
     # Reconnection settings
-    WS_BACKOFF_INITIAL = 1     # seconds
-    WS_BACKOFF_MAX     = 60    # seconds
-    WS_BACKOFF_FACTOR  = 2
+    WS_BACKOFF_INITIAL = 1  # seconds
+    WS_BACKOFF_MAX = 60  # seconds
+    WS_BACKOFF_FACTOR = 2
 
     # Weight cost of the all-symbols REST endpoint
     REST_PREMIUM_INDEX_WEIGHT = 10  # conservative estimate
@@ -73,22 +74,22 @@ class FundingRateCollector:
         self,
         config: FundingRateConfig,
         db: FundingRateDB,
-        on_record:  Optional[Callable[[FundingRateRecord], None]] = None,
+        on_record: Optional[Callable[[FundingRateRecord], None]] = None,
         on_extreme: Optional[Callable[[FundingRateRecord], None]] = None,
         extreme_threshold: float = 0.001,  # 0.1% funding rate
     ):
-        self.cfg              = config
-        self.db               = db
-        self.on_record        = on_record
-        self.on_extreme       = on_extreme
+        self.cfg = config
+        self.db = db
+        self.on_record = on_record
+        self.on_extreme = on_extreme
         self.extreme_threshold = extreme_threshold
 
         # Internal state
         self._queue: asyncio.Queue[List[FundingRateRecord]] = asyncio.Queue(maxsize=1000)
         self._running = False
-        self._last_rest_ts = 0.0     # epoch seconds of last REST bootstrap
-        self._symbol_count = 0       # how many symbols we're tracking
-        self._ws_errors = 0          # total WS reconnections (for monitoring)
+        self._last_rest_ts = 0.0  # epoch seconds of last REST bootstrap
+        self._symbol_count = 0  # how many symbols we're tracking
+        self._ws_errors = 0  # total WS reconnections (for monitoring)
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -138,8 +139,8 @@ class FundingRateCollector:
                 log.info("[WS] Connecting to %s", url)
                 async with websockets.connect(
                     url,
-                    ping_interval=20,   # keep-alive ping every 20s
-                    ping_timeout=10,    # error if no pong within 10s
+                    ping_interval=20,  # keep-alive ping every 20s
+                    ping_timeout=10,  # error if no pong within 10s
                     close_timeout=5,
                 ) as ws:
                     log.info("[WS] Connected ✓")
@@ -204,14 +205,16 @@ class FundingRateCollector:
                 continue
 
             try:
-                records.append(FundingRateRecord(
-                    symbol            = item["s"],
-                    funding_rate      = float(r_str),
-                    next_funding_time = int(item.get("T", 0)),
-                    mark_price        = float(item.get("p", 0)),
-                    index_price       = float(item.get("i", 0)),
-                    collected_at      = now_ms,
-                ))
+                records.append(
+                    FundingRateRecord(
+                        symbol=item["s"],
+                        funding_rate=float(r_str),
+                        next_funding_time=int(item.get("T", 0)),
+                        mark_price=float(item.get("p", 0)),
+                        index_price=float(item.get("i", 0)),
+                        collected_at=now_ms,
+                    )
+                )
             except (KeyError, ValueError) as e:
                 log.debug("[WS] Failed to parse item %r: %s", item, e)
 
@@ -250,7 +253,9 @@ class FundingRateCollector:
         headers = {"X-MBX-APIKEY": self.cfg.api_key}
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            async with session.get(
+                url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
 
                 # Track rate limit from response header
                 used_weight = resp.headers.get("X-MBX-USED-WEIGHT-1M", "?")
@@ -278,14 +283,16 @@ class FundingRateCollector:
             if not r_str:
                 continue
             try:
-                records.append(FundingRateRecord(
-                    symbol            = item["symbol"],
-                    funding_rate      = float(r_str),
-                    next_funding_time = int(item.get("nextFundingTime", 0)),
-                    mark_price        = float(item.get("markPrice", 0)),
-                    index_price       = float(item.get("indexPrice", 0)),
-                    collected_at      = now_ms,
-                ))
+                records.append(
+                    FundingRateRecord(
+                        symbol=item["symbol"],
+                        funding_rate=float(r_str),
+                        next_funding_time=int(item.get("nextFundingTime", 0)),
+                        mark_price=float(item.get("markPrice", 0)),
+                        index_price=float(item.get("indexPrice", 0)),
+                        collected_at=now_ms,
+                    )
+                )
             except (KeyError, ValueError) as e:
                 log.debug("[REST] Failed to parse item %r: %s", item, e)
 
@@ -340,8 +347,7 @@ class FundingRateCollector:
                         log.debug("[Writer] on_record callback error: %s", e)
 
                 # Fire the extreme-rate callback
-                if (self.on_extreme
-                        and abs(rec.funding_rate) >= self.extreme_threshold):
+                if self.on_extreme and abs(rec.funding_rate) >= self.extreme_threshold:
                     try:
                         self.on_extreme(rec)
                     except Exception as e:

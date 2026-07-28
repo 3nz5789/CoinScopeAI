@@ -39,7 +39,7 @@ class FundingRateFilter:
     """
 
     # Funding rate thresholds (per 8-hour period)
-    EXTREME_POSITIVE_FUNDING = 0.0005   # 0.05% = 54% annualized
+    EXTREME_POSITIVE_FUNDING = 0.0005  # 0.05% = 54% annualized
     EXTREME_NEGATIVE_FUNDING = -0.0005
 
     # Moderate thresholds
@@ -47,10 +47,9 @@ class FundingRateFilter:
     MODERATE_NEGATIVE_FUNDING = -0.0002
 
     def __init__(self):
-        self.exchange = ccxt.binance({
-            "enableRateLimit": True,
-            "options": {"defaultType": "future"}
-        })
+        self.exchange = ccxt.binance(
+            {"enableRateLimit": True, "options": {"defaultType": "future"}}
+        )
         self.cache = {}
         self.cache_ttl = 300  # 5 minute cache
 
@@ -66,17 +65,14 @@ class FundingRateFilter:
         """
         cache_key = f"funding_{symbol}"
         cached = self.cache.get(cache_key)
-        if cached and (datetime.utcnow() - cached['ts']).seconds < self.cache_ttl:
-            return cached['rate']
+        if cached and (datetime.utcnow() - cached["ts"]).seconds < self.cache_ttl:
+            return cached["rate"]
 
         try:
             funding = self.exchange.fetch_funding_rate(symbol)
-            rate = funding.get('fundingRate', 0)
+            rate = funding.get("fundingRate", 0)
 
-            self.cache[cache_key] = {
-                'rate': rate,
-                'ts': datetime.utcnow()
-            }
+            self.cache[cache_key] = {"rate": rate, "ts": datetime.utcnow()}
 
             logger.debug(f"📊 {symbol} funding rate: {rate:+.4%}")
             return rate
@@ -85,11 +81,7 @@ class FundingRateFilter:
             logger.error(f"❌ Failed to fetch funding rate for {symbol}: {e}")
             return None
 
-    def get_funding_history(
-        self,
-        symbol: str,
-        limit: int = 8  # Last 8 periods = 64 hours
-    ) -> list:
+    def get_funding_history(self, symbol: str, limit: int = 8) -> list:  # Last 8 periods = 64 hours
         """
         Get historical funding rates.
 
@@ -126,31 +118,27 @@ class FundingRateFilter:
 
         if not history:
             return {
-                'current': current or 0,
-                'mean_8h': 0,
-                'mean_24h': 0,
-                'max_8h': 0,
-                'min_8h': 0,
-                'std_dev': 0,
+                "current": current or 0,
+                "mean_8h": 0,
+                "mean_24h": 0,
+                "max_8h": 0,
+                "min_8h": 0,
+                "std_dev": 0,
             }
 
-        rates = [h.get('fundingRate', 0) for h in history]
+        rates = [h.get("fundingRate", 0) for h in history]
         rates_8h = rates[-8:] if len(rates) >= 8 else rates
 
         return {
-            'current': current or 0,
-            'mean_8h': np.mean(rates_8h),
-            'mean_24h': np.mean(rates),
-            'max_8h': np.max(rates_8h),
-            'min_8h': np.min(rates_8h),
-            'std_dev': np.std(rates),
+            "current": current or 0,
+            "mean_8h": np.mean(rates_8h),
+            "mean_24h": np.mean(rates),
+            "max_8h": np.max(rates_8h),
+            "min_8h": np.min(rates_8h),
+            "std_dev": np.std(rates),
         }
 
-    def should_fade_trade(
-        self,
-        direction: str,
-        symbol: str
-    ) -> Tuple[bool, str, float]:
+    def should_fade_trade(self, direction: str, symbol: str) -> Tuple[bool, str, float]:
         """
         Determine if trade should be faded based on funding rates.
 
@@ -168,28 +156,41 @@ class FundingRateFilter:
         # LONG signals faded when funding is extremely positive
         if direction == "BUY":
             if rate > self.EXTREME_POSITIVE_FUNDING:
-                return True, (
-                    f"Fade LONG: extreme positive funding "
-                    f"({rate:+.4%} — longs overcrowded)"
-                ), rate
+                return (
+                    True,
+                    (f"Fade LONG: extreme positive funding " f"({rate:+.4%} — longs overcrowded)"),
+                    rate,
+                )
             elif rate > self.MODERATE_POSITIVE_FUNDING:
-                return False, (
-                    f"Moderate positive funding ({rate:+.4%}) — "
-                    f"proceed with caution, reduce size"
-                ), rate
+                return (
+                    False,
+                    (
+                        f"Moderate positive funding ({rate:+.4%}) — "
+                        f"proceed with caution, reduce size"
+                    ),
+                    rate,
+                )
 
         # SHORT signals faded when funding is extremely negative
         elif direction == "SELL":
             if rate < self.EXTREME_NEGATIVE_FUNDING:
-                return True, (
-                    f"Fade SHORT: extreme negative funding "
-                    f"({rate:+.4%} — shorts overcrowded)"
-                ), rate
+                return (
+                    True,
+                    (
+                        f"Fade SHORT: extreme negative funding "
+                        f"({rate:+.4%} — shorts overcrowded)"
+                    ),
+                    rate,
+                )
             elif rate < self.MODERATE_NEGATIVE_FUNDING:
-                return False, (
-                    f"Moderate negative funding ({rate:+.4%}) — "
-                    f"proceed with caution, reduce size"
-                ), rate
+                return (
+                    False,
+                    (
+                        f"Moderate negative funding ({rate:+.4%}) — "
+                        f"proceed with caution, reduce size"
+                    ),
+                    rate,
+                )
 
         return False, f"Funding rate normal ({rate:+.4%})", rate
 
@@ -201,7 +202,7 @@ class FundingRateFilter:
             1.0 (normal) to 0.5 (extreme funding, reduce size)
         """
         stats = self.get_funding_statistics(symbol)
-        rate = stats['current']
+        rate = stats["current"]
 
         if abs(rate) > self.EXTREME_POSITIVE_FUNDING:
             return 0.5
@@ -225,36 +226,36 @@ class FundingRateFilter:
         rate = self.get_funding_rate(symbol)
         if rate is None:
             return {
-                'sentiment': 'UNKNOWN',
-                'funding_rate': 0,
-                'annualized': 0,
-                'action': 'NEUTRAL',
+                "sentiment": "UNKNOWN",
+                "funding_rate": 0,
+                "annualized": 0,
+                "action": "NEUTRAL",
             }
 
         # Annualize (3 periods per day × 365 days)
         annualized = rate * 3 * 365
 
         if rate > self.EXTREME_POSITIVE_FUNDING:
-            sentiment = 'EXTREME_LONG'
-            action = 'FADE_LONGS'
+            sentiment = "EXTREME_LONG"
+            action = "FADE_LONGS"
         elif rate > self.MODERATE_POSITIVE_FUNDING:
-            sentiment = 'LONG'
-            action = 'NEUTRAL'
+            sentiment = "LONG"
+            action = "NEUTRAL"
         elif rate < self.EXTREME_NEGATIVE_FUNDING:
-            sentiment = 'EXTREME_SHORT'
-            action = 'FADE_SHORTS'
+            sentiment = "EXTREME_SHORT"
+            action = "FADE_SHORTS"
         elif rate < self.MODERATE_NEGATIVE_FUNDING:
-            sentiment = 'SHORT'
-            action = 'NEUTRAL'
+            sentiment = "SHORT"
+            action = "NEUTRAL"
         else:
-            sentiment = 'NEUTRAL'
-            action = 'NEUTRAL'
+            sentiment = "NEUTRAL"
+            action = "NEUTRAL"
 
         return {
-            'sentiment': sentiment,
-            'funding_rate': rate,
-            'annualized': annualized,
-            'action': action,
+            "sentiment": sentiment,
+            "funding_rate": rate,
+            "annualized": annualized,
+            "action": action,
         }
 
     def get_market_structure(self, symbols: list) -> Dict:
@@ -285,26 +286,26 @@ class FundingRateFilter:
 
         if not rates:
             return {
-                'avg_funding': 0,
-                'extreme_long_count': 0,
-                'extreme_short_count': 0,
-                'overall_bias': 'UNKNOWN',
+                "avg_funding": 0,
+                "extreme_long_count": 0,
+                "extreme_short_count": 0,
+                "overall_bias": "UNKNOWN",
             }
 
         avg_funding = np.mean(rates)
 
         if avg_funding > self.MODERATE_POSITIVE_FUNDING:
-            bias = 'LONG'
+            bias = "LONG"
         elif avg_funding < self.MODERATE_NEGATIVE_FUNDING:
-            bias = 'SHORT'
+            bias = "SHORT"
         else:
-            bias = 'NEUTRAL'
+            bias = "NEUTRAL"
 
         return {
-            'avg_funding': avg_funding,
-            'extreme_long_count': extreme_long,
-            'extreme_short_count': extreme_short,
-            'overall_bias': bias,
+            "avg_funding": avg_funding,
+            "extreme_long_count": extreme_long,
+            "extreme_short_count": extreme_short,
+            "overall_bias": bias,
         }
 
 

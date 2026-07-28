@@ -40,26 +40,30 @@ logger = logging.getLogger("SimpleNotionIntegration")
 
 # ── Database IDs (CoinScopeAI Notion workspace — rebuilt 2026-04-04) ──────────
 TRADE_JOURNAL_DB_ID = "1430e3fb-d21b-49e7-b260-9dfa4adcb5f0"
-SIGNAL_LOG_DB_ID    = "ed9457ff-78f7-4008-bc28-ef3046506039"
+SIGNAL_LOG_DB_ID = "ed9457ff-78f7-4008-bc28-ef3046506039"
 
-NOTION_API_VERSION  = "2022-06-28"
-NOTION_BASE_URL     = "https://api.notion.com/v1"
+NOTION_API_VERSION = "2022-06-28"
+NOTION_BASE_URL = "https://api.notion.com/v1"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _notion_title(value: str) -> dict:
     return {"title": [{"text": {"content": str(value)}}]}
+
 
 def _notion_number(value) -> dict:
     if value is None:
         return {"number": None}
     return {"number": round(float(value), 6)}
 
+
 def _notion_select(value: str) -> dict:
     if not value:
         return {"select": None}
     return {"select": {"name": str(value)}}
+
 
 def _notion_date(value: str) -> dict:
     """Accept ISO datetime or date string."""
@@ -72,23 +76,26 @@ def _notion_date(value: str) -> dict:
     except ValueError:
         return {"date": {"start": value}}
 
+
 def _notion_rich_text(value: str) -> dict:
     if not value:
         return {"rich_text": []}
     return {"rich_text": [{"text": {"content": str(value)[:2000]}}]}
 
+
 def _map_regime(regime: str) -> str:
     """Map engine regime strings to Notion select options."""
     mapping = {
-        "bull":    "Bull",
+        "bull": "Bull",
         "bullish": "Bull",
-        "bear":    "Bear",
+        "bear": "Bear",
         "bearish": "Bear",
-        "chop":    "Chop",
-        "choppy":  "Chop",
+        "chop": "Chop",
+        "choppy": "Chop",
         "ranging": "Chop",
     }
     return mapping.get(str(regime).lower(), "Chop")
+
 
 def _map_direction(side: str) -> str:
     """Map engine side strings to LONG/SHORT."""
@@ -99,6 +106,7 @@ def _map_direction(side: str) -> str:
         return "SHORT"
     return "LONG"
 
+
 def _map_timeframe(tf: str) -> str:
     """Map timeframe strings to Notion select options."""
     valid = {"1m", "5m", "15m", "1h", "4h", "1d"}
@@ -106,26 +114,28 @@ def _map_timeframe(tf: str) -> str:
         return tf
     return "4h"
 
+
 def _map_exit_reason(status: str) -> Optional[str]:
     """Map trade status to exit reason."""
     mapping = {
-        "tp_hit":       "TP Hit",
-        "sl_hit":       "SL Hit",
-        "manual":       "Manual Close",
-        "time_stop":    "Time Stop",
-        "regime":       "Regime Change",
-        "closed":       "Manual Close",
+        "tp_hit": "TP Hit",
+        "sl_hit": "SL Hit",
+        "manual": "Manual Close",
+        "time_stop": "Time Stop",
+        "regime": "Regime Change",
+        "closed": "Manual Close",
     }
     return mapping.get(str(status).lower())
+
 
 def _calc_rr(entry: float, sl: float, tp: float, direction: str) -> Optional[float]:
     """Calculate R:R ratio."""
     try:
         if direction == "LONG":
-            risk   = entry - sl
+            risk = entry - sl
             reward = tp - entry
         else:
-            risk   = sl - entry
+            risk = sl - entry
             reward = entry - tp
         if risk <= 0:
             return None
@@ -135,6 +145,7 @@ def _calc_rr(entry: float, sl: float, tp: float, direction: str) -> Optional[flo
 
 
 # ── Core Class ────────────────────────────────────────────────────────────────
+
 
 class SimpleNotionIntegration:
     """
@@ -152,8 +163,8 @@ class SimpleNotionIntegration:
                 "Notion sync will be disabled."
             )
         self.headers = {
-            "Authorization":  f"Bearer {self.token}",
-            "Content-Type":   "application/json",
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
             "Notion-Version": NOTION_API_VERSION,
         }
 
@@ -165,14 +176,11 @@ class SimpleNotionIntegration:
             return None
         url = f"{NOTION_BASE_URL}/{endpoint}"
         try:
-            resp = requests.post(url, headers=self.headers,
-                                 data=json.dumps(payload), timeout=15)
+            resp = requests.post(url, headers=self.headers, data=json.dumps(payload), timeout=15)
             if resp.status_code in (200, 201):
                 return resp.json()
             else:
-                logger.error(
-                    f"Notion API error {resp.status_code}: {resp.text[:300]}"
-                )
+                logger.error(f"Notion API error {resp.status_code}: {resp.text[:300]}")
                 return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Notion request failed: {e}")
@@ -184,14 +192,11 @@ class SimpleNotionIntegration:
             return None
         url = f"{NOTION_BASE_URL}/{endpoint}"
         try:
-            resp = requests.patch(url, headers=self.headers,
-                                  data=json.dumps(payload), timeout=15)
+            resp = requests.patch(url, headers=self.headers, data=json.dumps(payload), timeout=15)
             if resp.status_code == 200:
                 return resp.json()
             else:
-                logger.error(
-                    f"Notion PATCH error {resp.status_code}: {resp.text[:300]}"
-                )
+                logger.error(f"Notion PATCH error {resp.status_code}: {resp.text[:300]}")
                 return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Notion PATCH failed: {e}")
@@ -203,8 +208,9 @@ class SimpleNotionIntegration:
             return []
         url = f"{NOTION_BASE_URL}/databases/{db_id}/query"
         try:
-            resp = requests.post(url, headers=self.headers,
-                                 data=json.dumps(filter_payload), timeout=15)
+            resp = requests.post(
+                url, headers=self.headers, data=json.dumps(filter_payload), timeout=15
+            )
             if resp.status_code == 200:
                 return resp.json().get("results", [])
         except requests.exceptions.RequestException as e:
@@ -245,30 +251,30 @@ class SimpleNotionIntegration:
         else:
             d = dict(entry)
 
-        symbol    = d.get("symbol", "???")
+        symbol = d.get("symbol", "???")
         direction = _map_direction(d.get("side", "LONG"))
-        regime    = _map_regime(d.get("regime", "chop"))
+        regime = _map_regime(d.get("regime", "chop"))
         opened_at = d.get("opened_at", datetime.now(timezone.utc).isoformat())
         d.get("closed_at", "")
 
-        entry_price  = d.get("entry_price", 0.0)
-        exit_price   = d.get("exit_price",  0.0)
-        quantity     = d.get("quantity",    0.0)
-        kelly_usd    = d.get("kelly_usd",   0.0)
-        pnl_pct      = d.get("pnl_pct",     0.0)
-        pnl_usd      = d.get("pnl_usd",     0.0)
+        entry_price = d.get("entry_price", 0.0)
+        exit_price = d.get("exit_price", 0.0)
+        quantity = d.get("quantity", 0.0)
+        kelly_usd = d.get("kelly_usd", 0.0)
+        pnl_pct = d.get("pnl_pct", 0.0)
+        pnl_usd = d.get("pnl_usd", 0.0)
         signal_score = d.get("signal_score", 0.0)
-        status       = d.get("status",      "")
+        status = d.get("status", "")
 
         # Infer SL/TP and leverage from kelly_usd if not present
-        stop_loss  = d.get("stop_loss",  None)
+        stop_loss = d.get("stop_loss", None)
         take_profit = d.get("take_profit", None)
-        leverage   = d.get("leverage",   None)
-        timeframe  = _map_timeframe(d.get("timeframe", "4h"))
-        funding    = d.get("funding_rate", None)
-        notes      = d.get("trade_notes", "")
-        mistakes   = d.get("mistakes",    "")
-        source     = d.get("signal_source", "Scanner")
+        leverage = d.get("leverage", None)
+        timeframe = _map_timeframe(d.get("timeframe", "4h"))
+        funding = d.get("funding_rate", None)
+        notes = d.get("trade_notes", "")
+        mistakes = d.get("mistakes", "")
+        source = d.get("signal_source", "Scanner")
 
         # R:R
         rr = None
@@ -284,28 +290,28 @@ class SimpleNotionIntegration:
         combined_notes = f"{auto_note}\n{notes}".strip()
 
         properties = {
-            "Crypto Pair":   _notion_title(symbol),
+            "Crypto Pair": _notion_title(symbol),
             "Date of Trade": _notion_date(opened_at),
-            "Direction":     _notion_select(direction),
-            "Entry Prices":  _notion_number(entry_price),
-            "Exit Prices":   _notion_number(exit_price if exit_price else None),
-            "Quantity":      _notion_number(quantity),
-            "Regime":        _notion_select(regime),
-            "Signal Score":  _notion_number(signal_score),
-            "Timeframe":     _notion_select(timeframe),
-            "Trade Notes":   _notion_rich_text(combined_notes),
+            "Direction": _notion_select(direction),
+            "Entry Prices": _notion_number(entry_price),
+            "Exit Prices": _notion_number(exit_price if exit_price else None),
+            "Quantity": _notion_number(quantity),
+            "Regime": _notion_select(regime),
+            "Signal Score": _notion_number(signal_score),
+            "Timeframe": _notion_select(timeframe),
+            "Trade Notes": _notion_rich_text(combined_notes),
             "Signal Source": _notion_select(source),
         }
 
         # Optional fields
         if stop_loss:
-            properties["Stop Loss"]    = _notion_number(stop_loss)
+            properties["Stop Loss"] = _notion_number(stop_loss)
         if take_profit:
-            properties["Take Profit"]  = _notion_number(take_profit)
+            properties["Take Profit"] = _notion_number(take_profit)
         if leverage:
-            properties["Leverage"]     = _notion_number(leverage)
+            properties["Leverage"] = _notion_number(leverage)
         if rr:
-            properties["R:R Ratio"]    = _notion_number(rr)
+            properties["R:R Ratio"] = _notion_number(rr)
         if funding is not None:
             properties["Funding Rate %"] = _notion_number(funding)
         if mistakes:
@@ -319,7 +325,7 @@ class SimpleNotionIntegration:
         properties["Strategy Used"] = _notion_select("Day trading")
 
         payload = {
-            "parent":     {"database_id": TRADE_JOURNAL_DB_ID},
+            "parent": {"database_id": TRADE_JOURNAL_DB_ID},
             "properties": properties,
         }
 
@@ -390,39 +396,39 @@ class SimpleNotionIntegration:
         acted_on: "Yes — Entered" | "No — Skipped" | "Watching"
         Returns: created page ID or None
         """
-        symbol     = signal.get("symbol", signal.get("pair", "???"))
-        sig_dir    = str(signal.get("signal", "NEUTRAL")).upper()
-        total      = signal.get("score", signal.get("total_score", 0.0))
-        timeframe  = _map_timeframe(signal.get("timeframe", "4h"))
-        rsi        = signal.get("rsi", None)
-        regime     = _map_regime(signal.get("regime", "chop"))
+        symbol = signal.get("symbol", signal.get("pair", "???"))
+        sig_dir = str(signal.get("signal", "NEUTRAL")).upper()
+        total = signal.get("score", signal.get("total_score", 0.0))
+        timeframe = _map_timeframe(signal.get("timeframe", "4h"))
+        rsi = signal.get("rsi", None)
+        regime = _map_regime(signal.get("regime", "chop"))
         confidence = signal.get("confidence", None)
-        funding    = signal.get("funding_rate", None)
-        atr_pct    = signal.get("atr_pct", None)
-        notes      = signal.get("notes", "")
+        funding = signal.get("funding_rate", None)
+        atr_pct = signal.get("atr_pct", None)
+        notes = signal.get("notes", "")
         skip_reason = signal.get("skip_reason", None)
 
         # Sub-scores (from scoring_fixed.py breakdown)
         sub = signal.get("sub_scores", {})
-        momentum   = sub.get("momentum",   signal.get("momentum_score",   None))
-        trend      = sub.get("trend",      signal.get("trend_score",      None))
+        momentum = sub.get("momentum", signal.get("momentum_score", None))
+        trend = sub.get("trend", signal.get("trend_score", None))
         volatility = sub.get("volatility", signal.get("volatility_score", None))
-        volume     = sub.get("volume",     signal.get("volume_score",     None))
-        entry_sc   = sub.get("entry",      signal.get("entry_score",      None))
-        liquidity  = sub.get("liquidity",  signal.get("liquidity_score",  None))
+        volume = sub.get("volume", signal.get("volume_score", None))
+        entry_sc = sub.get("entry", signal.get("entry_score", None))
+        liquidity = sub.get("liquidity", signal.get("liquidity_score", None))
 
         scanned_at = signal.get("timestamp", datetime.now(timezone.utc).isoformat())
         if isinstance(scanned_at, (int, float)):
             scanned_at = datetime.fromtimestamp(scanned_at, tz=timezone.utc).isoformat()
 
         properties = {
-            "Pair":        _notion_title(symbol),
-            "Signal":      _notion_select(sig_dir),
+            "Pair": _notion_title(symbol),
+            "Signal": _notion_select(sig_dir),
             "Total Score": _notion_number(total),
-            "Regime":      _notion_select(regime),
-            "Timeframe":   _notion_select(timeframe),
-            "Acted On":    _notion_select(acted_on),
-            "Scanned At":  _notion_date(str(scanned_at)),
+            "Regime": _notion_select(regime),
+            "Timeframe": _notion_select(timeframe),
+            "Acted On": _notion_select(acted_on),
+            "Scanned At": _notion_date(str(scanned_at)),
         }
 
         if rsi is not None:
@@ -451,7 +457,7 @@ class SimpleNotionIntegration:
             properties["Notes"] = _notion_rich_text(notes)
 
         payload = {
-            "parent":     {"database_id": SIGNAL_LOG_DB_ID},
+            "parent": {"database_id": SIGNAL_LOG_DB_ID},
             "properties": properties,
         }
 
@@ -561,8 +567,8 @@ class SimpleNotionIntegration:
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s | %(levelname)s | %(message)s")
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
     notion = SimpleNotionIntegration()
 
@@ -573,44 +579,48 @@ if __name__ == "__main__":
 
     # ── Test: log a sample trade ──────────────────────────────────────────────
     sample_trade = {
-        "symbol":       "BTC/USDT",
-        "side":         "LONG",
-        "regime":       "bull",
-        "confidence":   0.87,
-        "entry_price":  68000.0,
-        "exit_price":   69500.0,
-        "quantity":     0.05,
-        "kelly_usd":    340.0,
-        "pnl_pct":      0.022,
-        "pnl_usd":      75.00,
+        "symbol": "BTC/USDT",
+        "side": "LONG",
+        "regime": "bull",
+        "confidence": 0.87,
+        "entry_price": 68000.0,
+        "exit_price": 69500.0,
+        "quantity": 0.05,
+        "kelly_usd": 340.0,
+        "pnl_pct": 0.022,
+        "pnl_usd": 75.00,
         "signal_score": 8.2,
-        "status":       "tp_hit",
-        "timeframe":    "4h",
-        "stop_loss":    66800.0,
-        "take_profit":  69500.0,
-        "leverage":     5,
-        "opened_at":    datetime.now(timezone.utc).isoformat(),
+        "status": "tp_hit",
+        "timeframe": "4h",
+        "stop_loss": 66800.0,
+        "take_profit": 69500.0,
+        "leverage": 5,
+        "opened_at": datetime.now(timezone.utc).isoformat(),
         "signal_source": "Scanner",
-        "trade_notes":  "Clean breakout above EMA21 with vol confirmation.",
+        "trade_notes": "Clean breakout above EMA21 with vol confirmation.",
     }
     trade_page = notion.log_trade(sample_trade)
     print(f"\n✅ Trade page created: {trade_page}")
 
     # ── Test: log a sample signal ─────────────────────────────────────────────
     sample_signal = {
-        "symbol":     "ETH/USDT",
-        "signal":     "SHORT",
-        "score":      7.1,
-        "timeframe":  "4h",
-        "rsi":        72.4,
-        "regime":     "bear",
+        "symbol": "ETH/USDT",
+        "signal": "SHORT",
+        "score": 7.1,
+        "timeframe": "4h",
+        "rsi": 72.4,
+        "regime": "bear",
         "confidence": 0.79,
         "sub_scores": {
-            "momentum": 2, "trend": 3, "volatility": 2,
-            "volume": 3, "entry": 1, "liquidity": 3
+            "momentum": 2,
+            "trend": 3,
+            "volatility": 2,
+            "volume": 3,
+            "entry": 1,
+            "liquidity": 3,
         },
         "funding_rate": 0.0005,
-        "atr_pct":    1.9,
+        "atr_pct": 1.9,
     }
     sig_page = notion.log_signal(sample_signal, acted_on="Watching")
     print(f"✅ Signal page created: {sig_page}")

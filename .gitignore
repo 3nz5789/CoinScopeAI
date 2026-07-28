@@ -107,6 +107,10 @@ coinscopeai-dashboard/pnpm-lock.yaml.bak
 coinscope-mcp-server/node_modules/
 coinscope-mcp-server/dist/
 
+# ── Browser agent build artifacts ─────────────────────────────
+tools/browser/node_modules/
+tools/browser/screenshot.png
+
 # ── Engine runtime artifacts ──────────────────────────────────
 coinscope_trading_engine/.env
 coinscope_trading_engine/.env.*

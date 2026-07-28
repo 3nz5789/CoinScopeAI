@@ -1,0 +1,17 @@
+{
+  "name": "coinscopeai-browser-agent",
+  "version": "1.0.0",
+  "description": "Headless browser automation CLI for Kimi Code CLI via Playwright",
+  "main": "browser_agent.js",
+  "scripts": {
+    "agent": "node browser_agent.js",
+    "test": "node browser_agent.js '{\"action\":\"extract_text\",\"url\":\"https://example.com\"}'"
+  },
+  "keywords": ["playwright", "browser", "automation", "mcp-alternative"],
+  "author": "CoinScopeAI",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.62.0"
+  }
+}

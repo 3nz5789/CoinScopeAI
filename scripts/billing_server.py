@@ -78,7 +78,7 @@ if __name__ == "__main__":
         logger.warning(f"[billing_server] {n_warnings} config warning(s) — check .env")
 
     uvicorn.run(
-        "billing.webhook_handler:app",
+        "billing.stripe_checkout:app",
         host=host,
         port=port,
         reload=False,

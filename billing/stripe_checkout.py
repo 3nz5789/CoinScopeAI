@@ -33,6 +33,7 @@ from pydantic import BaseModel, field_validator
 import stripe
 
 from billing.config import get_price_id, list_plans
+from billing.customer_portal import router as portal_router
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -76,6 +77,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount customer portal router (POST /billing/portal/session, GET /billing/portal/config)
+app.include_router(portal_router)
+
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
@@ -104,6 +108,33 @@ class CheckoutResponse(BaseModel):
     interval: str
     amount_usd: float
     publishable_key: str
+
+
+class DashboardCheckoutRequest(BaseModel):
+    """Request shape expected by the React dashboard Pricing.tsx."""
+
+    tier: Literal["free", "trader", "desk_preview", "desk_full"]
+    cycle: Literal["monthly", "annual"] = "monthly"
+    customer_email: str | None = None
+    success_url: str | None = None
+    cancel_url: str | None = None
+
+    @field_validator("tier")
+    @classmethod
+    def tier_lower(cls, v: str) -> str:
+        return v.lower()
+
+    @field_validator("cycle")
+    @classmethod
+    def cycle_lower(cls, v: str) -> str:
+        return v.lower()
+
+
+class DashboardCheckoutResponse(BaseModel):
+    """Response shape expected by the React dashboard Pricing.tsx."""
+
+    url: str
+    session_id: str
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -214,6 +245,76 @@ async def create_checkout_session(req: CheckoutRequest):
         amount_usd=amount,
         publishable_key=os.getenv("STRIPE_PUBLISHABLE_KEY", ""),
     )
+
+
+@app.post("/billing/checkout", response_model=DashboardCheckoutResponse)
+async def create_checkout_dashboard(req: DashboardCheckoutRequest):
+    """
+    Dashboard-compatible Stripe Checkout alias.
+
+    The React dashboard calls this endpoint (via the Vite proxy on /billing/*).
+    It mirrors /billing/checkout/session but accepts `cycle` and returns `url`
+    to match the existing client contract.
+    """
+    if req.tier == "free":
+        raise HTTPException(
+            status_code=400,
+            detail="Free tier does not require checkout. Subscribe to a paid plan to upgrade.",
+        )
+
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(
+            status_code=503, detail="Stripe not configured — set STRIPE_SECRET_KEY in .env"
+        )
+
+    try:
+        price_id = get_price_id(req.tier, req.cycle)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    success_url = req.success_url or BILLING_SUCCESS_URL
+    cancel_url = req.cancel_url or BILLING_CANCEL_URL
+
+    params: dict = {
+        "mode": "subscription",
+        "line_items": [{"price": price_id, "quantity": 1}],
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "metadata": {
+            "tier": req.tier,
+            "cycle": req.cycle,
+            "source": "coinscopeai_dashboard",
+        },
+        "subscription_data": {
+            "metadata": {"tier": req.tier, "cycle": req.cycle},
+        },
+        "allow_promotion_codes": True,
+        "billing_address_collection": "auto",
+    }
+
+    if req.customer_email:
+        params["customer_email"] = req.customer_email
+
+    try:
+        session = stripe.checkout.Session.create(**params)
+    except stripe.InvalidRequestError as exc:
+        log.error("Stripe InvalidRequestError: %s", exc)
+        raise HTTPException(status_code=400, detail=f"Stripe error: {exc.user_message}")
+    except stripe.AuthenticationError:
+        log.error("Stripe AuthenticationError — check STRIPE_SECRET_KEY")
+        raise HTTPException(status_code=503, detail="Stripe authentication failed")
+    except stripe.StripeError as exc:
+        log.error("Stripe error: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Stripe error: {str(exc)}")
+
+    log.info(
+        "Dashboard checkout created | tier=%s cycle=%s session=%s",
+        req.tier,
+        req.cycle,
+        session.id,
+    )
+
+    return DashboardCheckoutResponse(url=session.url, session_id=session.id)
 
 
 @app.post("/billing/webhook")

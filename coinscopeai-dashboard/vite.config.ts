@@ -184,5 +184,13 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      // Canonical billing service runs on port 8002.
+      "/billing": {
+        target: "http://127.0.0.1:8002",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });

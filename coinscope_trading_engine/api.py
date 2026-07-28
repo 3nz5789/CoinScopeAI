@@ -2633,6 +2633,151 @@ async def get_circuit_breaker():
     }
 
 
+@app.get("/risk-gate", tags=["Risk"])
+async def get_risk_gate():
+    """
+    Aggregate risk gate verdict.
+
+    Combines circuit breaker, exposure, position count, autotrade state and
+    per-symbol health into a single GO/NO-GO signal for the dashboard.
+    """
+    from datetime import datetime, timezone
+
+    checked_at = datetime.now(timezone.utc).isoformat()
+
+    breaker_status = _circuit.status()
+    breaker_closed = breaker_status["state"] == BreakerState.CLOSED.value
+
+    max_positions = settings.max_open_positions or 3
+    max_exposure = settings.max_total_exposure_pct or 80.0
+    daily_loss_limit = abs(settings.max_daily_loss_pct or 5.0)
+    current_daily_loss_pct = abs(_exposure.daily_loss_pct)
+
+    positions_blocked = _exposure.position_count >= max_positions
+    exposure_blocked = _exposure.total_exposure_pct >= max_exposure
+    daily_loss_blocked = current_daily_loss_pct >= daily_loss_limit
+
+    # Count symbols currently paused by the per-symbol health guard
+    paused_symbols = [
+        s for s, h in _decisions.per_symbol_health().items()
+        if h.get("paused_until", 0) > time.time()
+    ]
+
+    # Base trading_allowed on the same logic the autotrader uses
+    trading_allowed = (
+        breaker_closed
+        and _autotrade_state["enabled"]
+        and not positions_blocked
+        and not exposure_blocked
+        and not daily_loss_blocked
+    )
+
+    gate_status = "OPEN" if trading_allowed else "CLOSED"
+
+    checks = {
+        "circuit_breaker": {
+            "status": "PASS" if breaker_closed else "FAIL",
+            "state": breaker_status["state"],
+            "trip_count": breaker_status["trip_count"],
+            "last_trip": breaker_status["last_trip"],
+            "message": (
+                "Circuit breaker closed — trading permitted."
+                if breaker_closed
+                else f"Circuit breaker open: {breaker_status['last_trip'] or 'risk limit exceeded'}"
+            ),
+        },
+        "autotrade": {
+            "status": "PASS" if _autotrade_state["enabled"] else "FAIL",
+            "enabled": _autotrade_state["enabled"],
+            "started_at": _autotrade_state["started_at"],
+            "message": (
+                "Autotrade is enabled."
+                if _autotrade_state["enabled"]
+                else "Autotrade is disabled — toggle via /autotrade/enable to trade."
+            ),
+        },
+        "max_open_positions": {
+            "status": "PASS" if not positions_blocked else "FAIL",
+            "current": _exposure.position_count,
+            "limit": max_positions,
+            "message": (
+                f"Positions {_exposure.position_count}/{max_positions} — within limit."
+                if not positions_blocked
+                else f"Max open positions reached ({_exposure.position_count}/{max_positions})."
+            ),
+        },
+        "portfolio_heat": {
+            "status": "PASS" if not exposure_blocked else "FAIL",
+            "current_pct": round(_exposure.total_exposure_pct, 2),
+            "limit_pct": max_exposure,
+            "message": (
+                f"Exposure {round(_exposure.total_exposure_pct, 2)}% / {max_exposure}% — within limit."
+                if not exposure_blocked
+                else f"Exposure cap reached ({round(_exposure.total_exposure_pct, 2)}% / {max_exposure}%)."
+            ),
+        },
+        "daily_drawdown": {
+            "status": "PASS" if not daily_loss_blocked else "FAIL",
+            "current_pct": round(-_exposure.daily_loss_pct, 4),
+            "limit_pct": -daily_loss_limit,
+            "message": (
+                f"Daily drawdown {round(-_exposure.daily_loss_pct, 4)}% / {daily_loss_limit}% — within limit."
+                if not daily_loss_blocked
+                else f"Daily loss limit breached ({round(-_exposure.daily_loss_pct, 4)}% / {daily_loss_limit}%)."
+            ),
+        },
+        "symbol_pauses": {
+            "status": "PASS" if not paused_symbols else "WARN",
+            "count": len(paused_symbols),
+            "symbols": paused_symbols[:10],
+            "message": (
+                f"{len(paused_symbols)} symbol(s) currently paused."
+                if paused_symbols
+                else "No symbols are currently paused."
+            ),
+        },
+    }
+
+    failed = [k for k, v in checks.items() if v["status"] == "FAIL"]
+    warnings = [k for k, v in checks.items() if v["status"] == "WARN"]
+
+    if failed:
+        notes = f"Gate CLOSED due to: {', '.join(failed)}."
+    elif warnings:
+        notes = f"Gate OPEN with warnings: {', '.join(warnings)}."
+    else:
+        notes = "All risk checks passed. Normal trading operations permitted."
+
+    return {
+        "checked_at": checked_at,
+        "gate_status": gate_status,
+        "trading_allowed": trading_allowed,
+        "gate_version": "2.0.0",
+        "checks": checks,
+        "active_restrictions": failed,
+        "risk_score": 0 if trading_allowed else 100,
+        "risk_level": "LOW" if trading_allowed else "HIGH",
+        "recommended_position_size_multiplier": 1.0 if trading_allowed else 0.0,
+        "thresholds": {
+            "max_daily_loss_pct": daily_loss_limit,
+            "max_drawdown_pct": breaker_status["max_drawdown_pct"],
+            "max_total_exposure_pct": max_exposure,
+            "max_open_positions": max_positions,
+            "max_consecutive_losses": breaker_status["max_consec_losses"],
+        },
+        "current": {
+            "daily_loss_pct": round(_exposure.daily_loss_pct, 4),
+            "total_exposure_pct": round(_exposure.total_exposure_pct, 2),
+            "position_count": _exposure.position_count,
+            "breaker_state": breaker_status["state"],
+            "autotrade_enabled": _autotrade_state["enabled"],
+            "paused_symbols_count": len(paused_symbols),
+            "last_reject_reason": _autotrade_state.get("last_reject_reason"),
+        },
+        "notes": notes,
+    }
+
+
 @app.post("/circuit-breaker/reset", tags=["Risk"])
 async def reset_circuit_breaker():
     """Manually reset a tripped circuit breaker."""

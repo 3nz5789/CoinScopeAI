@@ -19,8 +19,8 @@ export default function Pricing() {
   const tiers = plans.data ?? [];
 
   async function handleCheckout(tier: string) {
-    if (tier.toLowerCase() === 'desk_full') {
-      toast.info('Contact sales@coinscopeai.com for Desk Full pricing');
+    if (tier.toLowerCase() === 'free') {
+      toast.info('You are already on the Free plan.');
       return;
     }
     try {
@@ -80,16 +80,23 @@ export default function Pricing() {
           tiers.map((tier) => {
             const highlighted = tier.tier?.toLowerCase() === 'trader';
             const badge = highlighted ? 'Most Popular' : undefined;
-            // Engine only exposes a monthly price. Approximate annual at ~20% discount.
-            const monthly = tier.price_usd ?? 0;
-            const annual  = Math.round(monthly * 12 * 0.80);
+            // Use canonical monthly/annual prices from the billing service.
+            const monthly = tier.monthly_usd ?? tier.price_usd ?? 0;
+            const annual  = tier.annual_usd ?? Math.round(monthly * 12 * 0.80);
             const price   = billingCycle === 'annual' ? annual : monthly;
             const period  = billingCycle === 'annual' ? '/yr' : '/mo';
-            const cta = tier.tier?.toLowerCase() === 'desk_full' ? 'Contact Sales' : 'Start Free Trial';
+
+            const tierKey = tier.tier?.toLowerCase() ?? '';
+            let cta: string;
+            if (tierKey === 'free') {
+              cta = 'Current Plan';
+            } else {
+              cta = 'Subscribe';
+            }
 
             return (
               <div
-                key={tier.tier ?? tier.name}
+                key={tier.tier ?? tier.display_name ?? tier.name}
                 className={cn(
                   'rounded-lg border p-5 flex flex-col transition-all',
                   highlighted
@@ -104,7 +111,7 @@ export default function Pricing() {
                   </div>
                 )}
 
-                <h3 className="text-lg font-semibold text-foreground">{tier.name}</h3>
+                <h3 className="text-lg font-semibold text-foreground">{tier.display_name ?? tier.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1 mb-4">{tier.description ?? ''}</p>
 
                 {/* Price */}
@@ -113,15 +120,17 @@ export default function Pricing() {
                     ${price}
                   </span>
                   <span className="text-sm text-muted-foreground">{period}</span>
-                  {tier.tier?.toLowerCase() === 'desk_full' && (
-                    <span className="text-xs text-muted-foreground block mt-0.5">Starting price · contact sales</span>
+                  {billingCycle === 'annual' && tier.annual_savings_pct !== undefined && (
+                    <span className="text-xs text-emerald block mt-0.5">
+                      Save {tier.annual_savings_pct}% with annual billing
+                    </span>
                   )}
                 </div>
 
                 {/* CTA */}
                 <button
-                  onClick={() => handleCheckout(tier.tier ?? tier.name)}
-                  disabled={checkout.isPending}
+                  onClick={() => handleCheckout(tier.tier ?? tier.name ?? '')}
+                  disabled={checkout.isPending || tierKey === 'free'}
                   className={cn(
                     'w-full py-2.5 rounded-md text-sm font-medium transition-colors mb-5 disabled:opacity-60',
                     highlighted

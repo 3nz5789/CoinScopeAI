@@ -295,11 +295,19 @@ export interface AccountPositionsResp {
 
 export interface BillingPlan {
   tier: string;
-  name: string;
+  display_name: string;
+  name?: string;              // alias for display_name (backward compatibility)
   description?: string;
-  price_usd: number;
+  monthly_usd: number;        // canonical Track B monthly price (dollars)
+  annual_usd: number;         // canonical Track B annual price (dollars)
+  price_usd?: number;         // deprecated — left for backward compatibility
+  monthly_usd_cents?: number;
+  annual_usd_cents?: number;
+  annual_savings_pct?: number;
   price_id?: string;
+  price_ids_configured?: { monthly: boolean; annual: boolean };
   features?: string[];
+  most_popular?: boolean;
 }
 
 export interface CheckoutReq {

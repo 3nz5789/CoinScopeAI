@@ -1,0 +1,36 @@
+# CoinScopeAI — Kimi Code CLI project configuration (reference)
+#
+# IMPORTANT: Kimi Code CLI reads its runtime configuration from the global
+# ~/.kimi-code/config.toml, not from this project-local file. This file exists
+# as project documentation and should be kept in sync with the global config
+# when sharing workspace conventions with other developers.
+#
+# To apply these settings, copy the relevant sections into:
+#   ~/.kimi-code/config.toml
+
+[hooks]
+# Run before every assistant turn in this workspace.
+# Useful for lightweight checks; heavy work (tests, format) should live in
+# git pre-commit hooks instead.
+pre_turn = []
+post_turn = []
+
+[project]
+name = "CoinScopeAI"
+root = "/Users/mac/Documents/Claude/Projects/CoinScopeAI"
+primary_language = "python"
+fastapi_entrypoint = "coinscope_trading_engine/api.py"
+engine_port = 8081
+
+[mcp]
+# NOTE: Kimi Code CLI does not support registering arbitrary MCP servers.
+# BrowserMCP / Chrome DevTools MCP cannot be loaded here. Use the project-local
+# Playwright agent instead:
+#   cd tools/browser && node browser_agent.js '{"action":"extract_text","url":"..."}'
+
+[project.commands]
+start_engine = "uvicorn coinscope_trading_engine.api:app --host 127.0.0.1 --port 8081 --reload-dir coinscope_trading_engine"
+run_tests = "python3 coinscope_trading_engine/run_tests.py"
+lint = "ruff check ."
+format = "ruff format ."
+browser_extract = "cd tools/browser && node browser_agent.js"

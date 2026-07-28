@@ -34,9 +34,9 @@ from model import Kronos, KronosPredictor, KronosTokenizer  # noqa: E402
 
 # ── Defaults ──────────────────────────────────────────────────────────────
 DEFAULT_SYMBOL = "BTCUSDT"
-DEFAULT_INTERVAL = "5m"          # K-line interval
-DEFAULT_LOOKBACK = 120           # historical candles fed to Kronos (<=512 for small/base)
-DEFAULT_PRED_LEN = 12            # candles to forecast
+DEFAULT_INTERVAL = "5m"  # K-line interval
+DEFAULT_LOOKBACK = 120  # historical candles fed to Kronos (<=512 for small/base)
+DEFAULT_PRED_LEN = 12  # candles to forecast
 DEFAULT_MODEL = "NeoQuasar/Kronos-small"
 DEFAULT_TOKENIZER = "NeoQuasar/Kronos-Tokenizer-base"
 DEFAULT_HF_CACHE = str(REPO_ROOT / ".cache" / "kronos")
@@ -193,7 +193,9 @@ def build_summary(pred_df: pd.DataFrame, config: dict) -> dict:
     """Build a JSON-serialisable summary from a forecast DataFrame."""
     last_close = float(pred_df["close"].iloc[-1])
     first_close = float(pred_df["close"].iloc[0])
-    direction = "LONG" if last_close > first_close else "SHORT" if last_close < first_close else "NEUTRAL"
+    direction = (
+        "LONG" if last_close > first_close else "SHORT" if last_close < first_close else "NEUTRAL"
+    )
 
     return {
         "model": config.get("model", DEFAULT_MODEL),
@@ -232,7 +234,9 @@ def main() -> int:
     parser.add_argument("--symbol", default=DEFAULT_SYMBOL, help="Binance futures symbol")
     parser.add_argument("--interval", default=DEFAULT_INTERVAL, help="K-line interval")
     parser.add_argument("--lookback", type=int, default=DEFAULT_LOOKBACK, help="Historical candles")
-    parser.add_argument("--pred-len", type=int, default=DEFAULT_PRED_LEN, help="Candles to forecast")
+    parser.add_argument(
+        "--pred-len", type=int, default=DEFAULT_PRED_LEN, help="Candles to forecast"
+    )
     parser.add_argument("--model", default=DEFAULT_MODEL, help="HuggingFace model name")
     parser.add_argument("--tokenizer", default=DEFAULT_TOKENIZER, help="HuggingFace tokenizer name")
     parser.add_argument("--max-context", type=int, default=512, help="Model context length")

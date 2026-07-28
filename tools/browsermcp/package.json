@@ -1,0 +1,12 @@
+{
+  "name": "coinscopeai-browsermcp-runner",
+  "version": "1.0.0",
+  "description": "Local BrowserMCP server runner for MCP-compatible clients",
+  "scripts": {
+    "start": "npx -y @browsermcp/mcp@latest",
+    "inspect": "npx -y @modelcontextprotocol/inspector node node_modules/@browsermcp/mcp/dist/index.js"
+  },
+  "keywords": ["browsermcp", "mcp", "browser-automation"],
+  "author": "CoinScopeAI",
+  "license": "MIT"
+}

@@ -110,6 +110,7 @@ coinscope-mcp-server/dist/
 # ── Browser agent build artifacts ─────────────────────────────
 tools/browser/node_modules/
 tools/browser/screenshot.png
+tools/browsermcp/node_modules/
 
 # ── Engine runtime artifacts ──────────────────────────────────
 coinscope_trading_engine/.env

@@ -26,13 +26,13 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer, Candle
-from scanner.base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
-from utils.helpers import safe_divide
-from utils.logger import get_logger
+from ..config import settings
+from ..data.binance_rest import BinanceRESTClient
+from ..data.cache_manager import CacheManager
+from ..data.data_normalizer import DataNormalizer, Candle
+from .base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
+from ..utils.helpers import safe_divide
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -225,15 +225,15 @@ class PatternScanner(BaseScanner):
     # ── Data fetching ────────────────────────────────────────────────────
 
     async def _fetch_candles(self, symbol: str) -> list[Candle]:
-        from utils.helpers import timeframe_to_seconds
+        from ..utils.helpers import timeframe_to_seconds
         cache_key = f"candles:{symbol}:{self._timeframe}"
         cached = await self.cache.get(cache_key)
         if cached:
-            from scanner.volume_scanner import _dict_to_candle
+            from .volume_scanner import _dict_to_candle
             return [_dict_to_candle(c, symbol, self._timeframe) for c in cached]
         raw     = await self.rest.get_klines(symbol, self._timeframe, limit=self._candles_needed + 2)
         candles = self._normalizer.klines_to_candles(symbol, self._timeframe, raw)
         ttl     = max(5, timeframe_to_seconds(self._timeframe) // 2)
-        from scanner.volume_scanner import _candle_to_dict
+        from .volume_scanner import _candle_to_dict
         await self.cache.set(cache_key, [_candle_to_dict(c) for c in candles], ttl=ttl)
         return candles

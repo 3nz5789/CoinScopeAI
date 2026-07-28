@@ -14,11 +14,11 @@ from typing import Optional
 import numpy as np
 import pytest
 
-from data.data_normalizer import Candle
-from scanner.base_scanner import SignalDirection, HitStrength, ScannerHit, ScannerResult
-from signals.indicator_engine import IndicatorEngine, Indicators
-from signals.confluence_scorer import ConfluenceScorer, Signal
-from signals.entry_exit_calculator import EntryExitCalculator, TradeSetup
+from ..data.data_normalizer import Candle
+from ..scanner.base_scanner import SignalDirection, HitStrength, ScannerHit, ScannerResult
+from ..signals.indicator_engine import IndicatorEngine, Indicators
+from ..signals.confluence_scorer import ConfluenceScorer, Signal
+from ..signals.entry_exit_calculator import EntryExitCalculator, TradeSetup
 
 
 # ---------------------------------------------------------------------------

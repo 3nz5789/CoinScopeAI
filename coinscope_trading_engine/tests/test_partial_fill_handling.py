@@ -52,7 +52,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from execution.order_manager import (
+from ..execution.order_manager import (
     OrderManager,
     OrderRecord,
     OrderState,
@@ -60,7 +60,7 @@ from execution.order_manager import (
     RetryConfig,
     TERMINAL_STATES,
 )
-from data.binance_rest import BinanceRESTError
+from ..data.binance_rest import BinanceRESTError
 
 
 # ---------------------------------------------------------------------------

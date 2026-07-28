@@ -40,11 +40,11 @@ from typing import Optional
 
 import httpx
 
-from config import settings
-from scanner.base_scanner import SignalDirection
-from signals.confluence_scorer import Signal
-from signals.entry_exit_calculator import TradeSetup
-from utils.logger import get_logger
+from ..config import settings
+from ..scanner.base_scanner import SignalDirection
+from ..signals.confluence_scorer import Signal
+from ..signals.entry_exit_calculator import TradeSetup
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

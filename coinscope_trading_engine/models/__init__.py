@@ -5,10 +5,10 @@ Exports regime detection, sentiment analysis, price prediction,
 and anomaly detection components.
 """
 
-from models.regime_detector import RegimeDetector, RegimeResult, MarketRegime
-from models.sentiment_analyzer import SentimentAnalyzer, SentimentScore, SentimentLabel
-from models.price_predictor import PricePredictor, PredictionResult, PriceDirection
-from models.anomaly_detector import AnomalyDetector, AnomalyReport
+from .regime_detector import RegimeDetector, RegimeResult, MarketRegime
+from .sentiment_analyzer import SentimentAnalyzer, SentimentScore, SentimentLabel
+from .price_predictor import PricePredictor, PredictionResult, PriceDirection
+from .anomaly_detector import AnomalyDetector, AnomalyReport
 
 __all__ = [
     "RegimeDetector",

@@ -36,7 +36,7 @@ def test_scoring():
     """Test scoring engine"""
     import numpy as np
 
-    from core.scoring_fixed import FixedScorer
+    from .core.scoring_fixed import FixedScorer
 
     np.random.seed(42)
     n = 500
@@ -55,7 +55,7 @@ def test_scoring():
 
 def test_risk_gate():
     """Test risk gate"""
-    from core.risk_gate import RiskGate
+    from .core.risk_gate import RiskGate
 
     gate = RiskGate(initial_capital=10000)
     size = gate.calculate_position_size(
@@ -72,7 +72,7 @@ def test_regime():
     """Test HMM regime detector"""
     import numpy as np
 
-    from intelligence.hmm_regime_detector import EnsembleRegimeDetector
+    from .intelligence.hmm_regime_detector import EnsembleRegimeDetector
 
     np.random.seed(0)
     returns = np.random.randn(200) * 0.02
@@ -86,7 +86,7 @@ def test_regime():
 
 def test_kelly():
     """Test Kelly position sizer"""
-    from intelligence.kelly_position_sizer import KellyRiskController
+    from .intelligence.kelly_position_sizer import KellyRiskController
 
     kelly = KellyRiskController(fraction=0.25)
     for regime in ["bull", "chop", "bear"]:
@@ -97,7 +97,7 @@ def test_kelly():
 
 def test_journal():
     """Test trade journal"""
-    from storage.trade_journal import TradeJournal
+    from .storage.trade_journal import TradeJournal
 
     j = TradeJournal(path="logs/test_journal.json")
     entry = j.log_open(
@@ -113,7 +113,7 @@ def test_journal():
 
 def test_executor():
     """Test testnet executor"""
-    from live.binance_testnet_executor import TestnetExecutor
+    from .live.binance_testnet_executor import TestnetExecutor
 
     ex = TestnetExecutor()
     rec = ex.place_order("BTC/USDT", "BUY", kelly_usd=20, regime="bull", signal_score=2.5)
@@ -125,7 +125,7 @@ def test_executor():
 
 def test_scale_manager():
     """Test scale-up manager"""
-    from alerts.scale_up_manager import ScaleUpManager
+    from .alerts.scale_up_manager import ScaleUpManager
 
     sm = ScaleUpManager()
     print(f"  Current: {sm.status()['current']}")

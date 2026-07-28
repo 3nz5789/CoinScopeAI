@@ -13,7 +13,7 @@ Features
 
 Usage
 -----
-    from utils.logger import get_logger
+    from . import get_logger
 
     logger = get_logger(__name__)
     logger.info("Engine started")
@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from config import settings
+from ..config import settings
 
 # ---------------------------------------------------------------------------
 # ANSI colour codes for console output
@@ -235,7 +235,7 @@ def get_logger(name: str) -> logging.Logger:
 
     Usage (at the top of every module)::
 
-        from utils.logger import get_logger
+        from . import get_logger
         logger = get_logger(__name__)
 
     Parameters

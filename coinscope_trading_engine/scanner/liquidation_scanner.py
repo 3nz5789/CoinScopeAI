@@ -30,13 +30,13 @@ import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer
-from scanner.base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
-from utils.helpers import human_number, safe_divide, now_ms
-from utils.logger import get_logger
+from ..config import settings
+from ..data.binance_rest import BinanceRESTClient
+from ..data.cache_manager import CacheManager
+from ..data.data_normalizer import DataNormalizer
+from .base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
+from ..utils.helpers import human_number, safe_divide, now_ms
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -191,7 +191,7 @@ def _liq_to_dict(o) -> dict:
 
 def _dict_to_liq(d: dict):
     from datetime import datetime
-    from data.data_normalizer import LiquidationOrder
+    from ..data.data_normalizer import LiquidationOrder
     return LiquidationOrder(
         symbol="", side=d["side"], order_type="LIMIT",
         time_in_force="IOC", qty=d["qty"], price=d["price"],

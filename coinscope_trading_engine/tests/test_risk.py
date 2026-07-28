@@ -13,12 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from scanner.base_scanner import SignalDirection
-from signals.entry_exit_calculator import TradeSetup
-from risk.position_sizer import PositionSizer, PositionSize
-from risk.exposure_tracker import ExposureTracker
-from risk.correlation_analyzer import CorrelationAnalyzer
-from risk.circuit_breaker import CircuitBreaker, BreakerState
+from ..scanner.base_scanner import SignalDirection
+from ..signals.entry_exit_calculator import TradeSetup
+from ..risk.position_sizer import PositionSizer, PositionSize
+from ..risk.exposure_tracker import ExposureTracker
+from ..risk.correlation_analyzer import CorrelationAnalyzer
+from ..risk.circuit_breaker import CircuitBreaker, BreakerState
 
 
 # ---------------------------------------------------------------------------

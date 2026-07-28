@@ -44,7 +44,7 @@ def header(title: str) -> None:
 async def check_env() -> bool:
     header("1/7  Environment Variables")
     try:
-        from config import settings
+        from .config import settings
         key = settings.active_api_key
         secret = settings.active_api_secret
         if not key or not secret:
@@ -65,8 +65,8 @@ async def check_env() -> bool:
 async def check_rest_ping() -> bool:
     header("2/7  Binance Testnet REST Ping")
     try:
-        from config import settings
-        from data.binance_rest import BinanceRESTClient
+        from .config import settings
+        from .data.binance_rest import BinanceRESTClient
         rest = BinanceRESTClient(
             api_key    = settings.active_api_key,
             api_secret = settings.active_api_secret,
@@ -89,8 +89,8 @@ async def check_rest_ping() -> bool:
 async def check_account_balance() -> bool:
     header("3/7  Futures Account Balance")
     try:
-        from config import settings
-        from data.binance_rest import BinanceRESTClient
+        from .config import settings
+        from .data.binance_rest import BinanceRESTClient
         rest = BinanceRESTClient(
             api_key    = settings.active_api_key,
             api_secret = settings.active_api_secret,
@@ -116,9 +116,9 @@ async def check_account_balance() -> bool:
 async def check_klines() -> bool:
     header("4/7  Kline Data (BTCUSDT 1h × 10 bars)")
     try:
-        from config import settings
-        from data.binance_rest import BinanceRESTClient
-        from data.data_normalizer import DataNormalizer
+        from .config import settings
+        from .data.binance_rest import BinanceRESTClient
+        from .data.data_normalizer import DataNormalizer
         rest = BinanceRESTClient(
             api_key    = settings.active_api_key,
             api_secret = settings.active_api_secret,
@@ -140,8 +140,8 @@ async def check_klines() -> bool:
 async def check_websocket() -> bool:
     header("5/7  WebSocket Stream (3-second kline test)")
     try:
-        from config import settings
-        from data.binance_websocket import BinanceWebSocketManager
+        from .config import settings
+        from .data.binance_websocket import BinanceWebSocketManager
         ws = BinanceWebSocketManager(
             api_key    = settings.active_api_key,
             api_secret = settings.active_api_secret,
@@ -171,12 +171,12 @@ async def check_websocket() -> bool:
 async def check_signals() -> bool:
     header("6/7  Signal Generation (60 candles → scanner → score)")
     try:
-        from config import settings
-        from data.binance_rest import BinanceRESTClient
-        from data.data_normalizer import DataNormalizer
-        from scanner.volume_scanner import VolumeScanner
-        from scanner.pattern_scanner import PatternScanner
-        from signals.confluence_scorer import ConfluenceScorer
+        from .config import settings
+        from .data.binance_rest import BinanceRESTClient
+        from .data.data_normalizer import DataNormalizer
+        from .scanner.volume_scanner import VolumeScanner
+        from .scanner.pattern_scanner import PatternScanner
+        from .signals.confluence_scorer import ConfluenceScorer
 
         rest    = BinanceRESTClient(
             api_key    = settings.active_api_key,
@@ -211,14 +211,14 @@ async def check_signals() -> bool:
 async def check_telegram() -> bool:
     header("7/7  Telegram Bot (optional)")
     try:
-        from config import settings
+        from .config import settings
         token = settings.telegram_bot_token.get_secret_value() if settings.telegram_bot_token else ""
         if not token or token in ("", "your_telegram_bot_token_here"):
             print(WARN, "TELEGRAM_BOT_TOKEN not set — skipping")
             print("      → Get a token from @BotFather then set it in .env")
             return True
 
-        from alerts.telegram_notifier import TelegramNotifier
+        from .alerts.telegram_notifier import TelegramNotifier
         notifier = TelegramNotifier()
         ok = await notifier.test_connection()
         if ok:

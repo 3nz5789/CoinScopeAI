@@ -14,7 +14,7 @@ Categories
 
 Usage
 -----
-    from utils.helpers import ms_to_dt, pct_change, format_usdt, chunk_list
+    from . import ms_to_dt, pct_change, format_usdt, chunk_list
 
     dt  = ms_to_dt(1705311512994)
     pct = pct_change(old=40000, new=42000)   # → 5.0

@@ -9,7 +9,7 @@ or return the (possibly cleaned) value on success.
 
 Usage
 -----
-    from utils.validators import validate_symbol, validate_price, Validator
+    from . import validate_symbol, validate_price, Validator
 
     symbol = validate_symbol("btcusdt")        # → "BTCUSDT"
     price  = validate_price("42100.50")         # → 42100.50

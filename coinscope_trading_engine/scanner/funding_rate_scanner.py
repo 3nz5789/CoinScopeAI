@@ -29,13 +29,13 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer
-from scanner.base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
-from utils.helpers import safe_divide, pct_change, now_ms
-from utils.logger import get_logger
+from ..config import settings
+from ..data.binance_rest import BinanceRESTClient
+from ..data.cache_manager import CacheManager
+from ..data.data_normalizer import DataNormalizer
+from .base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
+from ..utils.helpers import safe_divide, pct_change, now_ms
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -194,7 +194,7 @@ def _mark_to_dict(m) -> dict:
 
 def _dict_to_mark(d: dict):
     from datetime import datetime
-    from data.data_normalizer import MarkPrice
+    from ..data.data_normalizer import MarkPrice
     return MarkPrice(
         symbol=d["symbol"], mark_price=d["mark_price"],
         index_price=d["index_price"], estimated_settle_price=d["estimated_settle_price"],
@@ -208,6 +208,6 @@ def _fr_to_dict(h) -> dict:
 
 def _dict_to_fr(d: dict):
     from datetime import datetime
-    from data.data_normalizer import FundingRate
+    from ..data.data_normalizer import FundingRate
     return FundingRate(symbol=d["symbol"], funding_rate=d["funding_rate"],
                        funding_time=datetime.fromisoformat(d["funding_time"]))

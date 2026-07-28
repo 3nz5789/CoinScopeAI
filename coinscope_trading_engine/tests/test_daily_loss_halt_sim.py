@@ -38,8 +38,8 @@ import pytest
 ENGINE_DIR = os.path.join(os.path.dirname(__file__))
 sys.path.insert(0, ENGINE_DIR)
 
-from risk.circuit_breaker import CircuitBreaker, BreakerState
-from core.risk_gate import RiskGate
+from ..risk.circuit_breaker import CircuitBreaker, BreakerState
+from ..core.risk_gate import RiskGate
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +97,7 @@ class TestDailyLossThresholdBoundary:
         This test documents the discrepancy — a breaker using settings
         default will halt at -2.0%, not -5.0%.
         """
-        from config import settings
+        from ..config import settings
         config_default = settings.max_daily_loss_pct
         assert config_default == CONFIG_DEFAULT_DAILY_LOSS_PCT, (
             f"config.py default is {config_default}%, "

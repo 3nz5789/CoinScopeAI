@@ -31,40 +31,40 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.binance_websocket import BinanceWebSocketManager
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer, Candle
+from .config import settings
+from .data.binance_rest import BinanceRESTClient
+from .data.binance_websocket import BinanceWebSocketManager
+from .data.cache_manager import CacheManager
+from .data.data_normalizer import DataNormalizer, Candle
 
-from scanner.volume_scanner import VolumeScanner
-from scanner.liquidation_scanner import LiquidationScanner
-from scanner.funding_rate_scanner import FundingRateScanner
-from scanner.pattern_scanner import PatternScanner
-from scanner.orderbook_scanner import OrderBookScanner
-from scanner.base_scanner import SignalDirection
+from .scanner.volume_scanner import VolumeScanner
+from .scanner.liquidation_scanner import LiquidationScanner
+from .scanner.funding_rate_scanner import FundingRateScanner
+from .scanner.pattern_scanner import PatternScanner
+from .scanner.orderbook_scanner import OrderBookScanner
+from .scanner.base_scanner import SignalDirection
 
-from signals.indicator_engine import IndicatorEngine
-from signals.confluence_scorer import ConfluenceScorer
-from signals.entry_exit_calculator import EntryExitCalculator
+from .signals.indicator_engine import IndicatorEngine
+from .signals.confluence_scorer import ConfluenceScorer
+from .signals.entry_exit_calculator import EntryExitCalculator
 
-from alerts.telegram_notifier import TelegramNotifier
-from alerts.webhook_dispatcher import WebhookDispatcher
-from alerts.alert_queue import AlertQueue, AlertPriority
-from alerts.rate_limiter import AlertRateLimiter
+from .alerts.telegram_notifier import TelegramNotifier
+from .alerts.webhook_dispatcher import WebhookDispatcher
+from .alerts.alert_queue import AlertQueue, AlertPriority
+from .alerts.rate_limiter import AlertRateLimiter
 
-from risk.position_sizer import PositionSizer
-from risk.exposure_tracker import ExposureTracker
-from risk.correlation_analyzer import CorrelationAnalyzer
-from risk.circuit_breaker import CircuitBreaker
+from .risk.position_sizer import PositionSizer
+from .risk.exposure_tracker import ExposureTracker
+from .risk.correlation_analyzer import CorrelationAnalyzer
+from .risk.circuit_breaker import CircuitBreaker
 
-from models.regime_detector import RegimeDetector, MarketRegime
-from models.sentiment_analyzer import SentimentAnalyzer
-from models.anomaly_detector import AnomalyDetector
+from .models.regime_detector import RegimeDetector, MarketRegime
+from .models.sentiment_analyzer import SentimentAnalyzer
+from .models.anomaly_detector import AnomalyDetector
 
-from utils.logger import get_logger, setup_logging
-from utils.helpers import safe_divide
-from monitoring.prometheus_metrics import metrics, start_metrics_server
+from .utils.logger import get_logger, setup_logging
+from .utils.helpers import safe_divide
+from .monitoring.prometheus_metrics import metrics, start_metrics_server
 
 logger = get_logger(__name__)
 

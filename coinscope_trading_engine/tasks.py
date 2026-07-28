@@ -51,7 +51,7 @@ def _get_notifier():
     """Lazy singleton: import + instantiate TelegramNotifier once per worker."""
     global _notifier
     if _notifier is None:
-        from alerts.telegram_notifier import TelegramNotifier
+        from .alerts.telegram_notifier import TelegramNotifier
         _notifier = TelegramNotifier()
     return _notifier
 
@@ -78,8 +78,8 @@ def _run(coro):
 
 def _get_rest():
     """Return a configured BinanceRESTClient."""
-    from config import settings
-    from data.binance_rest import BinanceRESTClient
+    from .config import settings
+    from .data.binance_rest import BinanceRESTClient
     return BinanceRESTClient(
         api_key    = settings.active_api_key,
         api_secret = settings.active_api_secret,
@@ -91,7 +91,7 @@ def _send_to_dlq(task_name: str, args: dict, error: str) -> None:
     """Push a failed task payload to Redis DLQ for manual inspection."""
     try:
         import redis
-        from config import settings
+        from .config import settings
         r = redis.from_url(settings.redis_url)
         r.lpush("coinscopeai:dlq", json.dumps({
             "task":      task_name,
@@ -120,13 +120,13 @@ def run_scan_cycle(self, pairs: Optional[list] = None):
     Returns a list of signal dicts for any actionable hits.
     """
     try:
-        from config import settings
-        from data.data_normalizer import DataNormalizer
-        from scanner.pattern_scanner import PatternScanner
-        from scanner.volume_scanner import VolumeScanner
-        from scanner.funding_rate_scanner import FundingRateScanner
-        from signals.confluence_scorer import ConfluenceScorer
-        from signals.entry_exit_calculator import EntryExitCalculator
+        from .config import settings
+        from .data.data_normalizer import DataNormalizer
+        from .scanner.pattern_scanner import PatternScanner
+        from .scanner.volume_scanner import VolumeScanner
+        from .scanner.funding_rate_scanner import FundingRateScanner
+        from .signals.confluence_scorer import ConfluenceScorer
+        from .signals.entry_exit_calculator import EntryExitCalculator
 
         target_pairs = pairs or settings.scan_pairs
         rest         = _get_rest()
@@ -192,9 +192,9 @@ def run_regime_detection(self, symbols: Optional[list] = None):
     Returns {symbol: regime_label} dict.
     """
     try:
-        from config import settings
-        from data.data_normalizer import DataNormalizer
-        from models.regime_detector import RegimeDetector
+        from .config import settings
+        from .data.data_normalizer import DataNormalizer
+        from .models.regime_detector import RegimeDetector
 
         target  = symbols or settings.scan_pairs
         rest    = _get_rest()
@@ -241,8 +241,8 @@ def run_price_prediction(self, symbol: str, timeframe: str = "1h"):
     Returns {"direction": "UP"|"DOWN"|"NEUTRAL", "confidence": float}.
     """
     try:
-        from data.data_normalizer import DataNormalizer
-        from models.price_predictor import PricePredictor
+        from .data.data_normalizer import DataNormalizer
+        from .models.price_predictor import PricePredictor
 
         rest    = _get_rest()
         norm    = DataNormalizer()
@@ -282,9 +282,9 @@ def run_anomaly_detection(self, symbols: Optional[list] = None):
     Returns {symbol: {"is_anomaly": bool, "severity": str}} dict.
     """
     try:
-        from config import settings
-        from data.data_normalizer import DataNormalizer
-        from models.anomaly_detector import AnomalyDetector
+        from .config import settings
+        from .data.data_normalizer import DataNormalizer
+        from .models.anomaly_detector import AnomalyDetector
 
         target  = symbols or settings.scan_pairs
         rest    = _get_rest()
@@ -379,7 +379,7 @@ def dispatch_telegram_alert(self, message: str, parse_mode: str = "HTML"):
 def dispatch_webhook_alert(self, payload: dict, alert_type: str = "signal"):
     """POST an alert payload to all configured webhook URLs."""
     try:
-        from alerts.webhook_dispatcher import WebhookDispatcher
+        from .alerts.webhook_dispatcher import WebhookDispatcher
 
         async def _dispatch():
             dispatcher = WebhookDispatcher()
@@ -441,7 +441,7 @@ def backtest_symbol(self, symbol: str, lookback_days: int = 30):
     Run the event-driven backtester for a single symbol and return results.
     """
     try:
-        from signals.backtester import Backtester, BacktestConfig
+        from .signals.backtester import Backtester, BacktestConfig
 
         rest = _get_rest()
 

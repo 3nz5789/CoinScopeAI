@@ -14,7 +14,7 @@ How it works
 
 Usage
 -----
-    from signals.backtester import Backtester, BacktestConfig
+    from . import Backtester, BacktestConfig
 
     config = BacktestConfig(
         symbols=["BTCUSDT", "ETHUSDT"],
@@ -35,14 +35,14 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from data.binance_rest import BinanceRESTClient
-from data.data_normalizer import DataNormalizer, Candle
-from scanner.base_scanner import SignalDirection
-from signals.indicator_engine import IndicatorEngine
-from signals.confluence_scorer import ConfluenceScorer, Signal
-from signals.entry_exit_calculator import EntryExitCalculator, TradeSetup
-from utils.helpers import pct_change, safe_divide, dt_to_ms, now_ms
-from utils.logger import get_logger
+from ..data.binance_rest import BinanceRESTClient
+from ..data.data_normalizer import DataNormalizer, Candle
+from ..scanner.base_scanner import SignalDirection
+from .indicator_engine import IndicatorEngine
+from .confluence_scorer import ConfluenceScorer, Signal
+from .entry_exit_calculator import EntryExitCalculator, TradeSetup
+from ..utils.helpers import pct_change, safe_divide, dt_to_ms, now_ms
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -252,7 +252,7 @@ class Backtester:
         # Multi-timeframe trend gate (computed from resampled 1h→4h closes)
         self._mtf_filter = None
         if config.mtf_filter_enabled:
-            from core.multi_timeframe_filter import MultiTimeframeFilter
+            from ..core.multi_timeframe_filter import MultiTimeframeFilter
             self._mtf_filter = MultiTimeframeFilter(ema_fast=9, ema_slow=21)
 
     def _htf_ratio(self) -> int:
@@ -534,8 +534,8 @@ class Backtester:
         if score < self._config.min_confluence_score:
             return None
 
-        from signals.confluence_scorer import Signal as Sig
-        from scanner.base_scanner import ScannerHit, HitStrength
+        from .confluence_scorer import Signal as Sig
+        from ..scanner.base_scanner import ScannerHit, HitStrength
         dummy_hit = ScannerHit(
             scanner="IndicatorEngine", symbol=symbol,
             direction=direction, strength=HitStrength.MEDIUM,
@@ -565,7 +565,7 @@ class Backtester:
 
         # ── 1. Try the local historical-klines store ──────────────────
         try:
-            from storage.historical_klines import HistoricalKlinesStore
+            from ..storage.historical_klines import HistoricalKlinesStore
             store = HistoricalKlinesStore(path="logs/klines.sqlite")
             # Ask for more than lookback so we capture full coverage
             rows = store.query(

@@ -34,7 +34,7 @@ import os
 # Allow importing from the engine root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from execution.order_manager import (
+from ..execution.order_manager import (
     NON_RETRYABLE_CODES,
     OrderManager,
     OrderRecord,
@@ -44,7 +44,7 @@ from execution.order_manager import (
     TERMINAL_STATES,
     make_order_manager,
 )
-from data.binance_rest import AuthError, BinanceRESTError, RateLimitError
+from ..data.binance_rest import AuthError, BinanceRESTError, RateLimitError
 
 
 # ---------------------------------------------------------------------------

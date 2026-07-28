@@ -15,12 +15,12 @@ pattern_scanner      : Recognises candlestick and chart patterns
 orderbook_scanner    : Detects order-book imbalances and large walls
 """
 
-from scanner.base_scanner import BaseScanner, ScannerHit, ScannerResult
-from scanner.volume_scanner import VolumeScanner
-from scanner.liquidation_scanner import LiquidationScanner
-from scanner.funding_rate_scanner import FundingRateScanner
-from scanner.pattern_scanner import PatternScanner
-from scanner.orderbook_scanner import OrderBookScanner
+from .base_scanner import BaseScanner, ScannerHit, ScannerResult
+from .volume_scanner import VolumeScanner
+from .liquidation_scanner import LiquidationScanner
+from .funding_rate_scanner import FundingRateScanner
+from .pattern_scanner import PatternScanner
+from .orderbook_scanner import OrderBookScanner
 
 __all__ = [
     "BaseScanner",

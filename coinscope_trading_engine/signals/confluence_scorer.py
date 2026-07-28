@@ -40,12 +40,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
-from config import settings
-from data.data_normalizer import Candle
-from scanner.base_scanner import ScannerHit, ScannerResult, SignalDirection, HitStrength
-from signals.indicator_engine import IndicatorEngine, Indicators
-from utils.helpers import safe_divide
-from utils.logger import get_logger
+from ..config import settings
+from ..data.data_normalizer import Candle
+from ..scanner.base_scanner import ScannerHit, ScannerResult, SignalDirection, HitStrength
+from .indicator_engine import IndicatorEngine, Indicators
+from ..utils.helpers import safe_divide
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

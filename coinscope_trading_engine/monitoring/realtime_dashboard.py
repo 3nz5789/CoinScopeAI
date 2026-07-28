@@ -15,8 +15,8 @@ import logging
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from storage.trade_journal import TradeJournal
-from monitoring.pair_monitor import PairMonitor
+from ..storage.trade_journal import TradeJournal
+from .pair_monitor import PairMonitor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Dashboard")

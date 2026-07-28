@@ -33,7 +33,7 @@ get dot-notation access and clear field names.
 
 Usage
 -----
-    from signals.indicator_engine import IndicatorEngine
+    from . import IndicatorEngine
 
     engine = IndicatorEngine()
     ind    = engine.compute(candles)
@@ -52,9 +52,9 @@ from typing import Optional
 
 import numpy as np
 
-from data.data_normalizer import Candle
-from utils.helpers import safe_divide
-from utils.logger import get_logger
+from ..data.data_normalizer import Candle
+from ..utils.helpers import safe_divide
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

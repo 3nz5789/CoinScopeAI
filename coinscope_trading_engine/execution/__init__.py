@@ -3,7 +3,7 @@
 Execution layer — order management and retry logic.
 """
 
-from execution.order_manager import (
+from .order_manager import (
     OrderManager,
     OrderRecord,
     OrderState,

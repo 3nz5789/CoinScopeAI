@@ -42,9 +42,9 @@ from typing import Optional
 
 import numpy as np
 
-from data.data_normalizer import Candle
-from signals.indicator_engine import IndicatorEngine
-from utils.logger import get_logger
+from ..data.data_normalizer import Candle
+from ..signals.indicator_engine import IndicatorEngine
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

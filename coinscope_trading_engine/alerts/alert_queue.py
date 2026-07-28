@@ -40,11 +40,11 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Any, Optional
 
-from alerts.telegram_notifier import TelegramNotifier
-from alerts.webhook_dispatcher import WebhookDispatcher
-from signals.confluence_scorer import Signal
-from signals.entry_exit_calculator import TradeSetup
-from utils.logger import get_logger
+from .telegram_notifier import TelegramNotifier
+from .webhook_dispatcher import WebhookDispatcher
+from ..signals.confluence_scorer import Signal
+from ..signals.entry_exit_calculator import TradeSetup
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

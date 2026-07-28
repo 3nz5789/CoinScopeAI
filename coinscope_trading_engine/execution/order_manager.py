@@ -75,13 +75,13 @@ from typing import Callable, Optional
 
 import aiohttp
 
-from data.binance_rest import (
+from ..data.binance_rest import (
     AuthError,
     BinanceRESTClient,
     BinanceRESTError,
     RateLimitError,
 )
-from utils.logger import get_logger
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

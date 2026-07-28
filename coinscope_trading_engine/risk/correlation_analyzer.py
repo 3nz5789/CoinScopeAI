@@ -43,9 +43,9 @@ from typing import Optional
 
 import numpy as np
 
-from scanner.base_scanner import SignalDirection
-from utils.helpers import safe_divide
-from utils.logger import get_logger
+from ..scanner.base_scanner import SignalDirection
+from ..utils.helpers import safe_divide
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -19,11 +19,11 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.scoring_fixed import FixedScorer
-from core.multi_timeframe_filter import MultiTimeframeFilter
-from intelligence.hmm_regime_detector import EnsembleRegimeDetector
-from scanners.volume_scanner import VolumeScanner
-from scanners.liquidation_scanner import LiquidationScanner
+from ..core.scoring_fixed import FixedScorer
+from ..core.multi_timeframe_filter import MultiTimeframeFilter
+from ..intelligence.hmm_regime_detector import EnsembleRegimeDetector
+from ..scanners.volume_scanner import VolumeScanner
+from ..scanners.liquidation_scanner import LiquidationScanner
 
 
 # ── Signal weights (sum to 1.0) ───────────────────────────────────────────────

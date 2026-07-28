@@ -53,7 +53,7 @@ os.environ.setdefault("SCAN_PAIRS",                 "BTCUSDT,ETHUSDT")
 # ---------------------------------------------------------------------------
 
 def _make_candles(n: int = 200):
-    from data.data_normalizer import Candle
+    from .data.data_normalizer import Candle
     import math
     candles = []
     base = 65_000.0
@@ -138,7 +138,7 @@ class BenchResult:
 # ---------------------------------------------------------------------------
 
 def bench_indicators(iterations: int) -> BenchResult:
-    from signals.indicator_engine import IndicatorEngine
+    from .signals.indicator_engine import IndicatorEngine
     candles = _make_candles(200)
     engine  = IndicatorEngine()
 
@@ -156,12 +156,12 @@ def bench_indicators(iterations: int) -> BenchResult:
 
 
 async def bench_scanner_pipeline(iterations: int) -> BenchResult:
-    from scanner.pattern_scanner import PatternScanner
-    from scanner.volume_scanner import VolumeScanner
-    from scanner.funding_rate_scanner import FundingRateScanner
-    from scanner.orderbook_scanner import OrderBookScanner
-    from scanner.liquidation_scanner import LiquidationScanner
-    from signals.confluence_scorer import ConfluenceScorer
+    from .scanner.pattern_scanner import PatternScanner
+    from .scanner.volume_scanner import VolumeScanner
+    from .scanner.funding_rate_scanner import FundingRateScanner
+    from .scanner.orderbook_scanner import OrderBookScanner
+    from .scanner.liquidation_scanner import LiquidationScanner
+    from .signals.confluence_scorer import ConfluenceScorer
 
     candles  = _make_candles(100)
     scanners = [
@@ -191,7 +191,7 @@ async def bench_redis(iterations: int) -> BenchResult:
     result = BenchResult(name="Redis set/get round-trip", iterations=iterations)
     try:
         import aioredis
-        from config import settings
+        from .config import settings
         r = await aioredis.from_url(settings.redis_url, decode_responses=True)
 
         # Warm up
@@ -212,9 +212,9 @@ async def bench_redis(iterations: int) -> BenchResult:
 
 
 def bench_entry_exit(iterations: int) -> BenchResult:
-    from signals.entry_exit_calculator import EntryExitCalculator
-    from signals.confluence_scorer import Signal
-    from scanner.base_scanner import SignalDirection
+    from .signals.entry_exit_calculator import EntryExitCalculator
+    from .signals.confluence_scorer import Signal
+    from .scanner.base_scanner import SignalDirection
 
     candles = _make_candles(60)
     calc    = EntryExitCalculator()

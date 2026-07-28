@@ -30,11 +30,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from config import settings
-from scanner.base_scanner import SignalDirection
-from signals.entry_exit_calculator import TradeSetup
-from utils.helpers import safe_divide, round_step
-from utils.logger import get_logger
+from ..config import settings
+from ..scanner.base_scanner import SignalDirection
+from ..signals.entry_exit_calculator import TradeSetup
+from ..utils.helpers import safe_divide, round_step
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

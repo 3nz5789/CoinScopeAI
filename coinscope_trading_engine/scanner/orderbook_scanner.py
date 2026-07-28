@@ -30,13 +30,13 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer, OrderBook, OrderBookLevel
-from scanner.base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
-from utils.helpers import safe_divide, human_number
-from utils.logger import get_logger
+from ..config import settings
+from ..data.binance_rest import BinanceRESTClient
+from ..data.cache_manager import CacheManager
+from ..data.data_normalizer import DataNormalizer, OrderBook, OrderBookLevel
+from .base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
+from ..utils.helpers import safe_divide, human_number
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

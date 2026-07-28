@@ -27,13 +27,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from config import settings
-from data.data_normalizer import Candle
-from scanner.base_scanner import SignalDirection
-from signals.confluence_scorer import Signal
-from signals.indicator_engine import Indicators
-from utils.helpers import round_step, safe_divide, risk_reward_ratio, format_usdt, format_pct
-from utils.logger import get_logger
+from ..config import settings
+from ..data.data_normalizer import Candle
+from ..scanner.base_scanner import SignalDirection
+from .confluence_scorer import Signal
+from .indicator_engine import Indicators
+from ..utils.helpers import round_step, safe_divide, risk_reward_ratio, format_usdt, format_pct
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -61,7 +61,7 @@ def event_loop():
 @pytest.fixture
 def btc_candles():
     """60 uptrending BTC candles at 1-hour interval."""
-    from data.data_normalizer import Candle
+    from ..data.data_normalizer import Candle
     candles = []
     base = 60_000.0
     for i in range(60):
@@ -88,7 +88,7 @@ def btc_candles():
 @pytest.fixture
 def eth_candles():
     """50 candles for ETHUSDT at 15-minute interval."""
-    from data.data_normalizer import Candle
+    from ..data.data_normalizer import Candle
     candles = []
     base = 3_000.0
     for i in range(50):

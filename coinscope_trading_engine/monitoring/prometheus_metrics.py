@@ -28,7 +28,7 @@ Metrics exposed
 
 Usage
 -----
-    from monitoring.prometheus_metrics import metrics, start_metrics_server
+    from . import metrics, start_metrics_server
 
     # At engine startup:
     start_metrics_server(port=9090)
@@ -48,7 +48,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from utils.logger import get_logger
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

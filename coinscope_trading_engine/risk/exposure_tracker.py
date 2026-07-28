@@ -32,10 +32,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from config import settings
-from scanner.base_scanner import SignalDirection
-from utils.helpers import safe_divide
-from utils.logger import get_logger
+from ..config import settings
+from ..scanner.base_scanner import SignalDirection
+from ..utils.helpers import safe_divide
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

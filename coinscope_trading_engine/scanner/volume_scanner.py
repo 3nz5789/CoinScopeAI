@@ -28,13 +28,13 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from config import settings
-from data.binance_rest import BinanceRESTClient
-from data.cache_manager import CacheManager
-from data.data_normalizer import DataNormalizer, Candle
-from scanner.base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
-from utils.helpers import pct_change, safe_divide
-from utils.logger import get_logger
+from ..config import settings
+from ..data.binance_rest import BinanceRESTClient
+from ..data.cache_manager import CacheManager
+from ..data.data_normalizer import DataNormalizer, Candle
+from .base_scanner import BaseScanner, ScannerHit, ScannerResult, SignalDirection, HitStrength
+from ..utils.helpers import pct_change, safe_divide
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -152,7 +152,7 @@ class VolumeScanner(BaseScanner):
         candles = self._normalizer.klines_to_candles(symbol, self._timeframe, raw)
 
         # Cache for half the candle duration
-        from utils.helpers import timeframe_to_seconds
+        from ..utils.helpers import timeframe_to_seconds
         ttl = max(5, timeframe_to_seconds(self._timeframe) // 2)
         await self.cache.set(cache_key, [_candle_to_dict(c) for c in candles], ttl=ttl)
         return candles
@@ -184,7 +184,7 @@ def _candle_to_dict(c: Candle) -> dict:
 
 def _dict_to_candle(d: dict, symbol: str, interval: str) -> Candle:
     from datetime import datetime, timezone
-    from data.data_normalizer import Candle as C
+    from ..data.data_normalizer import Candle as C
     return C(
         symbol=symbol, interval=interval,
         open_time  = datetime.fromisoformat(d["open_time"]),

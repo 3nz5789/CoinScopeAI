@@ -15,8 +15,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import httpx
 
-from data.binance_rest import BinanceRESTClient
-from data.data_normalizer import DataNormalizer
+from ..data.binance_rest import BinanceRESTClient
+from ..data.data_normalizer import DataNormalizer
 
 
 # ---------------------------------------------------------------------------

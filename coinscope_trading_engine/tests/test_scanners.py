@@ -12,13 +12,13 @@ from dataclasses import dataclass
 
 import pytest
 
-from scanner.base_scanner import SignalDirection, HitStrength, ScannerResult
-from scanner.volume_scanner import VolumeScanner
-from scanner.pattern_scanner import PatternScanner
-from scanner.funding_rate_scanner import FundingRateScanner
-from scanner.orderbook_scanner import OrderBookScanner
-from scanner.liquidation_scanner import LiquidationScanner
-from data.data_normalizer import Candle, OrderBook, LiquidationOrder
+from ..scanner.base_scanner import SignalDirection, HitStrength, ScannerResult
+from ..scanner.volume_scanner import VolumeScanner
+from ..scanner.pattern_scanner import PatternScanner
+from ..scanner.funding_rate_scanner import FundingRateScanner
+from ..scanner.orderbook_scanner import OrderBookScanner
+from ..scanner.liquidation_scanner import LiquidationScanner
+from ..data.data_normalizer import Candle, OrderBook, LiquidationOrder
 
 
 # ---------------------------------------------------------------------------

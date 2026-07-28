@@ -26,7 +26,7 @@ Config (from .env)
 
 Usage
 -----
-    from alerts.telegram_notifier import TelegramNotifier
+    from . import TelegramNotifier
 
     notifier = TelegramNotifier()
     await notifier.send_signal(signal, setup)
@@ -44,12 +44,12 @@ from typing import Optional
 
 import httpx
 
-from config import settings
-from signals.confluence_scorer import Signal
-from signals.entry_exit_calculator import TradeSetup
-from scanner.base_scanner import SignalDirection
-from utils.helpers import format_usdt, format_pct, human_number
-from utils.logger import get_logger
+from ..config import settings
+from ..signals.confluence_scorer import Signal
+from ..signals.entry_exit_calculator import TradeSetup
+from ..scanner.base_scanner import SignalDirection
+from ..utils.helpers import format_usdt, format_pct, human_number
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

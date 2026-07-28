@@ -21,10 +21,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from config import settings
-from data.cache_manager import CacheManager
-from data.binance_rest import BinanceRESTClient
-from utils.logger import get_logger
+from ..config import settings
+from ..data.cache_manager import CacheManager
+from ..data.binance_rest import BinanceRESTClient
+from ..utils.logger import get_logger
 
 logger = get_logger(__name__)
 

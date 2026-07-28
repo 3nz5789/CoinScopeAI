@@ -61,8 +61,8 @@ os.environ.setdefault("MAX_OPEN_POSITIONS",         "5")
 os.environ.setdefault("MAX_POSITION_SIZE_PCT",      "20.0")
 os.environ.setdefault("MAX_TOTAL_EXPOSURE_PCT",     "50.0")
 
-from data.data_normalizer import Candle, DataNormalizer
-from data.market_stream import BinanceFuturesStreamClient
+from ..data.data_normalizer import Candle, DataNormalizer
+from ..data.market_stream import BinanceFuturesStreamClient
 
 
 # ===========================================================================
@@ -380,7 +380,7 @@ class TestTC04ClosedCandleGating:
         """
         Simulate the NativeAdapter on_kline callback: it must discard open candles.
         """
-        from data.binance_stream_adapter import _NativeAdapter
+        from ..data.binance_stream_adapter import _NativeAdapter
 
         adapter   = _NativeAdapter(testnet=True)
         collected = []

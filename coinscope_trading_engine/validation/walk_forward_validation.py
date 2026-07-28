@@ -18,7 +18,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.scoring_fixed import FixedScorer
+from ..core.scoring_fixed import FixedScorer
 
 
 # ── Data Helpers ─────────────────────────────────────────────────────────────

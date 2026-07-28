@@ -6,7 +6,7 @@ Exports a singleton ``settings`` instance that every module should import.
 
 Usage
 -----
-    from config import settings
+    from . import settings
 
     print(settings.binance_api_key)
     print(settings.max_leverage)

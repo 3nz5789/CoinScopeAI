@@ -13,9 +13,9 @@ import logging
 # Adjust sys.path for module imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from live.master_orchestrator import CoinScopeOrchestrator
+from .live.master_orchestrator import CoinScopeOrchestrator
 from integrations.notion_simple_integration import SimpleNotionIntegration
-from storage.trade_journal import TradeJournal
+from .storage.trade_journal import TradeJournal
 
 logging.basicConfig(
     level=logging.INFO,

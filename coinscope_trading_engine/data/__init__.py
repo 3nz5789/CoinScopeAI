@@ -1,24 +1,14 @@
-"""
-data — Exchange connectivity, ingestion, normalisation, and caching.
-
-Modules
--------
-binance_websocket  : Persistent WebSocket connection manager (ws-fapi/v1)
-binance_rest       : Async REST client (fapi/v1, fapi/v2)
-data_normalizer    : Converts raw exchange payloads into internal schemas
-cache_manager      : Redis-backed caching layer with TTL management
-"""
-
-from .binance_rest import BinanceRESTClient, BinanceRESTError
-from .binance_websocket import BinanceWebSocketManager, BinanceAPIError
-from .cache_manager import CacheManager
-from .data_normalizer import DataNormalizer
+"""CoinScopeAI Data Pipeline package."""
+from coinscope_trading_engine.data.binance_rest import BinanceRESTClient
+from coinscope_trading_engine.data.binance_websocket import BinanceWebSocketClient
+from coinscope_trading_engine.data.cache_manager import CacheManager
+from coinscope_trading_engine.data.data_normalizer import DataNormalizer
+from coinscope_trading_engine.data.market_stream import MarketStream
 
 __all__ = [
     "BinanceRESTClient",
-    "BinanceRESTError",
-    "BinanceWebSocketManager",
-    "BinanceAPIError",
+    "BinanceWebSocketClient", 
     "CacheManager",
     "DataNormalizer",
+    "MarketStream",
 ]

@@ -1,0 +1,195 @@
+/**
+ * Visual regression skeleton · CoinScopeAI Dashboard
+ * --------------------------------------------------
+ * Rename to `visual.spec.ts` and add `@playwright/test` to devDependencies
+ * to make this run. Defaults to reading the combo matrix from
+ * `docs/qa-matrix.json` — edit there, not here.
+ *
+ *   pnpm add -D @playwright/test
+ *   pnpm exec playwright install --with-deps chromium
+ *   pnpm exec playwright test tests/visual.spec.ts
+ *
+ * Baselines land in tests/__screenshots__/. Review diffs with
+ *   pnpm exec playwright show-report
+ *
+ * For Percy / Chromatic, swap toHaveScreenshot for the relevant snapshot
+ * call; the test structure is the same.
+ *
+ * Assumes a Vite dev server is running on http://localhost:5174.
+ * If you want the test to start the server itself, uncomment the webServer
+ * block at the bottom of playwright.config.ts (also a skeleton — see below).
+ */
+
+import { test, expect, type Page } from '@playwright/test';
+import matrix from '../docs/qa-matrix.json';
+
+const BASE_URL = process.env.PREVIEW_URL ?? 'http://localhost:5174';
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+async function setAppearance(
+  page: Page,
+  theme: string | null,
+  density: string | null,
+) {
+  await page.evaluate(
+    ({ theme, density }) => {
+      const root = document.documentElement;
+      if (theme && theme !== 'default') root.setAttribute('data-theme', theme);
+      else root.removeAttribute('data-theme');
+      if (density && density !== 'default') root.setAttribute('data-density', density);
+      else root.removeAttribute('data-density');
+    },
+    { theme, density },
+  );
+  // Match docs-qa-checklist.md § 4 "wait_after_theme_change_ms"
+  await page.waitForTimeout(matrix._capture_protocol.wait_after_theme_change_ms);
+}
+
+async function gotoAndWait(page: Page, path: string) {
+  await page.goto(`${BASE_URL}${path}`, { waitUntil: 'networkidle' });
+  // Belt & braces — wait for Scanline overlay + Sidebar to be on screen
+  await page.waitForSelector('aside', { state: 'visible' });
+  await page.waitForSelector('main', { state: 'visible' });
+}
+
+// ── Test groups ───────────────────────────────────────────────────────────
+
+test.describe('CoinScopeAI · QA · minimum run', () => {
+  // 11 captures — see docs/qa-matrix.json `_minimum_run`. Catches ~95% of
+  // theme/density regressions per the QA checklist commentary.
+
+  for (const cap of matrix._minimum_run.captures) {
+    const page = matrix.pages.find((p) => p.id === cap.page)!;
+    const theme = matrix.themes.find((t) => t.id === cap.theme)!;
+    const density = matrix.densities.find((d) => d.id === cap.density)!;
+    const viewport = matrix.viewports.find((v) => v.id === cap.viewport)!;
+
+    test(`${page.id} · ${theme.id} · ${density.id} · ${viewport.width}w`, async ({ page: pwPage }) => {
+      await pwPage.setViewportSize({ width: viewport.width, height: viewport.height });
+      await gotoAndWait(pwPage, page.path);
+      await setAppearance(pwPage, theme.data_theme, density.data_density);
+
+      // Per spec capture-protocol naming: qa-{page}-{theme}-{density}-{w}.png
+      const name = `qa-${page.id}-${theme.id}-${density.id}-${viewport.width}.png`;
+      await expect(pwPage).toHaveScreenshot(name, {
+        fullPage: false,
+        animations: 'disabled',
+        maxDiffPixelRatio: 0.001, // Tight — operator UI shouldn't shift
+      });
+    });
+  }
+});
+
+test.describe('CoinScopeAI · QA · token sanity', () => {
+  // Verifies the v1.5.0 token sheet still resolves under each theme.
+  // Lifted from docs/qa-checklist.md § 1 "Token sanity list".
+
+  const REQUIRED_TOKENS = [
+    '--navy-deep', '--bg', '--background', '--card', '--secondary', '--muted',
+    '--foreground', '--fg', '--fg-2', '--fg-muted',
+    '--emerald', '--primary', '--warning', '--danger', '--info',
+    '--success-bg', '--success-border', '--warning-bg', '--danger-bg', '--info-bg',
+    '--signal-execute', '--signal-consider', '--signal-watch', '--signal-halt',
+    '--chart-up', '--chart-down', '--chart-grid', '--chart-area-up',
+    '--regime-trending', '--regime-volatile', '--regime-mean-reverting', '--regime-quiet',
+    '--border-w-3', '--o-40', '--z-modal', '--duration', '--ease-in-out',
+    '--row-h', '--row-h-head', '--grid-gap', '--panel-pad-x', '--container-default',
+    '--shadow-hover', '--shadow-glow', '--shadow-crit', '--ring-focus',
+  ];
+
+  for (const theme of matrix.themes) {
+    test(`every canonical token resolves under data-theme="${theme.id}"`, async ({ page }) => {
+      await gotoAndWait(page, '/');
+      await setAppearance(page, theme.data_theme, null);
+
+      const resolved = await page.evaluate((tokens) => {
+        const s = getComputedStyle(document.documentElement);
+        return Object.fromEntries(tokens.map((t) => [t, s.getPropertyValue(t).trim()]));
+      }, REQUIRED_TOKENS);
+
+      const empty = Object.entries(resolved).filter(([, v]) => v === '');
+      expect(empty, `tokens missing under ${theme.id}:\n${empty.map(([k]) => k).join('\n')}`).toEqual([]);
+    });
+  }
+});
+
+test.describe('CoinScopeAI · QA · chrome invariants', () => {
+  // These must hold across every theme. Spot-check a couple here; the full
+  // list of per-component checks is in docs/qa-checklist.md § 2.
+
+  test('TopBar has NO backdrop-filter (kit explicitly bans it)', async ({ page }) => {
+    await gotoAndWait(page, '/');
+    const filter = await page.evaluate(() => {
+      const h = document.querySelector('header');
+      return h ? getComputedStyle(h).backdropFilter : null;
+    });
+    expect(filter).toBe('none');
+  });
+
+  test('Sidebar active item shows a 3px emerald left bar', async ({ page }) => {
+    await gotoAndWait(page, '/');
+    const bar = await page.evaluate(() => {
+      const active = document.querySelector('aside button.text-emerald');
+      const before = active?.querySelector('span[aria-hidden="true"]');
+      if (!before) return null;
+      const r = before.getBoundingClientRect();
+      const s = getComputedStyle(before);
+      return { width: r.width, height: r.height, bg: s.backgroundColor };
+    });
+    expect(bar?.width).toBe(3);
+    expect(bar?.height).toBeGreaterThanOrEqual(18);
+  });
+
+  test('Scanline overlay is fixed, z-1, pointer-events: none', async ({ page }) => {
+    await gotoAndWait(page, '/');
+    const s = await page.evaluate(() => {
+      const el = document.querySelector('.scanline-overlay');
+      if (!el) return null;
+      const cs = getComputedStyle(el);
+      return { position: cs.position, zIndex: cs.zIndex, pointer: cs.pointerEvents };
+    });
+    expect(s?.position).toBe('fixed');
+    expect(s?.zIndex).toBe('1');
+    expect(s?.pointer).toBe('none');
+  });
+});
+
+test.describe('CoinScopeAI · QA · a11y smoke', () => {
+  // Minimal axe-core smoke check per theme. Install with:
+  //   pnpm add -D @axe-core/playwright
+  // Uncomment imports + skip to enable.
+
+  test.skip('axe-core has zero violations under data-theme="hc"', async ({ page }) => {
+    // const { AxeBuilder } = await import('@axe-core/playwright');
+    // await gotoAndWait(page, '/');
+    // await setAppearance(page, 'hc', null);
+    // const results = await new AxeBuilder({ page }).analyze();
+    // expect(results.violations).toEqual([]);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────
+   Suggested playwright.config.ts (skeleton — drop into project root):
+
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.001 } },
+  use: {
+    baseURL: process.env.PREVIEW_URL ?? 'http://localhost:5174',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ],
+  // Uncomment to let Playwright start Vite itself:
+  // webServer: {
+  //   command: 'pnpm dev',
+  //   url: 'http://localhost:5174',
+  //   reuseExistingServer: !process.env.CI,
+  //   timeout: 60_000,
+  // },
+});
+   ──────────────────────────────────────────────────────────────────────── */

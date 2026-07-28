@@ -1,0 +1,145 @@
+# ─────────────────────────────────────────────────────────────
+#  CoinScopeAI — .gitignore
+#  NEVER commit secrets, credentials, or generated artefacts
+# ─────────────────────────────────────────────────────────────
+
+# ── Secrets & Credentials (CRITICAL) ─────────────────────────
+.env
+.env.*
+!.env.example
+!.env.template
+secrets.json
+credentials.json
+*.key
+*.pem
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ── Virtual Environments ──────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# ── Jupyter Notebooks ─────────────────────────────────────────
+.ipynb_checkpoints
+*.ipynb
+
+# ── Testing & Coverage ────────────────────────────────────────
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# ── ML Models & Data (large binary files — Drive only) ────────
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.csv
+*.parquet
+*.feather
+docs/ml/models/
+docs/ml/data/
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+*.log.*
+coinscope_trading_engine/logs/
+
+# ── OS / Editor ───────────────────────────────────────────────
+.DS_Store
+.claude/
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Dashboard build artifacts ─────────────────────────────────
+coinscopeai-dashboard/node_modules/
+coinscopeai-dashboard/dist/
+coinscopeai-dashboard/.manus-logs/
+coinscopeai-dashboard/pnpm-lock.yaml.bak
+
+# ── MCP server build artifacts ────────────────────────────────
+coinscope-mcp-server/node_modules/
+coinscope-mcp-server/dist/
+
+# ── Engine runtime artifacts ──────────────────────────────────
+coinscope_trading_engine/.env
+coinscope_trading_engine/.env.*
+coinscope_trading_engine/logs/
+coinscope_trading_engine/data/
+
+# ── Duplicate engine folders (stale copies) ───────────────────
+coinscope_trading_engine 2/
+coinscope_trading_engine 3/
+coinscope_trading_engine 4/
+
+# ── Archives & Compressed ─────────────────────────────────────
+*.tar.gz
+*.zip
+*.bak
+*.bak.*
+
+# ── Sensitive admin documents (PII — Drive only) ──────────────
+14-admin/
+admin/
+
+# ── Temporary files ───────────────────────────────────────────
+.write_test*
+archive/_backups/
+99-archive/
+
+# ── Business-only Cowork folders (not for GitHub) ─────────────
+01-project-overview/
+03-roadmap/
+08-sessions/
+09-research/
+11-legal/
+14-admin/
+
+# ── CLAUDE.md is tracked — operator instructions for AI agents ─
+# Intentionally NOT ignored. Contains canonical thresholds.

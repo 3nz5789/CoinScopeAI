@@ -1,0 +1,666 @@
+/* ============================================================
+   CoinScopeAI Dashboard — Production Token Sheet (v1.5.0)
+   Mirrors `project/colors_and_type.css` from the design-system bundle
+   at https://api.anthropic.com/v1/design/h/33zOUClByxZsD4r9RfjkfQ
+   (v1.5.0 · 2026-05-19).
+   ============================================================ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Tailwind v4 inline theme — maps the canonical CSS vars to utility
+   classes (bg-emerald, text-crimson, …). The `--color-*` aliases are what
+   make those utilities exist; the actual values live on :root. */
+@theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+
+  /* shadcn aliases */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* HUD surface ladder — canonical hue 264.05 */
+  --color-navy-deep: oklch(0.12 0.025 264.05);
+  --color-navy-950: oklch(0.145 0.028 264.05);
+  --color-navy-900: oklch(0.185 0.02 264.05);
+  --color-navy-800: oklch(0.22 0.02 264.05);
+  --color-navy-700: oklch(0.25 0.015 264.05);
+
+  /* Brand + semantic (palette layer) */
+  --color-emerald: oklch(0.696 0.17 162.48);
+  --color-emerald-dim: oklch(0.55 0.14 162);
+  --color-cyan-accent: oklch(0.75 0.12 200);
+  --color-cyan-dim: oklch(0.55 0.10 200);
+  --color-amber-warn: oklch(0.795 0.184 86.047);
+  --color-crimson: oklch(0.637 0.237 25.331);
+  --color-info: oklch(0.623 0.214 259.815);
+  --color-profit: oklch(0.696 0.17 162.48);
+  --color-loss: oklch(0.637 0.237 25.331);
+
+  /* Regime palette — taxonomic */
+  --color-regime-trending: oklch(0.696 0.17 162.48);
+  --color-regime-volatile: oklch(0.795 0.184 86.047);
+  --color-regime-mean-reverting: oklch(0.7 0.03 264.05);
+  --color-regime-quiet: oklch(0.5 0.02 264.05);
+}
+
+/* ============================================================
+   :root — palette + semantic layer + scales (v1.5.0)
+   Tokens redeclared inside [data-theme=...] re-skin downstream
+   automatically because the semantic aliases use var() indirection.
+   ============================================================ */
+:root {
+  /* ── Radii — sharp, data-first */
+  --radius: 6px;
+  --radius-pill: 999px;
+
+  /* ── Surfaces (dark navy HUD) */
+  --navy-deep: oklch(0.12 0.025 264.05);
+  --bg: oklch(0.145 0.028 264.05);
+  --surface-1: oklch(0.185 0.02 264.05);
+  --surface-2: oklch(0.22 0.02 264.05);
+  --surface-3: oklch(0.25 0.015 264.05);
+
+  /* ── Foreground */
+  --fg: oklch(0.925 0.006 264.53);
+  --fg-2: oklch(0.75 0.01 264.05);
+  --fg-muted: oklch(0.556 0.02 264.05);
+
+  /* ── Borders */
+  --border-raw: oklch(0.3 0.015 264.05);
+  --border-soft: oklch(0.3 0.015 264.05 / 0.5);
+
+  /* ── Brand + semantic (palette) */
+  --emerald: oklch(0.696 0.17 162.48);
+  --emerald-fg: oklch(0.145 0.028 264.05);
+  --warning: oklch(0.795 0.184 86.047);
+  --danger: oklch(0.637 0.237 25.331);
+  --info: oklch(0.623 0.214 259.815);
+
+  /* ── Semantic state tokens (10/20 tint stack)
+     `--*-bg` = 10% surface tint, `--*-border` = 20% border tint,
+     `--*` = text/icon fg, `--*-fg` = contrast for solid fills. */
+  --success: var(--emerald);
+  --success-bg: oklch(0.696 0.17 162.48 / 0.10);
+  --success-border: oklch(0.696 0.17 162.48 / 0.20);
+  --success-fg: var(--emerald-fg);
+
+  --warning-bg: oklch(0.795 0.184 86.047 / 0.10);
+  --warning-border: oklch(0.795 0.184 86.047 / 0.20);
+  --warning-fg: oklch(0.18 0.05 86);
+
+  --danger-bg: oklch(0.637 0.237 25.331 / 0.10);
+  --danger-bg-solid: oklch(0.32 0.10 25);
+  --danger-border: oklch(0.637 0.237 25.331 / 0.20);
+  --danger-fg: oklch(0.98 0.005 25);
+
+  --info-bg: oklch(0.623 0.214 259.815 / 0.10);
+  --info-border: oklch(0.623 0.214 259.815 / 0.20);
+  --info-fg: oklch(0.98 0.005 259);
+
+  /* ── Signal / action semantic shortcuts */
+  --signal-long: var(--emerald);
+  --signal-short: var(--danger);
+  --signal-pass: var(--emerald);
+  --signal-fail: var(--danger);
+  --signal-execute: var(--emerald);
+  --signal-consider: var(--warning);
+  --signal-watch: var(--fg-muted);
+  --signal-skip: var(--warning);
+  --signal-halt: var(--danger);
+
+  /* ── Chart state aliases (use these in Recharts configs) */
+  --chart-up: var(--emerald);
+  --chart-down: var(--danger);
+  --chart-neutral: var(--fg-muted);
+  --chart-grid: oklch(0.3 0.015 264.05 / 0.30);
+  --chart-axis: var(--fg-muted);
+  --chart-cursor: var(--emerald);
+  --chart-area-up: oklch(0.696 0.17 162.48 / 0.25);
+  --chart-area-dn: oklch(0.637 0.237 25.331 / 0.25);
+
+  /* ── Text aliases */
+  --text-primary: var(--fg);
+  --text-secondary: var(--fg-2);
+  --text-tertiary: var(--fg-muted);
+  --text-link: var(--emerald);
+  --text-on-emerald: var(--emerald-fg);
+  --text-on-danger: oklch(0.98 0.005 25);
+
+  /* ── Regime palette */
+  --regime-trending: oklch(0.696 0.17 162.48);
+  --regime-volatile: oklch(0.795 0.184 86.047);
+  --regime-mean-reverting: oklch(0.7 0.03 264.05);
+  --regime-quiet: oklch(0.5 0.02 264.05);
+
+  /* ── shadcn tokens — bind to canonical palette */
+  --background: var(--bg);
+  --foreground: var(--fg);
+  --card: var(--surface-1);
+  --card-foreground: var(--fg);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--fg);
+  --primary: var(--emerald);
+  --primary-foreground: var(--emerald-fg);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--fg-2);
+  --muted: var(--surface-3);
+  --muted-foreground: var(--fg-muted);
+  --accent: oklch(0.75 0.12 200);
+  --accent-foreground: var(--bg);
+  --destructive: var(--danger);
+  --destructive-foreground: oklch(0.95 0 0);
+  --border: var(--border-raw);
+  --input: var(--surface-2);
+  --ring: var(--emerald);
+
+  --chart-1: var(--emerald);
+  --chart-2: var(--danger);
+  --chart-3: var(--warning);
+  --chart-4: var(--info);
+  --chart-5: oklch(0.7 0.15 300);
+
+  --sidebar: var(--navy-deep);
+  --sidebar-foreground: oklch(0.85 0.01 264.05);
+  --sidebar-primary: var(--emerald);
+  --sidebar-primary-foreground: var(--emerald-fg);
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--fg);
+  --sidebar-border: var(--border-soft);
+  --sidebar-ring: var(--emerald);
+
+  /* ── Spacing scale (4px base) */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px;  --space-8: 32px;  --space-10: 40px;  --space-12: 48px;
+
+  /* ── Type */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --fs-xs: 10px;  --fs-sm: 11px;  --fs-base: 13px;  --fs-md: 15px;
+  --fs-lg: 17px;  --fs-xl: 20px;  --fs-2xl: 28px;   --fs-3xl: 40px;
+  --tracking-wide: 0.04em;
+  --tracking-widest: 0.12em;
+
+  /* ── Effects */
+  --shadow-hover: 0 0 20px oklch(0.696 0.17 162.48 / 0.06);
+  --shadow-glow: 0 0 12px oklch(0.696 0.17 162.48 / 0.25);
+  --shadow-crit: 0 0 16px oklch(0.637 0.237 25.331 / 0.35);
+  --shadow-overlay: 0 8px 32px oklch(0 0 0 / 0.6);
+  --shadow-toast: 0 4px 16px oklch(0 0 0 / 0.4);
+  --ring-emerald: 0 0 0 1px oklch(0.696 0.17 162.48 / 0.4);
+  --ring-focus: 0 0 0 3px oklch(0.696 0.17 162.48 / 0.3);
+
+  /* ── Motion */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --duration-slow: 500ms;
+  --duration-pulse: 2000ms;
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-in: cubic-bezier(0.6, 0, 1, 0.4);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear;
+
+  /* ── Border width scale */
+  --border-w-0: 0;
+  --border-w-1: 1px;
+  --border-w-2: 2px;
+  --border-w-3: 3px;
+
+  /* ── Opacity scale */
+  --o-0: 0; --o-5: 0.05; --o-10: 0.10; --o-20: 0.20; --o-30: 0.30;
+  --o-40: 0.40; --o-50: 0.50; --o-60: 0.60; --o-70: 0.70;
+  --o-80: 0.80; --o-90: 0.90; --o-100: 1;
+
+  /* ── Z-index scale */
+  --z-base: 0;
+  --z-grid: 1;
+  --z-raised: 10;
+  --z-sticky: 100;
+  --z-overlay: 1000;
+  --z-modal: 1100;
+  --z-toast: 1200;
+  --z-tooltip: 1300;
+
+  /* ── Layout · grid + panels (scale with [data-density]) */
+  --grid-gap-tight: 6px;
+  --grid-gap: 12px;
+  --grid-gap-loose: 20px;
+  --panel-pad-x: 16px;
+  --panel-pad-y: 14px;
+  --page-pad-x: 20px;
+  --page-pad-y: 18px;
+  --row-h: 28px;
+  --row-h-head: 32px;
+
+  /* ── Container widths (docs tokens; @media hard-codes px) */
+  --container-content: 720px;
+  --container-narrow: 960px;
+  --container-default: 1280px;
+  --container-wide: 1600px;
+  --container-ultra: 1920px;
+}
+
+/* ============================================================
+   Density modes — opt-in via [data-density="..."]
+   ============================================================ */
+[data-density="compact"] {
+  --fs-base: 12px;
+  --fs-sm: 10px;
+  --fs-md: 14px;
+  --panel-pad-x: 10px;
+  --panel-pad-y: 8px;
+  --page-pad-x: 14px;
+  --page-pad-y: 12px;
+  --grid-gap: 8px;
+  --row-h: 22px;
+  --row-h-head: 26px;
+}
+[data-density="cozy"] {
+  --fs-base: 14px;
+  --fs-sm: 12px;
+  --fs-md: 16px;
+  --panel-pad-x: 20px;
+  --panel-pad-y: 18px;
+  --page-pad-x: 28px;
+  --page-pad-y: 24px;
+  --grid-gap: 16px;
+  --row-h: 36px;
+  --row-h-head: 40px;
+}
+
+/* ============================================================
+   Theme variants — opt-in via [data-theme="..."]
+   ============================================================ */
+
+/* ---------- LIGHT — daylight, marketing, exports ---------- */
+[data-theme="light"] {
+  --navy-deep: oklch(0.94 0.008 264);
+  --bg: oklch(0.985 0.003 264);
+  --surface-1: oklch(1 0 0);
+  --surface-2: oklch(0.965 0.005 264);
+  --surface-3: oklch(0.92 0.008 264);
+
+  --fg: oklch(0.20 0.022 264);
+  --fg-2: oklch(0.40 0.015 264);
+  --fg-muted: oklch(0.55 0.012 264);
+
+  --border-raw: oklch(0.86 0.005 264);
+  --border-soft: oklch(0.86 0.005 264 / 0.7);
+
+  --emerald: oklch(0.55 0.16 162);
+  --emerald-fg: oklch(0.985 0.003 264);
+  --warning: oklch(0.62 0.18 65);
+  --danger: oklch(0.55 0.23 25);
+  --info: oklch(0.52 0.21 259);
+
+  --success-bg: oklch(0.55 0.16 162 / 0.08);
+  --success-border: oklch(0.55 0.16 162 / 0.28);
+  --warning-bg: oklch(0.62 0.18 65 / 0.10);
+  --warning-border: oklch(0.62 0.18 65 / 0.30);
+  --warning-fg: oklch(0.985 0.003 264);
+  --danger-bg: oklch(0.55 0.23 25 / 0.08);
+  --danger-bg-solid: oklch(0.94 0.06 25);
+  --danger-border: oklch(0.55 0.23 25 / 0.28);
+  --info-bg: oklch(0.52 0.21 259 / 0.08);
+  --info-border: oklch(0.52 0.21 259 / 0.28);
+
+  --chart-area-up: oklch(0.55 0.16 162 / 0.18);
+  --chart-area-dn: oklch(0.55 0.23 25 / 0.18);
+  --chart-grid: oklch(0.86 0.005 264 / 0.6);
+
+  --shadow-hover: 0 1px 3px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0 0 0 / 0.04);
+  --shadow-glow: 0 0 8px oklch(0.55 0.16 162 / 0.3);
+  --shadow-crit: 0 0 12px oklch(0.55 0.23 25 / 0.3);
+  --shadow-overlay: 0 8px 24px oklch(0 0 0 / 0.15);
+  --shadow-toast: 0 4px 12px oklch(0 0 0 / 0.10);
+  --ring-focus: 0 0 0 3px oklch(0.55 0.16 162 / 0.25);
+}
+
+/* ---------- HC — WCAG AAA, 2px borders, pure b&w ---------- */
+[data-theme="hc"] {
+  --navy-deep: oklch(0 0 0);
+  --bg: oklch(0 0 0);
+  --surface-1: oklch(0.07 0 0);
+  --surface-2: oklch(0.14 0 0);
+  --surface-3: oklch(0.22 0 0);
+
+  --fg: oklch(1 0 0);
+  --fg-2: oklch(0.92 0 0);
+  --fg-muted: oklch(0.78 0 0);
+
+  --border-raw: oklch(0.65 0 0);
+  --border-soft: oklch(0.65 0 0);
+
+  --emerald: oklch(0.88 0.24 160);
+  --emerald-fg: oklch(0 0 0);
+  --warning: oklch(0.88 0.20 90);
+  --warning-fg: oklch(0 0 0);
+  --danger: oklch(0.74 0.30 25);
+  --danger-fg: oklch(0 0 0);
+  --info: oklch(0.78 0.22 259);
+  --info-fg: oklch(0 0 0);
+
+  --success-bg: oklch(0.88 0.24 160 / 0.15);
+  --success-border: oklch(0.88 0.24 160 / 0.55);
+  --warning-bg: oklch(0.88 0.20 90 / 0.15);
+  --warning-border: oklch(0.88 0.20 90 / 0.55);
+  --danger-bg: oklch(0.74 0.30 25 / 0.18);
+  --danger-bg-solid: oklch(0.30 0.18 25);
+  --danger-border: oklch(0.74 0.30 25 / 0.55);
+  --info-bg: oklch(0.78 0.22 259 / 0.15);
+  --info-border: oklch(0.78 0.22 259 / 0.55);
+
+  --border-w-1: 2px;
+  --border-w-2: 3px;
+
+  --shadow-hover: none;
+  --shadow-glow: 0 0 0 2px var(--emerald);
+  --shadow-crit: 0 0 0 2px var(--danger);
+  --shadow-overlay: 0 0 0 2px var(--fg);
+  --shadow-toast: 0 0 0 2px var(--fg);
+  --ring-focus: 0 0 0 3px var(--emerald);
+}
+
+/* ---------- TERMINAL — phosphor / Bloomberg ---------- */
+[data-theme="terminal"] {
+  --navy-deep: oklch(0 0 0);
+  --bg: oklch(0.04 0.008 60);
+  --surface-1: oklch(0.07 0.010 60);
+  --surface-2: oklch(0.11 0.012 60);
+  --surface-3: oklch(0.16 0.014 60);
+
+  --fg: oklch(0.88 0.18 84);
+  --fg-2: oklch(0.78 0.13 84);
+  --fg-muted: oklch(0.55 0.08 84);
+
+  --border-raw: oklch(0.30 0.04 84);
+  --border-soft: oklch(0.30 0.04 84 / 0.5);
+
+  --emerald: oklch(0.85 0.28 145);
+  --emerald-fg: oklch(0 0 0);
+  --warning: oklch(0.88 0.18 84);
+  --warning-fg: oklch(0 0 0);
+  --danger: oklch(0.72 0.31 28);
+  --danger-fg: oklch(0 0 0);
+  --info: oklch(0.80 0.18 220);
+  --info-fg: oklch(0 0 0);
+
+  --success-bg: oklch(0.85 0.28 145 / 0.10);
+  --success-border: oklch(0.85 0.28 145 / 0.45);
+  --warning-bg: oklch(0.88 0.18 84 / 0.10);
+  --warning-border: oklch(0.88 0.18 84 / 0.45);
+  --danger-bg: oklch(0.72 0.31 28 / 0.12);
+  --danger-bg-solid: oklch(0.22 0.13 28);
+  --danger-border: oklch(0.72 0.31 28 / 0.45);
+  --info-bg: oklch(0.80 0.18 220 / 0.10);
+  --info-border: oklch(0.80 0.18 220 / 0.45);
+
+  /* Sharp everything in terminal */
+  --radius: 0;
+  --radius-pill: 0;
+
+  /* Force mono everywhere */
+  --font-sans: var(--font-mono);
+
+  --shadow-hover: 0 0 14px oklch(0.85 0.28 145 / 0.2);
+  --shadow-glow: 0 0 10px currentColor;
+  --shadow-crit: 0 0 16px oklch(0.72 0.31 28 / 0.55);
+  --shadow-overlay: 0 0 24px oklch(0.85 0.28 145 / 0.15), 0 8px 32px oklch(0 0 0 / 0.7);
+  --shadow-toast: 0 0 12px oklch(0.85 0.28 145 / 0.3);
+  --ring-focus: 0 0 0 2px var(--emerald);
+}
+[data-theme="terminal"] .scanline-overlay {
+  background: repeating-linear-gradient(
+    0deg, transparent 0, transparent 2px,
+    oklch(0.88 0.18 84 / 0.04) 2px, oklch(0.88 0.18 84 / 0.04) 4px
+  );
+}
+[data-theme="terminal"] .hud-grid-bg {
+  background-image:
+    linear-gradient(oklch(0.30 0.04 84 / 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.30 0.04 84 / 0.4) 1px, transparent 1px);
+}
+
+/* ============================================================
+   Base layer + semantic helpers
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
+    line-height: 1.45;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .flex { min-height: 0; min-width: 0; }
+  @media (min-width: 640px) { .container { padding-left: 1.5rem; padding-right: 1.5rem; } }
+  @media (min-width: 1024px) { .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; } }
+}
+
+/* Type helper classes — match `colors_and_type.css` */
+.h1 { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+.h2 { font-size: var(--fs-lg); font-weight: 600; color: var(--fg); }
+.h3 { font-size: var(--fs-base); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg); }
+.eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--fg-muted);
+}
+.meta { font-size: var(--fs-sm); color: var(--fg-muted); }
+.data, .data-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "zero";
+}
+
+/* ============================================================
+   Signature HUD primitives
+   ============================================================ */
+.hud-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--duration) var(--ease-out),
+              box-shadow var(--duration) var(--ease-out);
+}
+.hud-panel:hover {
+  border-color: oklch(0.696 0.17 162.48 / 0.4);
+  box-shadow: var(--shadow-hover);
+}
+
+.hud-panel-glow {
+  background: var(--card);
+  border: 1px solid oklch(0.696 0.17 162.48 / 0.3);
+  border-radius: var(--radius);
+  box-shadow: 0 0 20px oklch(0.696 0.17 162.48 / 0.05);
+}
+
+.hud-grid-bg {
+  background-image:
+    linear-gradient(oklch(0.3 0.015 264.05 / 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.3 0.015 264.05 / 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-grid);
+  background: repeating-linear-gradient(
+    0deg, transparent 0, transparent 2px,
+    oklch(0.696 0.17 162.48 / 0.012) 2px, oklch(0.696 0.17 162.48 / 0.012) 4px
+  );
+}
+
+/* Action-level 3px left border helpers */
+.al-execute  { border-left: 3px solid var(--signal-execute); }
+.al-halt     { border-left: 3px solid var(--signal-halt); }
+.al-skip     { border-left: 3px solid var(--signal-skip); }
+.al-consider { border-left: 3px solid var(--signal-consider); }
+.al-watch    { border-left: 3px solid var(--signal-watch); }
+
+/* Status text helpers */
+.status-green  { color: var(--success); }
+.status-yellow { color: var(--warning); }
+.status-red    { color: var(--danger); }
+.status-black  { color: var(--fg-muted); }
+
+/* Live status pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px currentColor; }
+  50% { opacity: 0.55; box-shadow: 0 0 12px currentColor; }
+}
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.4 0.015 264.05); }
+
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   Badges, pills, action chips
+   ============================================================ */
+.cs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  width: fit-content;
+  white-space: nowrap;
+}
+.cs-chip svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+.cs-chip-em { color: var(--success); background: var(--success-bg); border-color: var(--success-border); }
+.cs-chip-dn { color: var(--danger);  background: var(--danger-bg);  border-color: var(--danger-border); }
+.cs-chip-wn { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-border); }
+.cs-chip-cy { color: var(--info);    background: var(--info-bg);    border-color: var(--info-border); }
+.cs-chip-mu { color: var(--fg-muted); background: var(--surface-3); border-color: var(--border); }
+
+.cs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border: 1px solid;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+.cs-pill > .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Kit-canonical card head + body */
+.cs-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.cs-card-title {
+  font: 600 12px var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--foreground);
+}
+.cs-card-sub {
+  font: 400 10px var(--font-sans);
+  color: var(--muted-foreground);
+  margin-left: 6px;
+}
+.cs-card-link {
+  font: 500 10px var(--font-sans);
+  color: var(--success);
+  white-space: nowrap;
+}
+.cs-card-link:hover { opacity: 0.8; }
+
+/* Focus ring helper — apply to any focusable element that needs the
+   canonical 3px emerald @ 30% ring. Use as `.cs-focus:focus-visible`. */
+.cs-focus:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+}

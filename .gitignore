@@ -122,6 +122,9 @@ coinscope_trading_engine/data/*.parquet
 coinscope_trading_engine/data/raw/
 coinscope_trading_engine/data/processed/
 
+# Scale-up manager runtime state
+scale_up_state.json
+
 # ── Duplicate engine folders (stale copies) ───────────────────
 coinscope_trading_engine 2/
 coinscope_trading_engine 3/

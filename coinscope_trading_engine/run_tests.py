@@ -9,7 +9,11 @@ import sys
 import os
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Allow running this file directly (python coinscope_trading_engine/run_tests.py)
+# while still supporting relative imports.
+if __name__ == "__main__" and __package__ is None:
+    __package__ = "coinscope_trading_engine"
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 os.makedirs("logs", exist_ok=True)
 
@@ -116,9 +120,15 @@ def test_executor():
     from .live.binance_testnet_executor import TestnetExecutor
 
     ex = TestnetExecutor()
-    rec = ex.place_order("BTC/USDT", "BUY", kelly_usd=20, regime="bull", signal_score=2.5)
-    assert rec is not None
-    pnl = ex.close_position(rec, exit_price=69000)
+    price = 68500.0
+    quantity = 20.0 / price
+    order_id = ex.place_order(
+        "BTC/USDT", "BUY", quantity=quantity, price=price, regime="bull", kelly_usd=20
+    )
+    assert order_id is not None and order_id != ""
+    record = next((r for r in ex.trade_log if r.order_id == order_id), None)
+    assert record is not None
+    pnl = ex.close_position(record, exit_price=69000)
     summary = ex.get_summary()
     print(f"  PnL: {pnl:+.2%} | Summary: {summary}")
 
@@ -137,6 +147,7 @@ def test_scale_manager():
 def test_api_import():
     """Test FastAPI import"""
     import importlib
+    import importlib.util
 
     spec = importlib.util.find_spec("fastapi")
     assert spec is not None, "FastAPI not installed"

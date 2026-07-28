@@ -158,12 +158,14 @@ def test_kronos_signal():
     """Test Kronos signal generator schema (best-effort; venv optional)."""
     from .signals.kronos_signal import generate_kronos_signal
 
-    sig = generate_kronos_signal(symbol="BTCUSDT", lookback=60, pred_len=6)
+    # Use sample_count=1 to keep the test fast; consensus logic is tested below.
+    sig = generate_kronos_signal(symbol="BTCUSDT", lookback=60, pred_len=6, sample_count=1)
     assert "symbol" in sig
     assert "direction" in sig
     assert "score" in sig
     assert "strength" in sig
     assert "forecast" in sig
+    assert "consensus" in sig
     assert sig["symbol"] == "BTCUSDT"
     assert sig["direction"] in ("LONG", "SHORT", "NEUTRAL")
     print(f"  Kronos signal: {sig['direction']} score={sig['score']:.1f} strength={sig['strength']}")

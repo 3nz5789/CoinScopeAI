@@ -97,17 +97,29 @@ def generate_kronos_signal(
     model: str = "NeoQuasar/Kronos-mini",
     tokenizer: str = "NeoQuasar/Kronos-Tokenizer-base",
     max_context: int = 2048,
-    timeout: int = 120,
+    sample_count: int = 3,
+    consensus_threshold_pct: float = 50.0,
+    timeout: int = 300,
 ) -> dict:
     """
-    Generate a Kronos-based signal for a single symbol.
+    Generate a Kronos-based signal for a single symbol using multi-sample
+    consensus to reduce stochastic noise.
+
+    Parameters
+    ----------
+    sample_count : int
+        Number of independent Kronos forecasts to run (1-20).
+    consensus_threshold_pct : float
+        Minimum percentage of samples that must agree for a non-NEUTRAL signal.
+        Default 66.7% means at least 2 of 3 samples must agree.
 
     Returns a dict with keys:
         symbol      : str
         direction   : "LONG" | "SHORT" | "NEUTRAL"
-        score       : float  (0.0 – 100.0, higher = stronger conviction)
+        score       : float  (0.0 – 100.0, based on consensus strength)
         strength    : "WEAK" | "MODERATE" | "STRONG"
         forecast    : list of forecast candles
+        consensus   : dict with count/pct details
         error       : str or None
         timestamp   : float
     """
@@ -121,7 +133,7 @@ def generate_kronos_signal(
         "max_context": max_context,
         "temperature": 1.0,
         "top_p": 0.9,
-        "sample_count": 1,
+        "sample_count": sample_count,
     }
 
     result = _run_kronos_subprocess(config, timeout=timeout)
@@ -134,21 +146,22 @@ def generate_kronos_signal(
             "score": 0.0,
             "strength": "WEAK",
             "forecast": [],
+            "consensus": {},
             "error": result["error"],
             "timestamp": time.time(),
         }
 
-    direction = result.get("direction", "NEUTRAL")
-    first_close = float(result.get("first_forecast_close", 0.0))
-    last_close = float(result.get("last_forecast_close", 0.0))
+    consensus_pct = float(result.get("consensus_pct", 0.0))
+    majority_dir = result.get("direction", "NEUTRAL")
 
-    # Map price change magnitude to a 0-100 score
-    if first_close > 0 and direction in ("LONG", "SHORT"):
-        pct_change = abs(last_close - first_close) / first_close
-        # Scale: 0.1% move -> 25, 0.5% -> 70, capped at 100
-        score = min(pct_change * 2500 * 100, 100.0)
+    # Only accept the majority direction if it meets the consensus threshold
+    if consensus_pct >= consensus_threshold_pct and majority_dir in ("LONG", "SHORT"):
+        direction = majority_dir
     else:
-        score = 0.0
+        direction = "NEUTRAL"
+
+    # Score is directly the consensus percentage (already 0-100)
+    score = consensus_pct
 
     if score >= 70.0:
         strength = "STRONG"
@@ -163,6 +176,13 @@ def generate_kronos_signal(
         "score": round(score, 2),
         "strength": strength,
         "forecast": result.get("forecast", []),
+        "consensus": {
+            "direction": majority_dir,
+            "count": result.get("consensus_count", 0),
+            "total": result.get("total_samples", 0),
+            "pct": consensus_pct,
+            "breakdown": result.get("counts", {}),
+        },
         "error": None,
         "timestamp": time.time(),
     }
@@ -187,14 +207,24 @@ class KronosScanner(BaseScanner):
         # BaseScanner contract by passing None values.
         super().__init__(cache=cache, rest=rest, name=name)
 
-    async def scan(self, symbol: str) -> ScannerResult:
+    async def scan(
+        self,
+        symbol: str,
+        sample_count: int = 3,
+        consensus_threshold_pct: float = 50.0,
+    ) -> ScannerResult:
         """
-        Run a Kronos forecast and emit a single ScannerHit for the dominant
-        direction, if any.
+        Run multiple Kronos forecasts and emit a single ScannerHit only when
+        the samples reach consensus.
         """
         # Offload the blocking subprocess call to a thread so the async event
         # loop is not frozen while the model downloads / infers.
-        signal = await asyncio.to_thread(generate_kronos_signal, symbol=symbol)
+        signal = await asyncio.to_thread(
+            generate_kronos_signal,
+            symbol=symbol,
+            sample_count=sample_count,
+            consensus_threshold_pct=consensus_threshold_pct,
+        )
 
         if signal.get("error"):
             return ScannerResult(
@@ -214,15 +244,25 @@ class KronosScanner(BaseScanner):
             else HitStrength.WEAK
         )
 
+        consensus = signal.get("consensus", {})
+        majority = consensus.get("direction", "NEUTRAL")
+        count = consensus.get("count", 0)
+        total = consensus.get("total", 0)
+
         hit = ScannerHit(
             scanner=self.name,
             symbol=symbol,
             direction=SignalDirection(direction),
             strength=strength,
             score=score,
-            reason=f"Kronos {direction} bias | score={score:.1f} | strength={strength.value}",
+            reason=(
+                f"Kronos consensus {direction} | "
+                f"{count}/{total} samples ({score:.1f}%) | "
+                f"breakdown={consensus.get('breakdown', {})}"
+            ),
             metadata={
                 "forecast": signal.get("forecast", []),
+                "consensus": consensus,
             },
         )
         return ScannerResult(scanner=self.name, symbol=symbol, hits=[hit])
@@ -230,5 +270,5 @@ class KronosScanner(BaseScanner):
 
 # ── CLI smoke-test ───────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    sig = generate_kronos_signal()
+    sig = generate_kronos_signal(symbol="BTCUSDT", sample_count=3)
     print(json.dumps(sig, indent=2, default=str))

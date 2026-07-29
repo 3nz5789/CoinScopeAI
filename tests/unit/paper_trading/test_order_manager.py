@@ -22,13 +22,14 @@ from services.paper_trading.safety import KillSwitch, OrderRequest, SafetyGate
 # ── Fixtures ──────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def clean_kill_file():
-    """Ensure kill switch file is cleaned before/after each test."""
-    from pathlib import Path
-    from services.paper_trading.safety import KillSwitch
-    Path(KillSwitch.KILL_FILE).unlink(missing_ok=True)
+def clean_kill_file(tmp_path, monkeypatch):
+    """Isolate the kill-switch flag to a per-test state dir.
+
+    Without this, running the suite on a machine with a genuinely
+    engaged kill switch would delete the operator's flag.
+    """
+    monkeypatch.setenv("COINSCOPE_STATE_DIR", str(tmp_path))
     yield
-    Path(KillSwitch.KILL_FILE).unlink(missing_ok=True)
 
 
 @pytest.fixture

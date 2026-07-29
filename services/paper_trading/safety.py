@@ -26,6 +26,7 @@ from .config import (
     HARDCODED_MAX_POSITION_SIZE_PCT,
     TradingConfig,
 )
+from .state_dir import get_kill_flag_path, write_private_file
 
 logger = logging.getLogger("coinscopeai.paper_trading.safety")
 
@@ -83,22 +84,56 @@ class KillSwitch:
 
     Uses a file-based flag so it persists across restarts
     and can be triggered externally (e.g., by a cron job or CLI).
+
+    The flag lives in the app-owned safety-state directory (see
+    ``state_dir.py``): ``$COINSCOPE_STATE_DIR/kill_switch.flag``, or
+    ``~/.coinscopeai/state/kill_switch.flag`` when the env var is unset.
+    It no longer lives in ``/tmp`` — ``/tmp`` is world-writable and is
+    cleared on reboot, which made an engaged kill switch both tamperable
+    and forgettable. The flag is written with mode 0600.
+
+    A flag that exists but cannot be parsed is treated as ENGAGED
+    (reason ``corrupt_kill_flag``): per the Key Invariant, when the
+    safety layer cannot determine its state, it halts — it never guesses.
     """
 
-    KILL_FILE = "/tmp/coinscopeai_kill_switch.flag"
+    # Resolved once at import for backward compatibility with scripts that
+    # read KillSwitch.KILL_FILE directly. Instances resolve the path at
+    # construction time via the same helper, so COINSCOPE_STATE_DIR set
+    # after import is honoured by new instances (tests rely on this).
+    KILL_FILE = str(get_kill_flag_path())
 
     def __init__(self):
         self._active = False
         self._lock = threading.Lock()
         self._reason = ""
         self._activated_at = 0.0
+        self._kill_file = get_kill_flag_path()
 
         # Check for persistent kill flag on init
-        if Path(self.KILL_FILE).exists():
+        if self._kill_file.exists():
             self._active = True
             self._reason = "persistent_kill_flag"
-            self._activated_at = Path(self.KILL_FILE).stat().st_mtime
+            self._activated_at = self._kill_file.stat().st_mtime
+            try:
+                data = json.loads(self._kill_file.read_text())
+                if isinstance(data, dict) and data.get("reason"):
+                    self._reason = str(data["reason"])
+            except Exception:
+                # Fail toward engaged: an unreadable flag is not proof the
+                # operator disengaged the switch.
+                self._reason = "corrupt_kill_flag"
+                logger.error(
+                    "Kill flag at %s is unreadable — treating kill switch as "
+                    "ENGAGED. Investigate, then deactivate explicitly with a reason.",
+                    self._kill_file,
+                )
             logger.warning("Kill switch is ACTIVE (persistent flag found)")
+
+    @property
+    def kill_file(self) -> Path:
+        """Path of this instance's persistent flag file."""
+        return self._kill_file
 
     @property
     def is_active(self) -> bool:
@@ -117,9 +152,9 @@ class KillSwitch:
             self._reason = reason
             self._activated_at = time.time()
 
-        # Write persistent flag
+        # Write persistent flag (owner-only from creation)
         try:
-            Path(self.KILL_FILE).write_text(json.dumps({
+            write_private_file(self._kill_file, json.dumps({
                 "reason": reason,
                 "activated_at": self._activated_at,
                 "pid": os.getpid(),
@@ -174,7 +209,7 @@ class KillSwitch:
             self._activated_at = 0.0
 
         try:
-            Path(self.KILL_FILE).unlink(missing_ok=True)
+            self._kill_file.unlink(missing_ok=True)
         except Exception:
             pass
 

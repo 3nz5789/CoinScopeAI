@@ -23,19 +23,13 @@ from services.paper_trading.safety import KillSwitch, SafetyGate, OrderRequest
 # ── Fixtures ──────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def clean_files():
-    """Clean up state and kill files."""
-    for f in [
-        "/tmp/coinscopeai_kill_switch.flag",
-        "/tmp/coinscopeai_paper_trading_state.json",
-    ]:
-        Path(f).unlink(missing_ok=True)
+def clean_files(tmp_path, monkeypatch):
+    """Isolate the kill-switch flag to a per-test state dir, and clean
+    the legacy engine state file."""
+    monkeypatch.setenv("COINSCOPE_STATE_DIR", str(tmp_path))
+    Path("/tmp/coinscopeai_paper_trading_state.json").unlink(missing_ok=True)
     yield
-    for f in [
-        "/tmp/coinscopeai_kill_switch.flag",
-        "/tmp/coinscopeai_paper_trading_state.json",
-    ]:
-        Path(f).unlink(missing_ok=True)
+    Path("/tmp/coinscopeai_paper_trading_state.json").unlink(missing_ok=True)
 
 
 # ── Kill Switch Integration Tests ─────────────────────────────

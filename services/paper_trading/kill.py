@@ -40,6 +40,7 @@ def main():
             print(f"   Reason: {status['reason']}")
         else:
             print("✅ Kill Switch: OFF")
+        print(f"   Flag: {ks.kill_file}")
         return
 
     if args.deactivate:

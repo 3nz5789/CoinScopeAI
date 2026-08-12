@@ -11,10 +11,14 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 
+from .state_dir import get_kill_flag_path
+
 
 def main():
+    # NOTE: engine state file still lives at the legacy /tmp path —
+    # migrating it is tracked in the SafetyGate persistence issue (#85).
     state_file = Path("/tmp/coinscopeai_paper_trading_state.json")
-    kill_file = Path("/tmp/coinscopeai_kill_switch.flag")
+    kill_file = get_kill_flag_path()
 
     print("=" * 60)
     print(" CoinScopeAI Paper Trading — Status")

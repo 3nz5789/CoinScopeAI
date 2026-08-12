@@ -32,12 +32,15 @@ from services.paper_trading.safety import (
 # ── Fixtures ──────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def clean_kill_file():
-    """Ensure kill switch file is cleaned before/after each test."""
-    kill_file = Path(KillSwitch.KILL_FILE)
-    kill_file.unlink(missing_ok=True)
-    yield
-    kill_file.unlink(missing_ok=True)
+def isolated_state_dir(tmp_path, monkeypatch):
+    """Point the safety-state directory at a per-test tmp dir.
+
+    Every KillSwitch instance resolves its flag path at construction
+    time from COINSCOPE_STATE_DIR, so setting it here fully isolates
+    each test from the developer's / CI's real state directory.
+    """
+    monkeypatch.setenv("COINSCOPE_STATE_DIR", str(tmp_path))
+    yield tmp_path
 
 
 @pytest.fixture
@@ -92,15 +95,15 @@ class TestKillSwitch:
 
     def test_activate_creates_file(self, kill_switch):
         kill_switch.activate("file_test")
-        assert Path(KillSwitch.KILL_FILE).exists()
-        data = json.loads(Path(KillSwitch.KILL_FILE).read_text())
+        assert kill_switch.kill_file.exists()
+        data = json.loads(kill_switch.kill_file.read_text())
         assert data["reason"] == "file_test"
 
     def test_deactivate(self, kill_switch):
         kill_switch.activate("test")
         kill_switch.deactivate("test cleanup")
         assert not kill_switch.is_active
-        assert not Path(KillSwitch.KILL_FILE).exists()
+        assert not kill_switch.kill_file.exists()
 
     def test_deactivate_requires_reason_argument(self, kill_switch):
         """
@@ -136,14 +139,56 @@ class TestKillSwitch:
             kill_switch.deactivate("post-incident review concluded; resuming")
         assert "post-incident review concluded; resuming" in caplog.text
 
-    def test_persistent_flag_on_init(self):
+    def test_persistent_flag_on_init(self, isolated_state_dir):
         """Kill switch should detect existing flag file on init."""
-        Path(KillSwitch.KILL_FILE).write_text(json.dumps({
+        flag = isolated_state_dir / "kill_switch.flag"
+        flag.write_text(json.dumps({
             "reason": "previous_crash",
             "activated_at": time.time(),
         }))
         ks = KillSwitch()
         assert ks.is_active
+
+    def test_persistent_flag_reason_is_restored(self, isolated_state_dir):
+        """A well-formed flag restores the original activation reason."""
+        flag = isolated_state_dir / "kill_switch.flag"
+        flag.write_text(json.dumps({
+            "reason": "operator_halt_incident_7",
+            "activated_at": time.time(),
+        }))
+        ks = KillSwitch()
+        assert ks.is_active
+        assert ks.reason == "operator_halt_incident_7"
+
+    def test_corrupt_flag_fails_engaged(self, isolated_state_dir):
+        """An unreadable flag must NOT disengage the switch.
+
+        Fail-closed per the Key Invariant: when the safety layer cannot
+        determine its state, it halts — it never guesses. A corrupt flag
+        is not proof the operator disengaged the switch.
+        """
+        flag = isolated_state_dir / "kill_switch.flag"
+        flag.write_text("{not valid json!!!")
+        ks = KillSwitch()
+        assert ks.is_active
+        assert ks.reason == "corrupt_kill_flag"
+
+    def test_kill_file_written_owner_only(self, kill_switch):
+        """The flag must never be world-readable on a shared host."""
+        import stat
+        kill_switch.activate("perm_test")
+        mode = stat.S_IMODE(kill_switch.kill_file.stat().st_mode)
+        assert mode == 0o600, f"kill flag mode {oct(mode)} != 0o600"
+
+    def test_state_dir_env_override(self, isolated_state_dir):
+        """COINSCOPE_STATE_DIR controls where the flag lives."""
+        ks = KillSwitch()
+        assert ks.kill_file.parent == isolated_state_dir
+
+    def test_flag_not_in_tmp(self, kill_switch):
+        """Regression for the /tmp vulnerability: the flag must not live
+        in the world-writable, reboot-cleared /tmp directory."""
+        assert not str(kill_switch.kill_file).startswith("/tmp/")
 
     def test_status_dict(self, kill_switch):
         status = kill_switch.status()

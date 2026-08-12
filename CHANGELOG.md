@@ -12,6 +12,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+- Kill-switch flag moved out of world-writable, reboot-cleared `/tmp` into an
+  app-owned safety-state directory: `$COINSCOPE_STATE_DIR/kill_switch.flag`
+  (default `~/.coinscopeai/state/`; systemd unit sets
+  `COINSCOPE_STATE_DIR=/var/lib/coinscopeai` via `StateDirectory=`). Flag is
+  written 0600 inside a 0700 directory, survives OS reboots, and a corrupt
+  flag now fails ENGAGED instead of being ignored. Closes #91.
+
 ### Added
 - `docs/validation/p0-public-summary.md` — one-page outsider-facing P0
   validation summary covering what is live, what is testnet only, what

@@ -81,7 +81,7 @@ The reason string is required by the API contract and lands in the journal. See 
 ```bash
 python -m services.paper_trading.kill --reason "<reason>"
 ```
-The CLI prompts for a `KILL`-string confirmation before writing the persistent flag at `/tmp/coinscopeai_kill_switch.flag`. The flag is read on every safety-gate evaluation; an existing flag persists across engine restarts.
+The CLI prompts for a `KILL`-string confirmation before writing the persistent flag at `$COINSCOPE_STATE_DIR/kill_switch.flag` (default `~/.coinscopeai/state/kill_switch.flag`; the systemd unit sets `/var/lib/coinscopeai`). The flag is written owner-only (0600) inside a 0700 directory — it no longer lives in world-writable `/tmp`, which was both tamperable and cleared on reboot. The flag is read on every safety-gate evaluation; an existing flag persists across engine restarts **and OS reboots**. A flag that exists but cannot be parsed is treated as ENGAGED (reason `corrupt_kill_flag`) — fail-closed, per the Key Invariant.
 
 ### Effect
 
@@ -123,7 +123,7 @@ Telegram alerts fire on trips and on kill-switch toggles. See [`../monitoring/sl
 
 1. **Never override a max-drawdown trip without reading the journal.** The journal tells you whether the trip was a single bad trade or a cumulative pattern. These demand different responses.
 2. **Do not reset a breaker "just to see if it works."** Resetting resumes trading. If you want to verify the reset path, do it in a staging environment, not production.
-3. **Never bypass the breaker by restarting the engine.** Breaker state is persisted. The kill-switch flag at `/tmp/coinscopeai_kill_switch.flag` survives restarts; the breaker state in the engine likewise persists.
+3. **Never bypass the breaker by restarting the engine.** Breaker state is persisted. The kill-switch flag at `$COINSCOPE_STATE_DIR/kill_switch.flag` survives restarts and reboots; the breaker state in the engine likewise persists.
 4. **Do not disable a breaker in config.** Breakers are features, not annoyances. If a breaker is firing too often, the symptom is the strategy, not the breaker.
 
 ## Hard rules for developers

@@ -1,0 +1,41 @@
+name: Secure Patch Release Scan
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: secure-patch-release-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  secure-patch-release:
+    name: Secure Patch Release Scan
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify scanner syntax
+        run: bash -n scripts/redacted_secret_scan.sh scripts/secure_patch_pr_guard.sh
+
+      - name: Report repository-wide potential secret patterns
+        run: |
+          set -euo pipefail
+          bash scripts/redacted_secret_scan.sh . | tee secure-patch-release-scan.txt
+          findings=$(tail -n +2 secure-patch-release-scan.txt || true)
+          if [ -n "$findings" ]; then
+            echo "::warning::Potential secret patterns already exist in the repository baseline. Values are redacted; review the scan paths and line numbers."
+          fi
+
+      - name: Block newly introduced secret patterns
+        run: |
+          bash scripts/secure_patch_pr_guard.sh \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}"

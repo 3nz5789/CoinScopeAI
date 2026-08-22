@@ -131,7 +131,7 @@ Status colour and matrix ID let you jump straight to the full row in [`invariant
                               └────────────────────┘
 ```
 
-Full architecture: [`docs/architecture/architecture.md`](docs/architecture/architecture.md)
+Phase-1 Agent OS architecture: [`docs/architecture/agent-os-phase1.md`](docs/architecture/agent-os-phase1.md). The legacy architecture path remains tracked in [`docs/architecture/repository-roadmap.md`](docs/architecture/repository-roadmap.md).
 
 ---
 
@@ -167,6 +167,14 @@ CoinScopeAI/
 │   ├── monitoring/             Health/readiness probes, Prometheus metrics
 │   └── signals/                Confluence scoring pipeline
 │
+├── agent_os/                Phase-1 Agent OS contracts, graph, runtime, risk facade, paper adapter
+│   ├── contracts/              Strategy, market, risk, execution, simulation, journal types
+│   ├── data/                   Provider-neutral ports and deterministic fixtures
+│   ├── runtime/                Graph validation, Skills, planner, replay inspection
+│   ├── risk/                   Mandatory facade over the canonical paper SafetyGate
+│   ├── execution/              Execution port and paper-only simulated fills
+│   └── api/                    FastAPI Agent OS entry point
+│
 ├── risk_management/         Risk gate, sizer, regime detector
 │   ├── risk_gate.py             Pre-trade gate: regime, heat, daily loss, drawdown
 │   ├── kelly_position_sizer.py  Fractional Kelly with 2% per-trade hard cap
@@ -175,6 +183,7 @@ CoinScopeAI/
 ├── services/                Long-running workers
 │   ├── paper_trading/           Engine + safety gate + kill switch + CLI
 │   ├── market_data/             Multi-venue stream recorders + aggregator
+│   ├── agent_worker/             Phase-1 deterministic Agent OS paper worker
 │   └── telegram-bot/            @ScoopyAI_bot worker
 │
 ├── apps/dashboard/          React 18 + Vite + Tailwind dashboard
@@ -258,6 +267,17 @@ curl http://localhost:8001/config | python3 -m json.tool
 ```
 
 Full guide: [`docs/runbooks/local-development.md`](docs/runbooks/local-development.md)
+
+### Phase-1 Agent OS quick start
+
+```bash
+make worker
+make test
+make dev-all
+curl http://localhost:8010/health
+```
+
+The Agent OS scaffold is deterministic and paper-only. It does not place live orders or create mainnet wallet paths. See [`docs/architecture/agent-os-phase1.md`](docs/architecture/agent-os-phase1.md) for the architecture, routes, milestones, and replay command.
 
 ### First scan
 

@@ -1,83 +1,91 @@
-# CoinScopeAI — Makefile
-# Common operator commands. Run from the repo root.
-# Requires: Python 3.11+, Docker, pip
+# Common operator commands. Run from the repository root.
+# Phase-1 defaults are local, paper-only, and do not require exchange credentials.
 
-.PHONY: help dev test lint typecheck guardrail sync clean install docs
+PYTHON ?= python3
+AGENT_OS_PORT ?= 8010
+DATA_DIR ?= ./data/recordings
+SPEED ?= 1.0
+START ?=
+END ?=
 
-# Default target
+.PHONY: help install dev dev-all worker test smoke lint format typecheck guardrail sync status replay agent-demo clean
+
 help:
 	@echo ""
 	@echo "CoinScopeAI — available targets"
 	@echo "────────────────────────────────────────────────────────"
 	@echo "  make install     Install Python dependencies"
-	@echo "  make dev         Start engine + Redis locally"
-	@echo "  make test        Run full test suite with coverage"
+	@echo "  make dev         Alias for the Phase-1 Agent OS API"
+	@echo "  make dev-all     Start the Phase-1 Agent OS API locally"
+	@echo "  make worker      Run one deterministic paper worker cycle"
+	@echo "  make agent-demo  Alias for worker"
+	@echo "  make test        Run repository and Agent OS tests"
+	@echo "  make replay      Replay recorded data through the existing stream CLI"
+	@echo "  make smoke       Run fast CI smoke tests"
 	@echo "  make lint        Run ruff + black checks (no auto-fix)"
 	@echo "  make format      Auto-fix with ruff + black"
-	@echo "  make typecheck   Run mypy type checks"
-	@echo "  make guardrail   Run drift detector + threshold guardrail"
+	@echo "  make typecheck   Run mypy type checks on Phase-1 packages"
+	@echo "  make guardrail   Run risk threshold guardrail"
 	@echo "  make sync        Run session-end sync verifier"
-	@echo "  make status      Morning engine status brief (all 6 endpoints)"
+	@echo "  make status      Run the daily engine status script"
 	@echo "  make clean       Remove build/cache artefacts"
 	@echo "────────────────────────────────────────────────────────"
 	@echo ""
 
-# ── Install ───────────────────────────────────────────────────────────────────
 install:
-	pip install --upgrade pip
-	pip install -r requirements.txt
-	pip install ruff black mypy pytest pytest-asyncio pytest-cov
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -r requirements.txt
+	$(PYTHON) -m pip install ruff black mypy pytest pytest-asyncio pytest-cov
 
-# ── Dev server ────────────────────────────────────────────────────────────────
-dev:
-	@echo "Starting Redis + engine..."
-	docker compose up -d redis
-	@sleep 1
-	cd coinscope_trading_engine && uvicorn api:app --reload --port 8001
+dev: dev-all
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
+dev-all:
+	@echo "Starting CoinScopeAI Agent OS API in PAPER mode on port $(AGENT_OS_PORT)..."
+	@echo "Live order placement: disabled. Mainnet wallets: disabled."
+	$(PYTHON) -m uvicorn agent_os.api.app:app --reload --port $(AGENT_OS_PORT)
+
+worker:
+	@echo "Running one deterministic CoinScopeAI Agent OS paper cycle..." >&2
+	@$(PYTHON) -m services.agent_worker.main
+
+agent-demo: worker
+
 test:
-	pytest -x -q tests/ coinscope_trading_engine/tests/ \
-		--cov=coinscope_trading_engine \
-		--cov-report=term-missing \
-		--cov-fail-under=60
+	$(PYTHON) -m pytest -x -q tests/
 
 smoke:
-	pytest -x -q tests/test_ci_smoke.py -W ignore::pytest.PytestConfigWarning
+	$(PYTHON) -m pytest -x -q tests/test_ci_smoke.py -W ignore::pytest.PytestConfigWarning
 
-# ── Lint (no auto-fix) ────────────────────────────────────────────────────────
 lint:
-	@echo "Running ruff..."
-	ruff check .
-	@echo "Running black --check..."
-	black --check .
-	@echo "Lint clean ✓"
+	ruff check agent_os services/agent_worker tests/agent_os
+	black --check agent_os services/agent_worker tests/agent_os
 
-# ── Format (auto-fix) ─────────────────────────────────────────────────────────
 format:
-	ruff check --fix .
-	black .
-	@echo "Format applied ✓"
+	ruff check --fix agent_os services/agent_worker tests/agent_os
+	black agent_os services/agent_worker tests/agent_os
 
-# ── Type checking ─────────────────────────────────────────────────────────────
 typecheck:
-	mypy coinscope_trading_engine --ignore-missing-imports --no-error-summary
+	mypy agent_os services/agent_worker --ignore-missing-imports --no-error-summary
 
-# ── Protective scripts ────────────────────────────────────────────────────────
 guardrail:
-	@echo "Running drift detector..."
-	python3 scripts/drift_detector.py
 	@echo "Running risk threshold guardrail..."
-	python3 scripts/risk_threshold_guardrail.py
-	@echo "Guardrail clean ✓"
+	$(PYTHON) scripts/risk_threshold_guardrail.py
 
 sync:
-	python3 scripts/sync_verify.py
+	$(PYTHON) scripts/sync_verify.py
 
 status:
-	./scripts/daily_status.sh
+	./scripts/run_daily_status.sh
 
-# ── Clean ─────────────────────────────────────────────────────────────────────
+replay:
+	@test -n "$(DATA_DIR)" || (echo "DATA_DIR is required" && exit 2)
+	$(PYTHON) -m services.market_data.streams.cli replay \
+		--data-dir "$(DATA_DIR)" \
+		--speed "$(SPEED)" \
+		$(if $(START),--start "$(START)",) \
+		$(if $(END),--end "$(END)",) \
+		--verbose
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true

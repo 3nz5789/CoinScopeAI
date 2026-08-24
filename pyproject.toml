@@ -41,7 +41,7 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = [
-    "config", "data", "scanner", "scanners", "signals", "risk",
+    "agent_os", "config", "data", "scanner", "scanners", "signals", "risk",
     "alerts", "models", "monitoring", "utils", "billing",
     "execution", "intelligence", "storage", "validation",
 ]
@@ -64,7 +64,7 @@ exclude = '''
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests", "coinscope_trading_engine/tests"]
+testpaths = ["tests"]
 asyncio_mode = "auto"
 filterwarnings = [
     "ignore::pytest.PytestConfigWarning",
@@ -78,7 +78,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["coinscope_trading_engine", "engine", "risk_management", "scripts"]
+source = ["agent_os", "engine", "risk_management", "scripts"]
 omit = ["*/tests/*", "*/.venv/*", "*/venv/*", "*/logs/*", "*/data/*",
         "*/migrations/*", "setup_stripe_products.py", "*/conftest.py"]
 

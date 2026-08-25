@@ -2,7 +2,7 @@
 
 **Project:** CoinScopeAI Agent OS
 **Design scope:** Policy-only, read-only design against `main`
-**Inspected baseline:** `fa8f841a6a0f92144c435242a9e11a7739383d7b`
+**Historical inspected baseline:** `fa8f841a6a0f92144c435242a9e11a7739383d7b`; current canonical `main` is `4bfae940d2ec373ee7c63d65819361cc8eafd41e`. This record describes the distinct disabled A3 capture-policy capability and must not be relabeled as the future AI explanation policy.
 **Clone:** `/home/ubuntu/readonly-clones/coinscopeai-a3-20260825T115247Z`
 **Repository:** `https://github.com/3nz5789/CoinScopeAI.git`
 **Prepared by:** Manus AI

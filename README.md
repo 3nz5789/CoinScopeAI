@@ -376,7 +376,7 @@ python3 scripts/sync_verify.py
 |---|---|---|
 | [ADR-0001](docs/decisions/adr-0001-fastapi-and-uvicorn.md) | FastAPI + Uvicorn as engine framework | Accepted |
 | [ADR-0002](docs/decisions/adr-0002-redis-celery-for-workers.md) | Redis + Celery for async task queue | Accepted |
-| [ADR-0003](docs/decisions/adr-0003-llm-off-hot-path.md) | LLM calls prohibited on the hot path | Accepted |
+| [ADR-0003](docs/decisions/adr-0003-llm-off-hot-path.md) | Future AI/LLM explanation capability is advisory by design and must remain off the trade-decision hot path; this ADR is a design/evidence anchor, not an adapter or comprehensive enforcement proof | Approved design decision; implementation remains unimplemented |
 
 ---
 

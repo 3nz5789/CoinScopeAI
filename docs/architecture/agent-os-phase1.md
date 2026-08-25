@@ -1,6 +1,6 @@
 # CoinScopeAI Agent OS — Phase 1 Architecture
 
-**Status:** Phase‑1 scaffold implemented on the `agent-os/phase1-scaffold` branch.
+**Status:** Phase‑1 scaffold and bounded follow-on Agent OS controls are present on current `main` at `4bfae940d2ec373ee7c63d65819361cc8eafd41e`. This document records the Phase‑1 boundary; it does not claim that the complete Agent OS, live platform, or future AI explanation capability is implemented.
 
 **Scope:** Establish a simple, modular VS-Code-style monorepo seam for prompt-to-graph strategy work, deterministic replay, mandatory risk evaluation, and paper execution. This phase does not place live orders or create mainnet wallet paths.
 

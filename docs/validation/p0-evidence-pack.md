@@ -534,6 +534,8 @@ These are not bugs. They are honest constraints that anyone reading this documen
 
 **What it means:** `intelligence/` modules (HMM regime detector, finbert sentiment filter, whale signal filter, funding rate filter) are loaded as optional — their absence does not prevent the engine from running. In P0, the primary regime signal comes from the FixedScorer + v3 classifier, not the HMM. The intelligence layer is a P1 enhancement.
 
+**Current-main documentation reconciliation:** ADR-0003 is the canonical design decision for keeping LLM/AI explanation logic off the trade-decision hot path. Existing boundary tests provide import-isolation evidence. The stronger rule that AI is explanatory-only and non-authoritative remains an approved design direction, not a completed runtime capability.
+
 ---
 
 ## 10. What Was Not Validated in P0

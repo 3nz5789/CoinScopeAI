@@ -2,9 +2,9 @@
 
 ## Final local implementation record
 
-**Status:** A4-v1 is implemented locally within the approved ten-file boundary. This document records the implemented, deterministic process-local behavior and its validation evidence; it does not authorize commit, push, PR, merge, deployment, or production use.
+**Status:** A4-v1 is present on current `main` at `4bfae940d2ec373ee7c63d65819361cc8eafd41e` within the approved ten-file boundary. This document records deterministic process-local behavior; it does not claim durable persistence, crash recovery, database backing, production readiness, or authorization to deploy.
 
-**Repository baseline:** `main` at `29001d119c3e21908b25432688c1e1dbf719b066`, inspected read-only in `/home/ubuntu/readonly-clones/CoinScopeAI-A4-20260825T125346Z`; that baseline clone remained clean. The implemented uncommitted worktree is `/home/ubuntu/readonly-clones/CoinScopeAI-A4-impl-20260825T130952Z` on branch `agent-os/a4-authorization-audit`.
+**Historical implementation record:** The earlier local baseline and uncommitted branch are retained as historical/reported provenance: `main` at `29001d119c3e21908b25432688c1e1dbf719b066` and branch `agent-os/a4-authorization-audit`.
 
 **Approved behavior:** server-owned, tenant-scoped authorization; immutable exact-scope grants; TTL no greater than 600 seconds; terminal lifecycle `ACTIVE → CONSUMED | REVOKED | EXPIRED`; deterministic in-memory atomic semantics; monotonic tenant/workspace revocation epochs; tenant-scoped idempotency; safe replay; cross-tenant non-disclosure; append-only whitelist-redacted audit metadata.
 

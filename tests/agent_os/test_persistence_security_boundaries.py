@@ -4,12 +4,19 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+MATERIAL_PATH = ROOT / "agent_os" / "persistence" / "material.py"
 PRODUCTION_PATHS = (
     ROOT / "agent_os" / "persistence" / "contracts.py",
     ROOT / "agent_os" / "persistence" / "ports.py",
     ROOT / "agent_os" / "persistence" / "ingress.py",
+    MATERIAL_PATH,
 )
-ALLOWED_IMPORT_ROOTS = {"__future__", "dataclasses", "enum", "re", "typing"}
+A1_ALLOWED_IMPORT_ROOTS = {"__future__", "dataclasses", "enum", "re", "typing"}
+MATERIAL_ALLOWED_IMPORT_ROOTS = A1_ALLOWED_IMPORT_ROOTS | {
+    "hashlib",
+    "json",
+    "math",
+}
 FORBIDDEN_IMPORT_ROOTS = {
     "asyncio",
     "boto3",
@@ -124,21 +131,27 @@ def test_only_approved_production_paths_exist() -> None:
         "agent_os/persistence/contracts.py",
         "agent_os/persistence/ports.py",
         "agent_os/persistence/ingress.py",
+        "agent_os/persistence/material.py",
     ]
 
 
 def test_production_imports_are_standard_library_or_relative_contract_imports() -> None:
     for path, tree, _ in parsed_sources():
+        allowed_roots = (
+            MATERIAL_ALLOWED_IMPORT_ROOTS if path == MATERIAL_PATH else A1_ALLOWED_IMPORT_ROOTS
+        )
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     root = alias.name.split(".", 1)[0]
-                    assert root in ALLOWED_IMPORT_ROOTS, (path, alias.name)
-                    assert root not in FORBIDDEN_IMPORT_ROOTS, (path, alias.name)
+                    assert root in allowed_roots, (path, alias.name)
+                    if path != MATERIAL_PATH:
+                        assert root not in FORBIDDEN_IMPORT_ROOTS, (path, alias.name)
             elif isinstance(node, ast.ImportFrom) and node.level == 0:
                 root = (node.module or "").split(".", 1)[0]
-                assert root in ALLOWED_IMPORT_ROOTS, (path, node.module)
-                assert root not in FORBIDDEN_IMPORT_ROOTS, (path, node.module)
+                assert root in allowed_roots, (path, node.module)
+                if path != MATERIAL_PATH:
+                    assert root not in FORBIDDEN_IMPORT_ROOTS, (path, node.module)
 
 
 def test_production_contracts_have_no_material_or_storage_fields() -> None:
@@ -148,7 +161,7 @@ def test_production_contracts_have_no_material_or_storage_fields() -> None:
                 assert node.target.id.lower() not in FORBIDDEN_FIELD_NAMES, (path, node.target.id)
             if isinstance(node, ast.arg):
                 assert node.arg.lower() not in FORBIDDEN_FIELD_NAMES, (path, node.arg)
-            if isinstance(node, ast.Constant):
+            if isinstance(node, ast.Constant) and path != MATERIAL_PATH:
                 assert not isinstance(node.value, (bytes, bytearray, memoryview)), path
 
 
@@ -157,13 +170,53 @@ def test_production_code_has_no_side_effecting_capability_calls() -> None:
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 name = node_name(node.func)
-                assert name not in FORBIDDEN_CALL_NAMES, (path, name, node.lineno)
+                if not (path == MATERIAL_PATH and name == "sha256"):
+                    assert name not in FORBIDDEN_CALL_NAMES, (path, name, node.lineno)
             if isinstance(node, ast.Attribute):
                 assert node.attr.lower() not in FORBIDDEN_CAPABILITY_NAMES, (
                     path,
                     node.attr,
                     node.lineno,
                 )
+
+
+def test_a2_private_material_has_no_public_content_extraction_methods() -> None:
+    path = MATERIAL_PATH
+    tree = ast.parse(path.read_text())
+    classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+    assert {"_PrivateCanonicalMaterial", "MaterialLease", "MaterialCoordinator"} <= set(classes)
+
+    private_material_methods = {
+        node.name
+        for node in classes["_PrivateCanonicalMaterial"].body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and not node.name.startswith("_")
+    }
+    assert private_material_methods == set()
+
+    lease_methods = {
+        node.name
+        for node in classes["MaterialLease"].body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and not node.name.startswith("_")
+    }
+    assert lease_methods == {"cancel", "consume", "status"}
+
+    forbidden_methods = {
+        "bytes",
+        "canonical_bytes",
+        "export",
+        "iterator",
+        "mapping",
+        "serialize",
+        "source",
+    }
+    declared_methods = {
+        node.name.lower()
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    assert not declared_methods.intersection(forbidden_methods)
 
 
 def test_ports_are_protocol_declarations_without_concrete_method_bodies() -> None:

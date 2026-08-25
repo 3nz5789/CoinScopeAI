@@ -250,7 +250,7 @@ Recorded validation results:
 | Broad `make test` | Blocked during unrelated wider-suite collection because `tests/test_coinscopeai.py` imports NumPy; NumPy was intentionally not installed because it is outside the approved minimal local tooling environment. This is an environment limitation outside the A4-v1 path union, not an A4-v1 implementation regression. |
 
 ```bash
-cd /home/ubuntu/readonly-clones/CoinScopeAI-A4-20260825T125346Z
+cd /home/ubuntu/readonly-clones/CoinScopeAI-A4-impl-20260825T130952Z
 python3 -m pytest -q \
   tests/agent_os/test_authorization_contracts.py \
   tests/agent_os/test_authorization_memory.py \

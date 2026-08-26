@@ -16,7 +16,7 @@ from engine.monitoring.legacy_read_path_metrics import ReadPathMetricOutcome
 
 @dataclass
 class RecordingMetrics:
-    requests: list[tuple] 
+    requests: list[tuple]
     dependencies: list[tuple]
     sources: list[tuple]
 

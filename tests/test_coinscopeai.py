@@ -70,7 +70,7 @@ class TestFixedScorer:
     """Tests for scoring_fixed.FixedScorer"""
 
     def _scorer(self):
-        from scoring_fixed import FixedScorer
+        from engine.signals.scoring_fixed import FixedScorer
         return FixedScorer()
 
     def test_generate_signals_returns_correct_shapes(self, sample_ohlcv):
@@ -151,7 +151,7 @@ class TestRiskGate:
     """Tests for risk_gate.RiskGate"""
 
     def _gate(self, **kwargs):
-        from risk_gate import RiskGate
+        from risk_management.risk_gate import RiskGate
         return RiskGate(initial_capital=10_000, **kwargs)
 
     # --- Position Sizing ---
@@ -232,7 +232,7 @@ class TestRiskGate:
 
     # --- Open / Close Position ---
     def test_open_position_returns_position_object(self):
-        from risk_gate import Position
+        from risk_management.risk_gate import Position
         gate = self._gate()
         pos = gate.open_position(
             symbol="BTC/USDT", direction=1, entry_price=50_000,
@@ -332,7 +332,7 @@ class TestKellyRiskController:
     """Tests for kelly_position_sizer.KellyRiskController"""
 
     def _kelly(self):
-        from kelly_position_sizer import KellyRiskController
+        from risk_management.kelly_position_sizer import KellyRiskController
         return KellyRiskController(fraction=0.25, hard_cap_pct=0.02)
 
     def test_bull_size_gt_chop_gt_bear(self):
@@ -403,7 +403,7 @@ class TestEnsembleRegimeDetector:
     """Tests for hmm_regime_detector.EnsembleRegimeDetector"""
 
     def _detector(self):
-        from hmm_regime_detector import EnsembleRegimeDetector
+        from risk_management.hmm_regime_detector import EnsembleRegimeDetector
         return EnsembleRegimeDetector()
 
     def test_predict_without_fit_returns_default(self, regime_data):
@@ -458,7 +458,7 @@ class TestEnsembleRegimeDetector:
 
     def test_short_data_returns_default(self):
         """Less than 50 returns → should return default."""
-        from hmm_regime_detector import EnsembleRegimeDetector
+        from risk_management.hmm_regime_detector import EnsembleRegimeDetector
         det = EnsembleRegimeDetector()
         short_returns = np.array([0.01, -0.02, 0.005])
         short_vol = np.array([0.01, 0.02, 0.01])
@@ -474,7 +474,7 @@ class TestTradeJournal:
     """Tests for trade_journal.TradeJournal"""
 
     def _journal(self, path):
-        from trade_journal import TradeJournal
+        from engine.integrations.trade_journal import TradeJournal
         return TradeJournal(path=path)
 
     def test_log_open_creates_entry(self, tmp_journal_path):
@@ -567,7 +567,7 @@ class TestTestnetExecutor:
         import os
         os.makedirs(str(tmp_path / "logs"), exist_ok=True)
         # Patch log dir to tmp
-        from binance_testnet_executor import TestnetExecutor
+        from engine.exchange.binance_testnet_executor import TestnetExecutor
         ex = TestnetExecutor.__new__(TestnetExecutor)
         ex.testnet = True
         ex.trade_log = []
@@ -686,7 +686,7 @@ class TestMultiTimeframeFilter:
     """Tests for multi_timeframe_filter.MultiTimeframeFilter"""
 
     def _filter(self):
-        from multi_timeframe_filter import MultiTimeframeFilter
+        from engine.signals.multi_timeframe_filter import MultiTimeframeFilter
         return MultiTimeframeFilter()
 
     def test_long_confirmed_on_bull_4h(self):
@@ -764,7 +764,7 @@ class TestScaleUpManager:
     """Tests for scale_up_manager.ScaleUpManager"""
 
     def _manager(self):
-        from scale_up_manager import ScaleUpManager
+        from engine.core.scale_up_manager import ScaleUpManager
         return ScaleUpManager()
 
     def test_initial_profile_is_seed(self):
@@ -817,10 +817,10 @@ class TestEndToEndFlow:
 
     def test_full_pipeline_long_trade(self, tmp_journal_path, sample_ohlcv, tmp_path):
         """Simulate: score → kelly → risk gate → journal → executor."""
-        from scoring_fixed import FixedScorer
-        from kelly_position_sizer import KellyRiskController
-        from risk_gate import RiskGate
-        from trade_journal import TradeJournal
+        from engine.signals.scoring_fixed import FixedScorer
+        from risk_management.kelly_position_sizer import KellyRiskController
+        from risk_management.risk_gate import RiskGate
+        from engine.integrations.trade_journal import TradeJournal
 
         c, h, lo, v, sp = sample_ohlcv
         scorer = FixedScorer()
@@ -867,7 +867,7 @@ class TestEndToEndFlow:
         """After max consecutive losses, all new orders should be blocked."""
         import os
         os.makedirs(str(tmp_path / "logs"), exist_ok=True)
-        from binance_testnet_executor import TestnetExecutor
+        from engine.exchange.binance_testnet_executor import TestnetExecutor
         ex = TestnetExecutor.__new__(TestnetExecutor)
         ex.testnet = True
         ex.trade_log = []
@@ -892,8 +892,8 @@ class TestEndToEndFlow:
 
     def test_kelly_and_risk_gate_consistent_sizing(self):
         """Both Kelly modules should produce non-zero, bounded sizes."""
-        from kelly_position_sizer import KellyRiskController
-        from risk_gate import RiskGate
+        from risk_management.kelly_position_sizer import KellyRiskController
+        from risk_management.risk_gate import RiskGate
 
         kelly = KellyRiskController(fraction=0.25)
         size_usd = kelly.calculate_position_size(0.44, 0.018, 0.012, "bull", 10_000)
@@ -912,7 +912,7 @@ class TestEdgeCases:
     """Boundary conditions and regression tests for known bugs."""
 
     def test_scorer_handles_single_bar(self):
-        from scoring_fixed import FixedScorer
+        from engine.signals.scoring_fixed import FixedScorer
         scorer = FixedScorer()
         c = np.array([100.0] * 50)
         h = c + 1.0
@@ -924,7 +924,7 @@ class TestEdgeCases:
         assert signals.shape == c.shape
 
     def test_risk_gate_handles_zero_atr(self):
-        from risk_gate import RiskGate
+        from risk_management.risk_gate import RiskGate
         gate = RiskGate()
         sl = gate.calculate_stop_loss(100.0, atr=0.0, direction=1)
         # With atr=0, stop distance = min(0, 2%) = 0 → stop = entry
@@ -935,19 +935,19 @@ class TestEdgeCases:
         p = str(tmp_path / "corrupt.json")
         with open(p, "w") as f:
             f.write("NOT VALID JSON {{{")
-        from trade_journal import TradeJournal
+        from engine.integrations.trade_journal import TradeJournal
         j = TradeJournal(path=p)
         assert j.entries == []
 
     def test_kelly_negative_kelly_returns_zero(self):
-        from kelly_position_sizer import KellyRiskController
+        from risk_management.kelly_position_sizer import KellyRiskController
         kelly = KellyRiskController()
         # Terrible odds: 10% win rate, 1% avg win, 5% avg loss
         size = kelly.calculate_position_size(0.10, 0.01, 0.05, "bull", 10_000)
         assert size == 0.0
 
     def test_mtf_filter_all_neutral_input(self):
-        from multi_timeframe_filter import MultiTimeframeFilter
+        from engine.signals.multi_timeframe_filter import MultiTimeframeFilter
         f = MultiTimeframeFilter()
         np.random.seed(0)
         n = 200
@@ -959,7 +959,7 @@ class TestEdgeCases:
         assert stats["confirmed_signals"] == 0
 
     def test_scale_manager_correct_account_progression(self):
-        from scale_up_manager import ScaleUpManager, PROFILES
+        from engine.core.scale_up_manager import ScaleUpManager, PROFILES
         sm = ScaleUpManager()
         # Account sizes should increase with each profile
         account_sizes = [p.account_usd for p in PROFILES]

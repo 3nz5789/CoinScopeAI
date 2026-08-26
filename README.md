@@ -23,8 +23,8 @@ The platform is designed to make strategy work easier to describe and test witho
 ## Current status
 
 > **Current Agent OS focus:** deterministic paper-mode strategy workflows. The Phase-1 scaffold, graph validation, fixture inspection, paper-only risk gate, paper executor, API entry point, worker demo, and focused tests are present on `main`. The default local workflow is designed to run without exchange credentials on its paper path, although broader legacy engine and operations workflows may require their own configuration. [1] [4]
->
-> **Not enabled by default:** live exchange order placement; testnet order submission from Agent OS entry points; mainnet wallets, custody, signing, or withdrawals; performance guarantees; profitability claims; and investment advice. The repository also contains older engine and P0/Testnet-oriented material, which must not be conflated with the current Agent OS paper contract. [1] [5]
+
+**Not enabled by default:** live exchange order placement; testnet order submission from Agent OS entry points; mainnet wallets, custody, signing, or withdrawals; performance guarantees; profitability claims; and investment advice. The repository also contains older engine and P0/Testnet-oriented material, which must not be conflated with the current Agent OS paper contract. [1] [5]
 
 Historical P0 validation documents remain useful as dated evidence about the legacy engine and its validation process. They are **historical/reported**, not a claim that the current Agent OS is production-ready or that any simulation, backtest, testnet run, or paper result predicts future performance. [5]
 

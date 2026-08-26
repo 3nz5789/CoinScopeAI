@@ -31,5 +31,11 @@ Makefile @3nz5789
 requirements.txt @3nz5789
 pyproject.toml @3nz5789
 
+# Secure patch-release controls — code-owner approval required on protected branches
+/.github/workflows/secure-patch-release.yml @3nz5789
+/scripts/redacted_secret_scan.sh @3nz5789
+/scripts/secure_patch_pr_guard.sh @3nz5789
+/CODEOWNERS @3nz5789
+
 # Docs (single reviewer OK)
 docs/ @3nz5789

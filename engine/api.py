@@ -23,7 +23,41 @@ from engine.core.scale_up_manager import ScaleUpManager
 from engine.integrations.trade_journal import TradeJournal
 from risk_management.regime_predictor import HMMRegimePredictor
 
+from engine.monitoring.legacy_read_path_metrics import (
+    LegacyReadPathMetrics,
+    ReadPathMetricOutcome,
+)
+
 logger = logging.getLogger(__name__)
+legacy_read_metrics = LegacyReadPathMetrics()
+
+
+def _observe_request_safely(
+    route: str,
+    outcome: ReadPathMetricOutcome,
+    duration_seconds: float,
+    error_classification: str | None = None,
+) -> None:
+    try:
+        legacy_read_metrics.observe_request(
+            route, outcome, duration_seconds, error_classification
+        )
+    except Exception:
+        pass
+
+
+def _observe_dependency_safely(dependency: str, duration_seconds: float) -> None:
+    try:
+        legacy_read_metrics.observe_dependency(dependency, duration_seconds)
+    except Exception:
+        pass
+
+
+def _observe_source_safely(route: str, source: str) -> None:
+    try:
+        legacy_read_metrics.observe_regime_source(route, source)
+    except Exception:
+        pass
 
 app = FastAPI(title="CoinScopeAI Engine API", version="1.0.0")
 
@@ -59,6 +93,9 @@ async def scan(
     pairs: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,TAO/USDT"
 ):
     """Trigger live market scan. Returns signals for all requested pairs."""
+    started = time.perf_counter()
+    outcome = ReadPathMetricOutcome.FRESH
+    error_classification = None
     try:
         from engine.core.master_orchestrator import CoinScopeOrchestrator
 
@@ -74,7 +111,13 @@ async def scan(
             "timestamp": time.time(),
         }
     except Exception as e:
+        outcome = ReadPathMetricOutcome.UNAVAILABLE
+        error_classification = "internal"
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _observe_request_safely(
+            "/scan", outcome, time.perf_counter() - started, error_classification
+        )
 
 
 # ── Performance ───────────────────────────────────────────────────
@@ -126,7 +169,13 @@ def _hmm_fallback(symbol: str, registry_symbol: str) -> dict:
     from risk_management.hmm_regime_detector import EnsembleRegimeDetector
 
     exchange = ccxt.binance({"enableRateLimit": True})
-    ohlcv = exchange.fetch_ohlcv(symbol, "4h", limit=200)
+    dependency_started = time.perf_counter()
+    try:
+        ohlcv = exchange.fetch_ohlcv(symbol, "4h", limit=200)
+    finally:
+        _observe_dependency_safely(
+            "exchange", time.perf_counter() - dependency_started
+        )
     df = pd.DataFrame(ohlcv, columns=["ts", "open", "high", "low", "close", "vol"])
     returns = df["close"].pct_change().dropna().values
     vol = pd.Series(returns).rolling(20).std().dropna().values
@@ -172,45 +221,76 @@ async def get_regime(symbol: str):
     4-state taxonomy. Triggered when no active registry row exists for the
     symbol, the pickle is missing, or feature computation fails.
     """
-    registry_symbol, ccxt_symbol = _normalise_symbols(symbol)
+    started = time.perf_counter()
+    outcome = ReadPathMetricOutcome.UNAVAILABLE
+    error_classification = None
 
     try:
-        import ccxt
-        import pandas as pd
+        try:
+            registry_symbol, ccxt_symbol = _normalise_symbols(symbol)
+        except Exception as e:
+            error_classification = "internal"
+            raise
+        try:
+            import ccxt
+            import pandas as pd
 
-        # Try the persisted model first. Even instantiating the predictor is
-        # cheap — the DB query happens inside .predict().
-        exchange = ccxt.binance({"enableRateLimit": True})
-        raw = exchange.fetch_ohlcv(ccxt_symbol, "1h", limit=500)
-        df = pd.DataFrame(
-            raw,
-            columns=["ts", "open", "high", "low", "close", "volume"],
+            # Try the persisted model first. Even instantiating the predictor is
+            # cheap — the DB query happens inside .predict().
+            exchange = ccxt.binance({"enableRateLimit": True})
+            dependency_started = time.perf_counter()
+            try:
+                raw = exchange.fetch_ohlcv(ccxt_symbol, "1h", limit=500)
+            finally:
+                _observe_dependency_safely(
+                    "exchange", time.perf_counter() - dependency_started
+                )
+            df = pd.DataFrame(
+                raw,
+                columns=["ts", "open", "high", "low", "close", "volume"],
+            )
+            df["open_time"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
+
+            predictor_started = time.perf_counter()
+            try:
+                prediction = regime_predictor.predict(registry_symbol, df)
+            finally:
+                _observe_dependency_safely(
+                    "model", time.perf_counter() - predictor_started
+                )
+            if prediction is not None:
+                response = {
+                    "symbol": prediction.symbol,
+                    "label": prediction.label,
+                    "confidence": round(prediction.confidence, 6),
+                    "state_probs": [round(p, 6) for p in prediction.state_probs],
+                    "state_labels": prediction.state_labels,
+                    "source": "hmm_regime_v1",
+                    "model_version": prediction.model_version,
+                    "trained_at": prediction.trained_at.astimezone(timezone.utc).isoformat(),
+                    "val_accuracy": prediction.val_accuracy,
+                    "price": float(df["close"].iloc[-1]),
+                    "timestamp": time.time(),
+                }
+                _observe_source_safely("/regime/{symbol}", "hmm_regime_v1")
+                outcome = ReadPathMetricOutcome.FRESH
+                return response
+
+            logger.warning(
+                "regime %s: no active model_registry row or pickle missing; using hmm_fallback",
+                registry_symbol,
+            )
+            response = _hmm_fallback(ccxt_symbol, registry_symbol)
+            _observe_source_safely("/regime/{symbol}", "hmm_fallback")
+            outcome = ReadPathMetricOutcome.MODEL_UNAVAILABLE
+            return response
+        except Exception as e:
+            error_classification = "internal"
+            raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _observe_request_safely(
+            "/regime/{symbol}", outcome, time.perf_counter() - started, error_classification
         )
-        df["open_time"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
-
-        prediction = regime_predictor.predict(registry_symbol, df)
-        if prediction is not None:
-            return {
-                "symbol": prediction.symbol,
-                "label": prediction.label,
-                "confidence": round(prediction.confidence, 6),
-                "state_probs": [round(p, 6) for p in prediction.state_probs],
-                "state_labels": prediction.state_labels,
-                "source": "hmm_regime_v1",
-                "model_version": prediction.model_version,
-                "trained_at": prediction.trained_at.astimezone(timezone.utc).isoformat(),
-                "val_accuracy": prediction.val_accuracy,
-                "price": float(df["close"].iloc[-1]),
-                "timestamp": time.time(),
-            }
-
-        logger.warning(
-            "regime %s: no active model_registry row or pickle missing; using hmm_fallback",
-            registry_symbol,
-        )
-        return _hmm_fallback(ccxt_symbol, registry_symbol)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Scale Profile ─────────────────────────────────────────────────

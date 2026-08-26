@@ -6,27 +6,27 @@
 
 ## What it is
 
-CoinScopeAI is a futures-native research and decision-support environment that is evolving into an AI-as-a-Service **Agent OS** for crypto traders. The repository combines market-data and research components with deterministic strategy contracts, graph inspection, explicit risk boundaries, and paper execution. The current Agent OS path is intentionally narrow: it turns a natural-language request into an editable paper-mode draft, validates the graph, inspects fixture or replay events, evaluates risk, and creates only a simulated paper fill when the request is approved. [1]
+CoinScopeAI is a futures-native research and decision-support environment that is evolving into an AI-as-a-Service **Agent OS** for crypto traders. The repository combines market-data and research components with deterministic strategy contracts, graph inspection, explicit risk boundaries, and paper execution. The current Agent OS path is intentionally narrow: it turns a natural-language request into an editable paper-mode draft, validates the graph, inspects fixture or replay events, evaluates risk, and creates only a simulated paper fill when the request is approved.
 
 The current Phase-1 lifecycle is:
 
-> **Prompt → Graph → Inspect → Risk gate → Paper fill → Journal/review** [1]
+> **Prompt → Graph → Inspect → Risk gate → Paper fill → Journal/review**
 
-CoinScopeAI is **not** a generic signal bot, fund manager, copy-trading service, investment adviser, or default live-trading system. The current Agent OS API has no live-order placement or mainnet-wallet path, and non-paper execution modes are rejected at the Agent OS risk boundary. [2]
+CoinScopeAI is **not** a generic signal bot, fund manager, copy-trading service, investment adviser, or default live-trading system. The current Agent OS API has no live-order placement or mainnet-wallet path, and non-paper execution modes are rejected at the Agent OS risk boundary.
 
 ## Why it exists
 
 Crypto futures decisions depend on more than an entry condition. Funding, open interest, liquidity, order-flow context, volatility, regime, exposure, and execution assumptions all affect how a strategy should be researched and reviewed. CoinScopeAI’s direction is to bring those concerns into a single workflow where strategy intent, data provenance, policy checks, risk decisions, simulated fills, and review metadata remain inspectable.
 
-The platform is designed to make strategy work easier to describe and test without turning AI output into an ungoverned authority. The current prompt planner is deterministic and draft-oriented. A future model or provider may assist with structured workflow creation or explanation only after a separate design and implementation review; the current repository does not contain a model adapter or comprehensive runtime enforcement of that future boundary. [3]
+The platform is designed to make strategy work easier to describe and test without turning AI output into an ungoverned authority. The current prompt planner is deterministic and draft-oriented. A future model or provider may assist with structured workflow creation or explanation only after a separate design and implementation review; the current repository does not contain a model adapter or comprehensive runtime enforcement of that future boundary.
 
 ## Current status
 
-> **Current Agent OS focus:** deterministic paper-mode strategy workflows. The Phase-1 scaffold, graph validation, fixture inspection, paper-only risk gate, paper executor, API entry point, worker demo, and focused tests are present on `main`. The default local workflow is designed to run without exchange credentials on its paper path, although broader legacy engine and operations workflows may require their own configuration. [1] [4]
+> **Current Agent OS focus:** deterministic paper-mode strategy workflows. The Phase-1 scaffold, graph validation, fixture inspection, paper-only risk gate, paper executor, API entry point, worker demo, and focused tests are present on `main`. The default local workflow is designed to run without exchange credentials on its paper path, although broader legacy engine and operations workflows may require their own configuration.
 
-**Not enabled by default:** live exchange order placement; testnet order submission from Agent OS entry points; mainnet wallets, custody, signing, or withdrawals; performance guarantees; profitability claims; and investment advice. The repository also contains older engine and P0/Testnet-oriented material, which must not be conflated with the current Agent OS paper contract. [1] [5]
+**Not enabled by default:** live exchange order placement; testnet order submission from Agent OS entry points; mainnet wallets, custody, signing, or withdrawals; performance guarantees; profitability claims; and investment advice. The repository also contains older engine and P0/Testnet-oriented material, which must not be conflated with the current Agent OS paper contract.
 
-Historical P0 validation documents remain useful as dated evidence about the legacy engine and its validation process. They are **historical/reported**, not a claim that the current Agent OS is production-ready or that any simulation, backtest, testnet run, or paper result predicts future performance. [5]
+Historical P0 validation documents remain useful as dated evidence about the legacy engine and its validation process. They are **historical/reported**, not a claim that the current Agent OS is production-ready or that any simulation, backtest, testnet run, or paper result predicts future performance.
 
 ## Safety model
 
@@ -43,7 +43,7 @@ Safety is part of the Agent OS contract rather than a post-processing step.
 | AI boundary | ADR-0003 records constraints for a future explanation capability. It does not prove that an AI explanation adapter or comprehensive runtime enforcement exists today. |
 | Secrets | Do not commit, log, fixture, serialize, or place in browser storage any API keys, private keys, wallet seed phrases, credentials, or sensitive account and journal data. |
 
-The underlying repository also contains engine-side controls for leverage, sizing, exposure, drawdown, daily loss, circuit breakers, and kill-switch behavior. Read the current risk documentation and implementation before relying on a specific threshold; the Agent OS does not create a second threshold authority. [6]
+The underlying repository also contains engine-side controls for leverage, sizing, exposure, drawdown, daily loss, circuit breakers, and kill-switch behavior. Read the current risk documentation and implementation before relying on a specific threshold; the Agent OS does not create a second threshold authority.
 
 This is software tooling for research, education, simulation, and workflow support. It is not financial advice.
 
@@ -51,12 +51,12 @@ This is software tooling for research, education, simulation, and workflow suppo
 
 ### Current and bounded capabilities
 
-- **Futures market context:** existing market-data services and contracts cover normalized event types such as candles, trades, order-book data, funding, liquidations, and open interest; provider-neutral on-chain and research-feed contracts remain deferred. [1]
+- **Futures market context:** existing market-data services and contracts cover normalized event types such as candles, trades, order-book data, funding, liquidations, and open interest; provider-neutral on-chain and research-feed contracts remain deferred.
 - **Strategy specification:** deterministic natural-language prompt-to-draft planning with editable graph nodes, lifecycle state, and missing-field reporting.
 - **Graph validation and inspection:** required schedule, market, condition, entry, risk, and exit nodes are validated before a draft can proceed; fixture or replay inspection emits observations and provenance.
 - **Risk-gated paper execution:** paper requests cross the Agent OS risk boundary, receive a canonical safety decision, and are re-checked by the paper executor before a simulated fill is recorded.
-- **Local API and worker workflow:** the Phase-1 FastAPI entry point and deterministic worker expose a paper-mode health check, draft workflow, risk status, risk evaluation, paper order, and paper session surfaces. [2] [4]
-- **Focused verification:** deterministic fixtures, replay-compatible data ports, Agent OS tests, smoke checks, lint, typecheck, guardrails, and synchronization checks are available through the repository command surface. [4]
+- **Local API and worker workflow:** the Phase-1 FastAPI entry point and deterministic worker expose a paper-mode health check, draft workflow, risk status, risk evaluation, paper order, and paper session surfaces.
+- **Focused verification:** deterministic fixtures, replay-compatible data ports, Agent OS tests, smoke checks, lint, typecheck, guardrails, and synchronization checks are available through the repository command surface.
 
 ### Planned / evolving capabilities
 
@@ -77,7 +77,7 @@ flowchart LR
     G --- E
 ```
 
-The `agent_os/` package is the canonical Phase-1 orchestration and control-plane boundary. It owns portable strategy contracts, graph validation, deterministic planning, fixture/replay inspection, the AgentRiskGate facade, the paper execution port, and the Agent OS API. Existing engine, market-data, paper-trading, dashboard, and research modules remain in the monorepo; this README does not describe them as deprecated or claim that they have been migrated. [1]
+The `agent_os/` package is the canonical Phase-1 orchestration and control-plane boundary. It owns portable strategy contracts, graph validation, deterministic planning, fixture/replay inspection, the AgentRiskGate facade, the paper execution port, and the Agent OS API. Existing engine, market-data, paper-trading, dashboard, and research modules remain in the monorepo; this README does not describe them as deprecated or claim that they have been migrated.
 
 Strategies and Skills may propose intent or produce observations, but they do not bypass policy or risk evaluation. The paper execution port is the only execution path exposed by the current Agent OS contract. Any future connector must be separately designed and approved; reads, simulations, lifecycle changes, or backtests must never create live orders as a side effect.
 
@@ -118,7 +118,7 @@ Keep all credential fields empty unless a separately documented, human-approved 
 make agent-demo
 ```
 
-`make worker` is an alias for the same deterministic paper cycle. The output includes a paper-mode strategy document, fixture observations, a risk status, and a simulated paper-execution result. It does not place an exchange order. [4]
+`make worker` is an alias for the same deterministic paper cycle. The output includes a paper-mode strategy document, fixture observations, a risk status, and a simulated paper-execution result. It does not place an exchange order.
 
 ### Run the local Agent OS API
 
@@ -136,7 +136,7 @@ curl -X POST http://127.0.0.1:8010/agent/drafts \
   -d '{"prompt":"Every 1h long BTCUSDT when funding is negative with risk 1% and stop loss 2%"}'
 ```
 
-The draft route returns a strategy document, graph summary, validation result, and missing-field report. An incomplete request such as `Watch BTCUSDT` is blocked and does not create an execution request. [1] [2]
+The draft route returns a strategy document, graph summary, validation result, and missing-field report. An incomplete request such as `Watch BTCUSDT` is blocked and does not create an execution request.
 
 ### Current Agent OS API surfaces
 
@@ -178,7 +178,7 @@ To replay existing recorded market-data files through the repository’s stream 
 make replay DATA_DIR=./data/recordings SPEED=10
 ```
 
-The replay directory must already contain recorded JSONL or JSONL.GZ stream data. Do not treat a simulation or backtest result as profitability, investment advice, or a guarantee of future performance. Where replay or simulation is supported, record assumptions and provenance and prefer deterministic fixtures and repeatable runs. [1] [4]
+The replay directory must already contain recorded JSONL or JSONL.GZ stream data. Do not treat a simulation or backtest result as profitability, investment advice, or a guarantee of future performance. Where replay or simulation is supported, record assumptions and provenance and prefer deterministic fixtures and repeatable runs.
 
 ## Repository Structure
 
@@ -247,12 +247,3 @@ See [`SECURITY.md`](SECURITY.md) for the private vulnerability-reporting process
 ## License
 
 MIT — see [`LICENSE`](LICENSE).
-
-## References
-
-[1]: docs/architecture/agent-os-phase1.md
-[2]: agent_os/api/app.py
-[3]: docs/decisions/adr-0003-llm-off-hot-path.md
-[4]: Makefile
-[5]: docs/validation/p0-evidence-pack.md
-[6]: docs/validation/invariant-matrix.md

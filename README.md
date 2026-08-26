@@ -6,7 +6,7 @@
 
 ## What it is
 
-CoinScopeAI is a futures-native research and decision-support environment that is evolving into an AI-as-a-Service **Agent OS** for crypto traders. The repository combines market-data and research components with deterministic strategy contracts, graph inspection, explicit risk boundaries, and paper execution. The current Agent OS path is intentionally narrow: it turns a natural-language request into an editable paper-mode draft, validates the graph, inspects fixture or replay events, evaluates risk, and creates only a simulated paper fill when the request is approved.
+CoinScopeAI is a futures-native research and decision-support environment built as an **Agent OS** for crypto traders. The repository combines market-data and research components with deterministic strategy contracts, graph inspection, explicit risk boundaries, and paper execution. The current Agent OS path is intentionally narrow: it turns a natural-language request into an editable paper-mode draft, validates the graph, inspects fixture or replay events, evaluates risk, and creates only a simulated paper fill when the request is approved.
 
 The current Phase-1 lifecycle is:
 

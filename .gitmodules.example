@@ -1,0 +1,5 @@
+# Example .gitmodules entry (replace <PLUNK_REPO_URL> with the actual URL)
+
+[submodule "coinscope-integrations/plunk"]
+	path = coinscope-integrations/plunk
+	url = <PLUNK_REPO_URL>
